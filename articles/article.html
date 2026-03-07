@@ -356,6 +356,7 @@ avatarDiv.textContent = initials;
             document.getElementById('article-content').innerHTML = article.content_html || '<p>No content available.</p>';
 // --- Init Tuwa Hybrid Subtitles (MP4 + YouTube) ---
             // --- Init Tuwa Hybrid Subtitles (MP4 + YouTube) ---
+            // --- Init Tuwa Hybrid Subtitles (MP4 + YouTube) ---
             async function initHybridSubtitles() {
               const subtitleBoxes = document.querySelectorAll('.tuwa-subtitle-box');
               let needsYouTubeAPI = false;
@@ -372,17 +373,21 @@ avatarDiv.textContent = initials;
                 }
 
                 try {
-                  // 1. Fetch & Parse VTT
+                  // 1. Fetch & Parse VTT (Upgraded Bulletproof Parser)
                   const response = await fetch(vttUrl);
                   if (!response.ok) throw new Error(`VTT missing at ${vttUrl} (Status: ${response.status})`);
-                  const vttText = await response.text();
+                  
+                  // Convert Windows line endings to standard, then split by blank lines 
+                  // (The regex \n[ \t]*\n ensures it splits even if the blank line has invisible spaces)
+                  const vttText = (await response.text()).replace(/\r\n/g, '\n');
+                  const blocks = vttText.split(/\n[ \t]*\n/);
                   
                   const cues = [];
-                  const blocks = vttText.split(/(?:\r?\n){2,}/);
                   for (const block of blocks) {
                     if (block.includes('WEBVTT')) continue;
-                    const lines = block.split(/\r?\n/);
+                    const lines = block.trim().split('\n');
                     const timeLineIndex = lines.findIndex(l => l.includes('-->'));
+                    
                     if (timeLineIndex !== -1) {
                       const times = lines[timeLineIndex].split('-->');
                       const start = parseVttTime(times[0]);
@@ -405,10 +410,19 @@ avatarDiv.textContent = initials;
 
                   // 3. Route logic based on element type
                   if (mediaEl.tagName.toLowerCase() === 'video') {
-                    // It's a local MP4
+                    // Local MP4
+                    
+                    // FIX: Force the first subtitle to show immediately before they even click play!
+                    updateSubtitle(0);
+                    
+                    // Sync during playback
                     mediaEl.addEventListener('timeupdate', () => updateSubtitle(mediaEl.currentTime));
+                    
+                    // Sync if they click around the timeline while paused
+                    mediaEl.addEventListener('seeked', () => updateSubtitle(mediaEl.currentTime));
+
                   } else if (mediaEl.tagName.toLowerCase() === 'iframe') {
-                    // It's a YouTube Iframe
+                    // YouTube Iframe
                     needsYouTubeAPI = true;
                     ytPlayersQueue.push({ id: mediaId, render: updateSubtitle });
                   }
@@ -416,7 +430,7 @@ avatarDiv.textContent = initials;
                 } catch (error) {
                   console.error('Subtitle Engine Error:', error);
                   box.style.display = 'none';
-                  box.insertAdjacentHTML('afterend', `<p style="color:red; font-size:12px;">Subtitle Error: Check console</p>`); // Helpful visual debug
+                  box.insertAdjacentHTML('afterend', `<p style="color:red; font-size:12px;">Subtitle Error: Check console</p>`); 
                 }
               }
 
@@ -429,7 +443,6 @@ avatarDiv.textContent = initials;
                         'onReady': (event) => {
                           const player = event.target;
                           setInterval(() => {
-                            // Only check time if playing to save memory
                             if (player.getPlayerState() === YT.PlayerState.PLAYING) {
                               p.render(player.getCurrentTime());
                             }
@@ -440,18 +453,15 @@ avatarDiv.textContent = initials;
                   });
                 };
 
-                // Check if YouTube API is fully loaded and ready
                 if (window.YT && window.YT.Player) {
                   setupYTPlayers();
                 } else {
-                  // If it's not loaded, load it and wait for the callback
                   const oldOnReady = window.onYouTubeIframeAPIReady;
                   window.onYouTubeIframeAPIReady = function() {
                     if (oldOnReady) oldOnReady();
                     setupYTPlayers();
                   };
                   
-                  // Only inject the script tag if it hasn't been injected yet
                   if (!document.getElementById('yt-api-script')) {
                     const tag = document.createElement('script');
                     tag.id = 'yt-api-script';
