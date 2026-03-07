@@ -114,79 +114,63 @@
           
           // Fetch Author Details
           try {
-            // Try primary endpoint
-            let authRes = await fetch(`/api/author?name=${encodeURIComponent(authorFilter)}`);
-            let authData = null;
+            const authRes = await fetch(`/api/author?name=${encodeURIComponent(authorFilter)}`);
+              if (authRes.ok) {
+                const authData = await authRes.json();
 
-            // If response is not JSON or not OK, try alternate endpoint then fallback
-            const tryParseJson = async (res) => {
-              try {
-                const ct = res.headers.get('content-type') || '';
-                if (ct.includes('application/json')) return await res.json();
-                // attempt to parse as text then json
-                const txt = await res.text();
-                try { return JSON.parse(txt); } catch { return null; }
-              } catch (_) { return null; }
-            };
+                // Prefer canonical DB name
+                const displayName = (authData.name || authorFilter).trim();
+                document.getElementById('auth-name').textContent = displayName;
 
-            if (authRes.ok) authData = await tryParseJson(authRes);
+                // Avatar handling: prefer avatar_url, avatar, image_url, then ui-avatars fallback
+                const avatarSrc = (authData.avatar_url || authData.avatar || authData.image_url || '').trim() || ('https://ui-avatars.com/api/?name=' + encodeURIComponent(displayName) + '&background=random');
+                document.getElementById('auth-avatar').src = avatarSrc;
 
-            if (!authData) {
-              // fallback to alternate API if present
-              try {
-                authRes = await fetch(`/api/get-author?name=${encodeURIComponent(authorFilter)}`);
-                if (authRes.ok) authData = await tryParseJson(authRes);
-              } catch (_) { /* ignore */ }
+                // Role and bio from SQL
+                document.getElementById('auth-role').textContent = authData.role || 'Contributor';
+                document.getElementById('auth-bio').textContent = authData.bio || `Stories written by ${displayName}.`;
+
+                // Social links: accept comma-separated or single URL
+                const socialsEl = document.getElementById('auth-socials');
+                socialsEl.innerHTML = '';
+                if (authData.social_link) {
+                  const links = String(authData.social_link).split(',').map(s => s.trim()).filter(Boolean);
+                  links.forEach(link => {
+                    const href = link.startsWith('http') ? link : `https://${link}`;
+                    const a = document.createElement('a');
+                    a.href = href;
+                    a.target = '_blank';
+                    a.className = 'px-3 py-2 bg-white/5 hover:bg-white/10 rounded-full text-xs font-bold text-white transition-colors border border-white/5';
+                    a.textContent = link.replace(/^https?:\/\//, '').replace(/www\./, '');
+                    socialsEl.appendChild(a);
+                  });
+                }
+
+              // SEO / Social Meta for author page
+              const pageUrl = window.location.href;
+              setMetaProperty('og:type', 'profile');
+              setMetaProperty('og:title', `${displayName} | OpenTuwa`);
+              setMetaProperty('og:description', authData.bio || `Articles by ${displayName}`);
+              setMetaProperty('og:image', avatarSrc);
+              setMetaProperty('og:url', pageUrl);
+              setMetaName('twitter:card', avatarSrc ? 'summary_large_image' : 'summary');
+              setMetaName('twitter:title', `${displayName} | OpenTuwa`);
+              setMetaName('twitter:description', authData.bio || `Articles by ${displayName}`);
+              setMetaName('twitter:image', avatarSrc);
+              setCanonical(pageUrl);
+
+            } else {
+              // Fallback rendering
+              document.getElementById('auth-name').textContent = authorFilter;
+              document.getElementById('auth-avatar').src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(authorFilter) + '&background=random';
+              document.getElementById('auth-bio').textContent = `Articles contributed by ${authorFilter}.`;
+              // Minimal meta for fallback
+              setMetaProperty('og:title', `${authorFilter} | OpenTuwa`);
+              setMetaProperty('og:description', `Articles by ${authorFilter}`);
+              setCanonical(window.location.href);
             }
-
-            // If still no structured data, render safe fallbacks
-            const displayName = ((authData && authData.name) || authorFilter).trim();
-            document.getElementById('auth-name').textContent = displayName;
-
-            const avatarSrc = (authData && (authData.avatar_url || authData.avatar || authData.image_url || authData.image)) || '';
-            document.getElementById('auth-avatar').src = (avatarSrc && avatarSrc.trim()) ? avatarSrc.trim() : ('https://ui-avatars.com/api/?name=' + encodeURIComponent(displayName) + '&background=random');
-
-            // Role and bio from SQL or safe defaults
-            document.getElementById('auth-role').textContent = (authData && (authData.role || authData.title || authData.position)) || 'Contributor';
-            document.getElementById('auth-bio').textContent = (authData && (authData.bio || authData.about || authData.description)) || `Stories written by ${displayName}.`;
-
-            // Social links: accept comma-separated or single URL
-            const socialsEl = document.getElementById('auth-socials');
-            socialsEl.innerHTML = '';
-            const socialField = authData && (authData.social_link || authData.socials || authData.social || authData.links);
-            if (socialField) {
-              const links = String(socialField).split(',').map(s => s.trim()).filter(Boolean);
-              links.forEach(link => {
-                const href = link.startsWith('http') ? link : `https://${link}`;
-                const a = document.createElement('a');
-                a.href = href;
-                a.target = '_blank';
-                a.className = 'px-3 py-2 bg-white/5 hover:bg-white/10 rounded-full text-xs font-bold text-white transition-colors border border-white/5';
-                a.textContent = link.replace(/^https?:\/\//, '').replace(/www\./, '');
-                socialsEl.appendChild(a);
-              });
-            }
-
-            // SEO / Social Meta for author page
-            const pageUrl = window.location.href;
-            setMetaProperty('og:type', 'profile');
-            setMetaProperty('og:title', `${displayName} | OpenTuwa`);
-            setMetaProperty('og:description', (authData && (authData.bio || authData.about || authData.description)) || `Articles by ${displayName}`);
-            setMetaProperty('og:image', document.getElementById('auth-avatar').src);
-            setMetaProperty('og:url', pageUrl);
-            setMetaName('twitter:card', document.getElementById('auth-avatar').src ? 'summary_large_image' : 'summary');
-            setMetaName('twitter:title', `${displayName} | OpenTuwa`);
-            setMetaName('twitter:description', (authData && (authData.bio || authData.about || authData.description)) || `Articles by ${displayName}`);
-            setMetaName('twitter:image', document.getElementById('auth-avatar').src);
-            setCanonical(pageUrl);
-
           } catch (e) {
             console.error("Error fetching author details", e);
-            // ensure minimal fallback UI
-            document.getElementById('auth-name').textContent = authorFilter;
-            document.getElementById('auth-avatar').src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(authorFilter) + '&background=random';
-            document.getElementById('auth-role').textContent = 'Contributor';
-            document.getElementById('auth-bio').textContent = `Articles contributed by ${authorFilter}.`;
           }
 
         } else if (tagFilter) {
