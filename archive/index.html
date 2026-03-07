@@ -29,6 +29,19 @@
   <style>
     body { background-color: #0a0a0b; color: #e5e5e5; -webkit-font-smoothing: antialiased; }
     .glass-header { backdrop-filter: blur(12px); background-color: rgba(10, 10, 11, 0.8); border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+    /* Floating mini player styles (kept small) */
+    #floating-player {
+      position: fixed; right: 24px; bottom: 24px; width: 360px; max-width: calc(100% - 48px); height: 202px;
+      background: linear-gradient(180deg, rgba(10,10,10,0.85), rgba(10,10,10,0.95)); border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+      display: none; z-index: 120; overflow: hidden; backdrop-filter: blur(6px) saturate(120%);
+    }
+    #floating-player.show { display: block; }
+    #floating-player .thumb { width: 100%; height: 120px; object-fit: cover; background:#111 }
+    #floating-player .meta { padding: 10px; color: #fff; display:flex; gap:8px; align-items:center }
+    #floating-player .meta .title { font-weight:700; font-size:14px; line-height:1.1; }
+    #floating-player .controls { margin-left:auto; display:flex; gap:8px; align-items:center }
+    #floating-player .controls button { background:rgba(255,255,255,0.06); border:0; color:#fff; padding:6px 8px; border-radius:8px; cursor:pointer }
+    #floating-player .close { position:absolute; top:6px; right:8px; background:transparent; border:0; color:rgba(255,255,255,0.8); font-size:16px; cursor:pointer }
   </style>
 </head>
 <body>
@@ -127,6 +140,59 @@
         container.innerHTML = `<div class="text-red-500">Failed to load archive: ${error.message}</div>`;
       }
     });
+  </script>
+  <!-- Floating player renderer for site pages -->
+  <div id="floating-player" aria-hidden="true">
+    <button class="close" aria-label="Close">✕</button>
+    <div class="thumb-wrap"><img id="floating-thumb" class="thumb" src="" alt=""></div>
+    <div class="meta">
+      <div>
+        <div id="floating-title" class="title"></div>
+        <div id="floating-sub" class="text-tuwa-muted text-xs"></div>
+      </div>
+      <div class="controls">
+        <button id="floating-play">Play</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function(){
+      function mountFloating(){
+        try {
+          const raw = localStorage.getItem('floatingVideo');
+          if (!raw) return;
+          const s = JSON.parse(raw);
+          if (!s || !s.src) return;
+          const el = document.getElementById('floating-player');
+          const thumb = document.getElementById('floating-thumb');
+          const title = document.getElementById('floating-title');
+          const floatingPlay = document.getElementById('floating-play');
+          const closeBtn = el.querySelector('.close');
+          thumb.src = s.poster || s.src;
+          title.textContent = s.title || 'Playing';
+          el.classList.add('show');
+
+          el.addEventListener('click', (ev)=>{
+            if (ev.target === floatingPlay || ev.target === closeBtn) return;
+            window.location.href = '/articles/' + encodeURIComponent(s.slug || '');
+          });
+
+          floatingPlay.addEventListener('click', (e)=>{
+            e.stopPropagation();
+            localStorage.setItem('floatingRequested', JSON.stringify({slug: s.slug, seek: s.currentTime || 0, play:true}));
+            window.location.href = '/articles/' + encodeURIComponent(s.slug || '');
+          });
+
+          closeBtn.addEventListener('click', (e)=>{
+            e.stopPropagation();
+            localStorage.removeItem('floatingVideo');
+            el.classList.remove('show');
+          });
+        } catch(e){}
+      }
+
+      window.addEventListener('DOMContentLoaded', ()=> setTimeout(mountFloating, 250));
+    })();
   </script>
 </body>
 </html>

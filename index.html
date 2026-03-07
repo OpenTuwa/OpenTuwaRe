@@ -248,5 +248,61 @@
       }
     });
 </script>
+<!-- Floating player renderer for site pages -->
+<div id="floating-player" aria-hidden="true">
+  <button class="close" aria-label="Close">✕</button>
+  <div class="thumb-wrap"><img id="floating-thumb" class="thumb" src="" alt=""></div>
+  <div class="meta">
+    <div>
+      <div id="floating-title" class="title"></div>
+      <div id="floating-sub" class="text-tuwa-muted text-xs"></div>
+    </div>
+    <div class="controls">
+      <button id="floating-play">Play</button>
+    </div>
+  </div>
+</div>
+<script>
+  (function(){
+    function mountFloating(){
+      try {
+        const raw = localStorage.getItem('floatingVideo');
+        if (!raw) return;
+        const s = JSON.parse(raw);
+        if (!s || !s.src) return;
+        const el = document.getElementById('floating-player');
+        const thumb = document.getElementById('floating-thumb');
+        const title = document.getElementById('floating-title');
+        const floatingPlay = document.getElementById('floating-play');
+        const closeBtn = el.querySelector('.close');
+        thumb.src = s.poster || s.src;
+        title.textContent = s.title || 'Playing';
+        el.classList.add('show');
+
+        // Click navigates back to original article and stores desired time
+        el.addEventListener('click', (ev)=>{
+          // avoid clicks from control buttons
+          if (ev.target === floatingPlay || ev.target === closeBtn) return;
+          window.location.href = '/articles/' + encodeURIComponent(s.slug || '') ;
+        });
+
+        floatingPlay.addEventListener('click', (e)=>{
+          e.stopPropagation();
+          // open article and indicate it should autoplay (we store flag)
+          localStorage.setItem('floatingRequested', JSON.stringify({slug: s.slug, seek: s.currentTime || 0, play:true}));
+          window.location.href = '/articles/' + encodeURIComponent(s.slug || '');
+        });
+
+        closeBtn.addEventListener('click', (e)=>{
+          e.stopPropagation();
+          localStorage.removeItem('floatingVideo');
+          el.classList.remove('show');
+        });
+      } catch(e){}
+    }
+    // Show only after small delay so it doesn't flash during quick navigation
+    window.addEventListener('DOMContentLoaded', ()=> setTimeout(mountFloating, 250));
+  })();
+</script>
 </body>
 </html>

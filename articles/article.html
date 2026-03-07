@@ -87,6 +87,29 @@
       transform: none;
       pointer-events: auto;
     }
+    /* Floating mini player */
+    #floating-player {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      width: 360px;
+      max-width: calc(100% - 48px);
+      height: 202px;
+      background: linear-gradient(180deg, rgba(10,10,10,0.85), rgba(10,10,10,0.95));
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+      display: none;
+      z-index: 120;
+      overflow: hidden;
+      backdrop-filter: blur(6px) saturate(120%);
+    }
+    #floating-player.show { display: block; }
+    #floating-player .thumb { width: 100%; height: 120px; object-fit: cover; background:#111 }
+    #floating-player .meta { padding: 10px; color: #fff; display:flex; gap:8px; align-items:center }
+    #floating-player .meta .title { font-weight:700; font-size:14px; line-height:1.1; }
+    #floating-player .controls { margin-left:auto; display:flex; gap:8px; align-items:center }
+    #floating-player .controls button { background:rgba(255,255,255,0.06); border:0; color:#fff; padding:6px 8px; border-radius:8px; cursor:pointer }
+    #floating-player .close { position:absolute; top:6px; right:8px; background:transparent; border:0; color:rgba(255,255,255,0.8); font-size:16px; cursor:pointer }
   </style>
 </head>
 <body class="selection-highlight">
@@ -328,6 +351,53 @@ avatarDiv.textContent = initials;
             // 5. Inject Body Content
             document.getElementById('article-content').innerHTML = article.content_html || '<p>No content available.</p>';
 
+            // If there's an HTML5 <video> in the content, wire up floating-player persistence
+            (function setupFloatingPersistence(){
+              try {
+                const videoEl = document.querySelector('#article-content video');
+                if (!videoEl) return;
+                const slugKey = slug;
+                const saveState = () => {
+                  try {
+                    const src = videoEl.currentSrc || videoEl.src || '';
+                    if (!src) return;
+                    const state = {
+                      slug: slugKey,
+                      src,
+                      currentTime: Math.floor(videoEl.currentTime || 0),
+                      playing: !videoEl.paused && !videoEl.ended,
+                      title: article.title || '',
+                      poster: videoEl.getAttribute('poster') || article.image_url || ''
+                    };
+                    localStorage.setItem('floatingVideo', JSON.stringify(state));
+                  } catch (e) {}
+                };
+
+                // Periodically save currentTime while playing
+                let saver = null;
+                videoEl.addEventListener('play', () => {
+                  saveState();
+                  if (saver) clearInterval(saver);
+                  saver = setInterval(saveState, 1000);
+                });
+                videoEl.addEventListener('pause', () => { saveState(); if (saver) clearInterval(saver); saver = null; });
+                videoEl.addEventListener('timeupdate', () => { /* light-weight */ });
+
+                // Save on page hide/unload
+                window.addEventListener('pagehide', saveState);
+                window.addEventListener('beforeunload', saveState);
+
+                // If returning from floating click, restore time
+                try {
+                  const floating = JSON.parse(localStorage.getItem('floatingVideo')||'null');
+                  if (floating && floating.slug === slugKey && floating.currentTime) {
+                    videoEl.currentTime = floating.currentTime;
+                    if (floating.playing) { videoEl.play().catch(()=>{}); }
+                  }
+                } catch(e){}
+              } catch(e){}
+            })();
+
             // Show article, hide loader
             statusEl.style.display = 'none';
             containerEl.style.display = 'block';
@@ -533,6 +603,99 @@ avatarDiv.textContent = initials;
             }
         });
     }
+  </script>
+  <!-- Floating player renderer for site pages (copied from index for consistency) -->
+  <div id="floating-player" aria-hidden="true">
+    <button class="close" aria-label="Close">✕</button>
+    <div class="thumb-wrap"><img id="floating-thumb" class="thumb" src="" alt=""></div>
+    <div class="meta">
+      <div>
+        <div id="floating-title" class="title"></div>
+        <div id="floating-sub" class="text-tuwa-muted text-xs"></div>
+      </div>
+      <div class="controls">
+        <button id="floating-play">Play</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function(){
+      function mountFloating(){
+        try {
+          const raw = localStorage.getItem('floatingVideo');
+          if (!raw) return;
+          const s = JSON.parse(raw);
+          if (!s || !s.src) return;
+          const el = document.getElementById('floating-player');
+          const thumb = document.getElementById('floating-thumb');
+          const title = document.getElementById('floating-title');
+          const floatingPlay = document.getElementById('floating-play');
+          const closeBtn = el.querySelector('.close');
+          thumb.src = s.poster || s.src;
+          title.textContent = s.title || 'Playing';
+          el.classList.add('show');
+
+          // Click navigates back to original article and stores desired time
+          el.addEventListener('click', (ev)=>{
+            if (ev.target === floatingPlay || ev.target === closeBtn) return;
+            window.location.href = '/articles/' + encodeURIComponent(s.slug || '');
+          });
+
+          floatingPlay.addEventListener('click', (e)=>{
+            e.stopPropagation();
+            localStorage.setItem('floatingRequested', JSON.stringify({slug: s.slug, seek: s.currentTime || 0, play:true}));
+            window.location.href = '/articles/' + encodeURIComponent(s.slug || '');
+          });
+
+          closeBtn.addEventListener('click', (e)=>{
+            e.stopPropagation();
+            localStorage.removeItem('floatingVideo');
+            el.classList.remove('show');
+          });
+        } catch(e){}
+      }
+
+      // On article pages, also handle floatingRequested when arriving from floating player
+      function handleFloatingRequestedOnArticle(){
+        try {
+          const reqRaw = localStorage.getItem('floatingRequested');
+          if (!reqRaw) return;
+          const req = JSON.parse(reqRaw);
+          if (!req || !req.slug) return;
+          // Only act if we're on the requested slug page
+          const pathSegments = window.location.pathname.split('/').filter(Boolean);
+          const currentSlug = pathSegments[pathSegments.length - 1] || '';
+          if (currentSlug !== req.slug) return;
+
+          // Find first video in article content
+          const vid = document.querySelector('#article-content video');
+          if (!vid) {
+            // remove request if no video to avoid sticking
+            localStorage.removeItem('floatingRequested');
+            return;
+          }
+
+          // Seek and play as requested
+          if (typeof req.seek === 'number') {
+            try { vid.currentTime = Math.max(0, req.seek); } catch(e){}
+          }
+          if (req.play) {
+            vid.play().catch(()=>{});
+          }
+
+          // Clean up the request after applying
+          localStorage.removeItem('floatingRequested');
+        } catch(e){}
+      }
+
+      window.addEventListener('DOMContentLoaded', ()=>{
+        // Small delay to avoid flash
+        setTimeout(()=>{
+          mountFloating();
+          handleFloatingRequestedOnArticle();
+        }, 250);
+      });
+    })();
   </script>
 </body>
 </html>
