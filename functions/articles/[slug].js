@@ -1,5 +1,15 @@
 export async function onRequestGet(context) {
   const { env, params, request } = context;
+  // Detect common crawler user-agents; only return prerendered HTML for bots
+  const ua = (request && request.headers && request.headers.get('user-agent')) || '';
+  const botRegex = /(facebookexternalhit|facebot|twitterbot|linkedinbot|slackbot|telegrambot|whatsapp|googlebot|bingbot|duckduckbot|applebot)/i;
+  if (!botRegex.test(ua)) {
+    if (context && typeof context.next === 'function') {
+      return await context.next();
+    }
+    // If we cannot delegate, let the browser handle (avoid returning prerender HTML)
+    return new Response(null, { status: 204 });
+  }
   try {
     const slug = params.slug;
     const { results } = await env.DB.prepare("SELECT * FROM articles WHERE slug = ?").bind(slug).all();
