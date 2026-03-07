@@ -19,6 +19,27 @@ export async function onRequestGet(context) {
     const title = article.title || 'Article';
     const description = article.seo_description || article.subtitle || (article.excerpt || '');
     const image = article.image_url || '';
+    const imageAlt = article.image_alt || article.image_description || title;
+    const authorName = article.author_name || article.author || 'OpenTuwa';
+    const publishedAt = article.published_at || article.created_at || article.date_published || '';
+    const updatedAt = article.updated_at || article.modified_at || article.date_updated || publishedAt;
+    // build images array (support a JSON field or single image_url)
+    let images = [];
+    try {
+      if (article.images_json) {
+        const parsed = typeof article.images_json === 'string' ? JSON.parse(article.images_json) : article.images_json;
+        if (Array.isArray(parsed)) images = parsed.filter(Boolean);
+      }
+    } catch (e) { images = []; }
+    if (!images.length && image) images = [image];
+    // keywords/tags
+    let keywords = '';
+    try {
+      if (article.tags) {
+        if (Array.isArray(article.tags)) keywords = article.tags.join(', ');
+        else if (typeof article.tags === 'string') keywords = article.tags;
+      }
+    } catch (e) { keywords = ''; }
 
     // Detect inline video or iframe sources in content_html (for social players)
     let videoSrc = '';
@@ -117,17 +138,26 @@ export async function onRequestGet(context) {
     const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
       <title>${escapeHtml(title)} | OpenTuwa</title>
       <meta name="description" content="${escapeHtml(description)}">
+      <meta name="robots" content="index, follow, max-image-preview:large">
+      ${keywords ? `<meta name="keywords" content="${escapeHtml(keywords)}">` : ''}
+      ${images && images.length ? `<meta property="og:image" content="${escapeHtml(images[0])}">` : ''}
+      ${images && images.length && imageAlt ? `<meta property="og:image:alt" content="${escapeHtml(imageAlt)}">` : ''}
       <meta property="og:type" content="article">
       <meta property="og:title" content="${escapeHtml(title)}">
       <meta property="og:description" content="${escapeHtml(description)}">
-      ${image ? `<meta property="og:image" content="${escapeHtml(image)}">` : ''}
+      ${images && images.length ? images.map(img=>`<meta property="og:image" content="${escapeHtml(img)}">`).join('') : ''}
       ${videoMeta}
       <meta property="og:url" content="${escapeHtml(url)}">
-      <meta name="twitter:card" content="${image ? 'summary_large_image' : 'summary'}">
+      <meta name="twitter:card" content="${images && images.length ? 'summary_large_image' : 'summary'}">
       <meta name="twitter:title" content="${escapeHtml(title)}">
       <meta name="twitter:description" content="${escapeHtml(description)}">
-      ${image ? `<meta name="twitter:image" content="${escapeHtml(image)}">` : ''}
+      ${images && images.length ? `<meta name="twitter:image" content="${escapeHtml(images[0])}">` : ''}
+      ${images && images.length && imageAlt ? `<meta name="twitter:image:alt" content="${escapeHtml(imageAlt)}">` : ''}
       <link rel="canonical" href="${escapeHtml(url)}">
+      <!-- Structured data for Article / VideoObject to help search engines and AI understand content -->
+      <script type="application/ld+json">${JSON.stringify(buildJsonLd({
+        url, title, description, images, authorName, publishedAt, updatedAt, keywords, videoSrc
+      }))}</script>
     </head><body>
       <main style="font-family:Arial,Helvetica,sans-serif;max-width:800px;margin:4rem auto;padding:1rem;">
         <h1>${escapeHtml(title)}</h1>
@@ -150,4 +180,58 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function isoDate(val) {
+  if (!val) return undefined;
+  try {
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return undefined;
+    return d.toISOString();
+  } catch (e) { return undefined; }
+}
+
+function stripHtml(html) {
+  if (!html) return '';
+  return String(html).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function buildJsonLd(opts) {
+  const { url, title, description, images, authorName, publishedAt, updatedAt, keywords, videoSrc } = opts || {};
+  const origin = (() => { try { return new URL(url).origin; } catch (e) { return ''; } })();
+  const ld = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    'mainEntityOfPage': { '@type': 'WebPage', '@id': url },
+    'headline': title,
+    'description': description,
+    'image': images && images.length ? images : undefined,
+    'author': { '@type': 'Person', 'name': authorName },
+    'publisher': {
+      '@type': 'Organization',
+      'name': 'OpenTuwa',
+      'logo': { '@type': 'ImageObject', 'url': origin ? (origin + '/img/logo.png') : undefined }
+    },
+    'datePublished': isoDate(publishedAt),
+    'dateModified': isoDate(updatedAt),
+    'keywords': keywords || undefined,
+    'articleBody': stripHtml(description || '')
+  };
+  // add video object when available
+  if (videoSrc) {
+    const v = { '@type': 'VideoObject', 'name': title, 'description': description };
+    v.contentUrl = videoSrc;
+    v.embedUrl = videoSrc;
+    // derive a sensible thumbnail
+    if (/youtube\.com|youtu\.be/.test(videoSrc)) {
+      // try to extract id
+      const m = videoSrc.match(/(?:embed\/|v=|youtu\.be\/)([A-Za-z0-9_-]+)/);
+      if (m && m[1]) v.thumbnailUrl = [`https://img.youtube.com/vi/${m[1]}/maxresdefault.jpg`];
+    }
+    if (!v.thumbnailUrl && images && images.length) v.thumbnailUrl = [images[0]];
+    if (isoDate(publishedAt)) v.uploadDate = isoDate(publishedAt);
+    ld.video = v;
+  }
+  // remove undefined values by stringify-reparse trick
+  return JSON.parse(JSON.stringify(ld));
 }
