@@ -490,8 +490,8 @@ avatarDiv.textContent = initials;
               return secs;
             }
 
-            // Execute
-            initHybridSubtitles();
+// Execute only after the HTML is fully loaded
+document.addEventListener('DOMContentLoaded', initHybridSubtitles);
             // --- End Init Tuwa Hybrid Subtitles ---
 
             // Show article, hide loader
