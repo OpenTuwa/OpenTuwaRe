@@ -1,144 +1,208 @@
 <!DOCTYPE html>
-<html class="scroll-smooth" lang="en">
+<html class="scroll-smooth antialiased" lang="en">
 <head>
   <meta charset="utf-8"/>
   <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
   <title>OpenTuwa | Reading</title>
+  
   <link href="https://fonts.googleapis.com" rel="preconnect"/>
   <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet"/>
-  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet"/>
+  
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries,typography"></script>
+  
   <script>
-    tailwind.config = { theme: { extend: { colors: { 'tuwa-black': '#0a0a0b', 'tuwa-gray': '#161618', 'tuwa-text': '#e5e5e5', 'tuwa-muted': '#a1a1aa', 'tuwa-accent': '#3b82f6', 'tuwa-gold': '#d4af37' }, fontFamily: { sans: ['Inter', 'sans-serif'], heading: ['Plus Jakarta Sans', 'sans-serif'] }, lineHeight: { 'article': '1.8' } } } }
+    tailwind.config = { 
+      theme: { 
+        extend: { 
+          colors: { 
+            'tuwa-black': '#050505', 
+            'tuwa-gray': '#111111', 
+            'tuwa-text': '#e5e5e5', 
+            'tuwa-muted': '#a1a1aa', 
+            'tuwa-accent': '#3b82f6', 
+            'tuwa-gold': '#d4af37' 
+          }, 
+          fontFamily: { 
+            sans: ['Inter', 'sans-serif'], 
+            heading: ['Plus Jakarta Sans', 'sans-serif'] 
+          },
+          typography: (theme) => ({
+            DEFAULT: {
+              css: {
+                color: theme('colors.tuwa-text'),
+                a: {
+                  color: theme('colors.tuwa-accent'),
+                  '&:hover': { color: theme('colors.blue.400') },
+                },
+                h1: { fontFamily: theme('fontFamily.heading').join(', '), color: '#fff', letterSpacing: '-0.025em' },
+                h2: { fontFamily: theme('fontFamily.heading').join(', '), color: '#fff', letterSpacing: '-0.025em' },
+                h3: { fontFamily: theme('fontFamily.heading').join(', '), color: '#fff' },
+                strong: { color: '#fff' },
+                blockquote: { 
+                  borderLeftColor: theme('colors.tuwa-accent'), 
+                  color: theme('colors.tuwa-muted'),
+                  fontStyle: 'italic',
+                  backgroundColor: theme('colors.white/5'),
+                  padding: '1rem',
+                  borderRadius: '0 0.5rem 0.5rem 0'
+                },
+                code: { color: theme('colors.tuwa-accent'), backgroundColor: theme('colors.white/5'), padding: '0.2rem 0.4rem', borderRadius: '0.25rem', fontWeight: '400' },
+                'code::before': { content: '""' },
+                'code::after': { content: '""' },
+              },
+            },
+          }),
+        } 
+      } 
+    }
   </script>
   <style>
-    body { background-color: #0a0a0b; color: #e5e5e5; -webkit-font-smoothing: antialiased; }
-    h1, h2, h3, h4 { font-family: 'Plus Jakarta Sans', sans-serif; letter-spacing: -0.02em; }
-    .article-content p { margin-bottom: 2rem; font-size: 1.125rem; }
-    .selection-highlight::selection { background: #3b82f6; color: white; }
-    .article-content img, .article-content video, .article-content iframe { max-width: 100%; height: auto; border-radius: 0.75rem; margin: 2rem 0; }
-    .glass-header { backdrop-filter: blur(12px); background-color: rgba(10, 10, 11, 0.8); border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
-    .hero-gradient-overlay { background: linear-gradient(to bottom, transparent 0%, #0a0a0b 100%); }
-    .tag-hover:hover { border-color: #3b82f6; color: #3b82f6; }
+    body { background-color: var(--tuwa-black, #050505); color: #e5e5e5; }
+    ::selection { background: #3b82f6; color: #fff; }
+    
+    .glass-header {
+      background: rgba(5, 5, 5, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    #progress-bar {
+      transform-origin: 0% 50%;
+      transform: scaleX(0);
+      transition: transform 0.1s ease-out;
+    }
+    
+    .fade-in { animation: fadeIn 0.8s ease-out forwards; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 </head>
-<body class="selection-highlight">
-  <header class="fixed top-0 w-full z-50 glass-header">
-    <nav class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-      <div class="flex items-center space-x-8">
-        <a class="text-2xl font-extrabold tracking-tighter font-heading text-white" href="/">TUWA</a>
-        <div class="hidden md:flex space-x-6 text-sm font-medium text-tuwa-muted">
-          <a class="hover:text-white transition-colors" href="/">Stories</a>
-          <a class="hover:text-white transition-colors" href="#">Lab</a>
-          <a class="hover:text-white transition-colors" href="/archive.html">Archive</a>
-        </div>
-      </div>
-    </nav>
+<body class="min-h-screen flex flex-col font-sans">
+
+  <div class="fixed top-0 left-0 w-full h-1 bg-tuwa-gray z-[60]">
+    <div id="progress-bar" class="h-full bg-tuwa-accent shadow-[0_0_10px_rgba(59,130,246,0.8)] w-full"></div>
+  </div>
+
+  <header class="glass-header sticky top-0 z-50">
+    <div class="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-2 group text-sm font-medium text-tuwa-muted hover:text-white transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+        Back to Stories
+      </a>
+      <button class="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 flex items-center justify-center text-tuwa-muted hover:text-white transition-colors" onclick="navigator.clipboard.writeText(window.location.href); alert('Link copied!')">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+      </button>
+    </div>
   </header>
 
-  <main>
-    <div id="status" class="py-40 text-center text-tuwa-muted"><h2 class="text-2xl font-bold animate-pulse">Loading article...</h2></div>
-    <div id="article-container" style="display: none;">
-        <section id="hero-section" class="relative w-full h-[80vh] overflow-hidden">
-          <img id="hero-img" alt="Article Hero" class="w-full h-full object-cover transform scale-105" src=""/>
-          <div class="absolute inset-0 hero-gradient-overlay"></div>
-        </section>
-        <section class="relative -mt-40 z-10 px-6">
-          <div class="max-w-4xl mx-auto text-center">
-            <div id="badge-container" class="flex flex-wrap justify-center gap-3 mb-8"></div>
-            <h1 id="article-title" class="text-5xl md:text-7xl font-extrabold mb-6 leading-[1.1]"></h1>
-            <p id="article-subtitle" class="text-xl md:text-2xl text-tuwa-muted font-light max-w-2xl mx-auto leading-relaxed"></p>
-            <div class="mt-12 flex items-center justify-center space-x-4 border-y border-white/5 py-8 flex-wrap gap-y-4">
-              <div class="flex items-center space-x-3">
-                <div id="author-initials" class="w-10 h-10 rounded-full bg-tuwa-accent flex items-center justify-center font-bold text-xs text-white uppercase"></div>
-                <div class="text-left">
-                  <p id="author-name" class="text-sm font-semibold text-white"></p>
-                  <p class="text-xs text-tuwa-muted">Author</p>
-                </div>
-              </div>
-              <div class="hidden sm:block h-8 w-[1px] bg-white/10"></div>
-              <div class="text-left">
-                <p id="article-date" class="text-sm font-semibold text-white"></p>
-                <p id="article-read-time" class="text-xs text-tuwa-muted"></p>
-              </div>
-            </div>
-          </div>
-        </section>
-        <article id="article-content" class="max-w-[720px] mx-auto px-6 py-20 article-content text-tuwa-text"></article>
-    </div>
+  <div id="loading-state" class="flex-grow flex items-center justify-center min-h-[60vh]">
+    <div class="w-8 h-8 border-2 border-tuwa-gray border-t-tuwa-accent rounded-full animate-spin"></div>
+  </div>
 
-    <section class="bg-tuwa-gray py-24 px-6 border-t border-white/5">
-      <div class="max-w-3xl mx-auto text-center">
-        <h2 class="text-4xl font-bold mb-6 text-white">Stay Ahead of the Curve</h2>
-        <form onsubmit="handleSubscribe(event)" class="flex flex-col md:flex-row gap-4 justify-center">
-          <input type="email" required class="bg-tuwa-black border border-white/10 rounded-full px-8 py-4 w-full md:w-96 text-white focus:outline-none focus:border-tuwa-accent transition-all" placeholder="Enter your email"/>
-          <button type="submit" class="bg-tuwa-accent hover:bg-blue-600 text-white font-bold py-4 px-10 rounded-full transition-all">Join the Lab</button>
-        </form>
+  <main id="article-container" class="flex-grow max-w-3xl mx-auto w-full px-6 py-12 md:py-20 hidden">
+    
+    <header class="mb-12 md:mb-16 text-center fade-in">
+      <div id="tags-container" class="flex flex-wrap justify-center gap-2 mb-6"></div>
+      
+      <h1 id="article-title" class="text-4xl md:text-5xl lg:text-6xl font-heading font-bold text-white mb-6 tracking-tight leading-[1.15]"></h1>
+      <p id="article-subtitle" class="text-xl text-tuwa-muted mb-8 leading-relaxed max-w-2xl mx-auto"></p>
+      
+      <div class="flex items-center justify-center py-6 border-y border-white/10">
+        <div class="w-12 h-12 rounded-full bg-tuwa-gray border border-white/10 flex items-center justify-center text-lg font-heading font-bold text-white mr-4" id="author-initials"></div>
+        <div class="text-left">
+          <div id="author-name" class="font-medium text-white text-base"></div>
+          <div class="text-sm text-tuwa-muted flex items-center gap-2 mt-0.5">
+            <span id="article-date"></span>
+            <span class="w-1 h-1 rounded-full bg-tuwa-muted/50"></span>
+            <span id="article-read-time"></span>
+          </div>
+        </div>
       </div>
-    </section>
+    </header>
+
+    <article id="article-content" class="prose prose-invert prose-lg md:prose-xl max-w-none fade-in" style="animation-delay: 0.2s; opacity: 0;"></article>
+
   </main>
 
-  <footer class="py-12 px-6 border-t border-white/5">
-    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
-      <div class="text-xl font-extrabold font-heading text-white">TUWA</div>
-      <div class="flex space-x-8 text-xs font-bold tracking-widest uppercase text-tuwa-muted">
-        <a class="hover:text-white transition-colors" href="https://opentuware.pages.dev/legal/" target="_blank">Privacy</a>
-        <a class="hover:text-white transition-colors" href="https://x.com/OpenTuwa" target="_blank">Twitter</a>
-      </div>
+  <footer class="border-t border-white/5 py-12 mt-20 bg-tuwa-gray/30">
+    <div class="max-w-3xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
+      <a href="/" class="text-tuwa-accent font-medium hover:text-blue-400 transition-colors">← Read more stories</a>
+      <p class="text-tuwa-muted text-sm">© 2026 Tuwa Media</p>
     </div>
   </footer>
 
   <script>
-    async function handleSubscribe(e) {
-        e.preventDefault();
-        const btn = e.target.querySelector('button');
-        const input = e.target.querySelector('input');
-        const ogText = btn.textContent;
-        btn.textContent = 'Joining...';
-        try {
-            const res = await fetch('/api/subscribe', { method: 'POST', body: JSON.stringify({ email: input.value }) });
-            if (res.ok) { btn.textContent = 'Subscribed!'; btn.classList.add('bg-green-500'); input.value = ''; }
-        } catch (err) { btn.textContent = 'Error'; }
-        setTimeout(() => { if(btn.textContent==='Error') btn.textContent = ogText; }, 3000);
-    }
+    // Scroll Progress Bar Logic
+    window.addEventListener('scroll', () => {
+      const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const scrolled = (winScroll / height);
+      document.getElementById('progress-bar').style.transform = `scaleX(${scrolled})`;
+    });
 
     document.addEventListener('DOMContentLoaded', async () => {
         const pathSegments = window.location.pathname.split('/').filter(Boolean);
-        const slug = pathSegments[pathSegments.length - 1] || 'default-slug';
-        const statusEl = document.getElementById('status');
+        const slug = pathSegments[pathSegments.length - 1]; 
+
+        const statusEl = document.getElementById('loading-state');
         const containerEl = document.getElementById('article-container');
 
+        if (!slug || slug.includes('.html')) {
+            statusEl.innerHTML = `
+              <div class="text-center">
+                <h2 class="text-2xl font-bold text-white mb-2">Welcome</h2>
+                <p class="text-tuwa-muted">Select an article from the homepage.</p>
+                <a href="/" class="text-tuwa-accent mt-4 inline-block hover:underline">Go to Stories</a>
+              </div>`;
+            return;
+        }
+
         try {
-            const response = await fetch(`/api/article/${slug}`);
-            if (!response.ok) throw new Error('Article could not be found.');
+            const response = await fetch(`/api/articles/${slug}`);
+            if (!response.ok) throw new Error(response.status === 404 ? 'Article not found.' : 'Failed to load article.');
             const article = await response.json();
 
-            document.title = `${article.title || 'Article'} | OpenTuwa`;
+            // Populate Metadata
+            document.title = `${article.title} | OpenTuwa`;
             document.getElementById('article-title').textContent = article.title;
-            if (article.subtitle) document.getElementById('article-subtitle').textContent = article.subtitle;
-
-            const heroSection = document.getElementById('hero-section');
-            if (article.image_url && article.image_url.trim() !== '') {
-                document.getElementById('hero-img').src = article.image_url;
-                heroSection.style.display = 'block';
-            } else { heroSection.style.display = 'none'; }
-
-            if (article.tags) {
-                document.getElementById('badge-container').innerHTML = article.tags.split(',').map(tag => `<a href="/?tag=${encodeURIComponent(tag.trim())}" class="px-3 py-1 border border-white/10 rounded-full text-[10px] tracking-widest font-bold uppercase tag-hover text-white transition-colors inline-block decoration-none">${tag.trim()}</a>`).join('');
+            
+            if (article.subtitle) {
+              document.getElementById('article-subtitle').textContent = article.subtitle;
+            } else {
+              document.getElementById('article-subtitle').style.display = 'none';
             }
 
+            // Tags formatting
+            if (article.tags) {
+                document.getElementById('tags-container').innerHTML = article.tags.split(',').map(tag => 
+                    `<span class="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[11px] tracking-widest font-bold uppercase text-tuwa-accent transition-colors inline-block decoration-none">${tag.trim()}</span>`
+                ).join('');
+            }
+
+            // Author formatting
             const authorName = article.author || 'Tuwa Media';
-            document.getElementById('author-name').innerHTML = `<a href="/?author=${encodeURIComponent(authorName)}" class="text-white hover:text-tuwa-accent transition-colors decoration-none">${authorName}</a>`;
+            document.getElementById('author-name').innerHTML = authorName;
             document.getElementById('author-initials').textContent = authorName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
             
             document.getElementById('article-date').textContent = article.published_at ? new Date(article.published_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Recently published';
             document.getElementById('article-read-time').textContent = `${article.read_time_minutes || 5} min read`;
+            
+            // Content injection (Tailwind 'prose' will style this automatically!)
             document.getElementById('article-content').innerHTML = article.content_html || '<p>No content available.</p>';
 
+            // UI Swap
             statusEl.style.display = 'none';
             containerEl.style.display = 'block';
+            containerEl.classList.remove('hidden');
+
         } catch (error) {
-            statusEl.innerHTML = `<div class="max-w-md mx-auto"><h2 class="text-3xl font-bold text-red-500 mb-4">Oops!</h2><p class="mb-6">${error.message}</p><a href="/" class="text-tuwa-accent hover:underline font-medium">← Back Home</a></div>`;
+            statusEl.innerHTML = `
+              <div class="max-w-md mx-auto text-center">
+                  <h2 class="text-3xl font-heading font-bold text-white mb-4">Oops!</h2>
+                  <p class="text-tuwa-muted mb-6">${error.message}</p>
+                  <a href="/" class="px-6 py-2 bg-tuwa-accent text-white rounded-full hover:bg-blue-600 transition-colors inline-block font-medium">← Back to Home</a>
+              </div>`;
         }
     });
   </script>
