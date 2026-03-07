@@ -128,10 +128,17 @@
           </div>
         </section>
         <article id="article-content" class="max-w-[720px] mx-auto px-6 py-20 article-content text-tuwa-text" data-purpose="main-story-content">
-            </article>
+          </article>
+
+        <!-- Recommended Articles -->
+        <section id="recommended-section" class="max-w-4xl mx-auto px-6 pb-20">
+          <h3 class="text-2xl font-bold text-white mb-6">Recommended For You</h3>
+          <div id="recommended-articles" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
+        </section>
+
         </div>
 
-    <section class="bg-tuwa-gray py-24 px-6 border-t border-white/5" data-purpose="subscription-cta">
+      <section class="bg-tuwa-gray py-24 px-6 border-t border-white/5" data-purpose="subscription-cta">
       <div class="max-w-3xl mx-auto text-center">
         <h2 class="text-4xl font-bold mb-6 text-white">Stay Ahead of the Curve</h2>
         <p class="text-tuwa-muted mb-10 text-lg">Join thinkers and researchers receiving our daily deep-dives into the view of the world.</p>
@@ -252,6 +259,43 @@ avatarDiv.textContent = initials;
             // Show article, hide loader
             statusEl.style.display = 'none';
             containerEl.style.display = 'block';
+
+            // Fetch recommended articles (exclude current slug) and render up to 3 suggestions
+            try {
+              const listRes = await fetch('/api/article');
+              if (listRes.ok) {
+                let others = await listRes.json();
+                // Remove current article by slug
+                others = others.filter(a => a.slug && a.slug !== slug);
+                // Sort by published_at (most recent first) when available
+                others.sort((a,b) => {
+                  const da = a.published_at ? new Date(a.published_at).getTime() : 0;
+                  const db = b.published_at ? new Date(b.published_at).getTime() : 0;
+                  return db - da;
+                });
+                const picks = others.slice(0, 3);
+                const container = document.getElementById('recommended-articles');
+                if (picks.length === 0) {
+                  container.innerHTML = '<div class="col-span-full text-tuwa-muted">No recommendations available.</div>';
+                } else {
+                  container.innerHTML = picks.map(a => {
+                    const img = (a.image_url && a.image_url.trim() !== '') ? a.image_url : 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop';
+                    const dateStr = a.published_at ? new Date(a.published_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+                    return `
+                      <a href="/articles/${a.slug}" class="block rounded-xl overflow-hidden bg-tuwa-gray border border-white/5 p-4 hover:shadow-lg transition-shadow">
+                      <div class="w-full h-40 mb-3 overflow-hidden rounded-md">
+                        <img src="${img}" alt="${a.title}" class="w-full h-full object-cover">
+                      </div>
+                      <h4 class="text-lg font-bold text-white mb-1">${a.title}</h4>
+                      <div class="text-xs text-tuwa-muted">${dateStr} • ${a.read_time_minutes || 5} min</div>
+                      </a>
+                    `;
+                  }).join('');
+                }
+              }
+            } catch (e) {
+              console.warn('Failed to load recommendations', e);
+            }
 
         } catch (error) {
             statusEl.innerHTML = `
