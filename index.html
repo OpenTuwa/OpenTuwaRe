@@ -1,173 +1,190 @@
 <!DOCTYPE html>
-<html class="scroll-smooth antialiased" lang="en">
+<html class="scroll-smooth" lang="en">
 <head>
   <meta charset="utf-8"/>
   <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
   <title>OpenTuwa | Stories</title>
-  
   <link href="https://fonts.googleapis.com" rel="preconnect"/>
   <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet"/>
-  
-  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries,typography"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <script>
-    tailwind.config = { 
-      theme: { 
-        extend: { 
-          colors: { 
-            'tuwa-black': '#050505', // Slightly deeper black for better OLED contrast
-            'tuwa-gray': '#111111', 
-            'tuwa-text': '#e5e5e5', 
-            'tuwa-muted': '#a1a1aa', 
-            'tuwa-accent': '#3b82f6', 
-            'tuwa-gold': '#d4af37' 
-          }, 
-          fontFamily: { 
-            sans: ['Inter', 'sans-serif'], 
-            heading: ['Plus Jakarta Sans', 'sans-serif'] 
-          },
-          animation: {
-            'fade-in-up': 'fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-          },
-          keyframes: {
-            fadeInUp: {
-              '0%': { opacity: '0', transform: 'translateY(20px)' },
-              '100%': { opacity: '1', transform: 'translateY(0)' },
-            }
-          }
-        } 
-      } 
-    }
+    tailwind.config = { theme: { extend: { colors: { 'tuwa-black': '#0a0a0b', 'tuwa-gray': '#161618', 'tuwa-text': '#e5e5e5', 'tuwa-muted': '#a1a1aa', 'tuwa-accent': '#3b82f6', 'tuwa-gold': '#d4af37' }, fontFamily: { sans: ['Inter', 'sans-serif'], heading: ['Plus Jakarta Sans', 'sans-serif'] } } } }
   </script>
   <style>
-    body { background-color: var(--tuwa-black, #050505); color: #e5e5e5; }
-    ::selection { background: #3b82f6; color: #fff; }
-    
-    /* Premium Glassmorphism */
-    .glass-header {
-      background: rgba(5, 5, 5, 0.75);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    }
-
-    /* Cinematic Card Hover */
-    .card-hover {
-      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .card-hover:hover {
-      transform: translateY(-4px);
-    }
+    body { background-color: #0a0a0b; color: #e5e5e5; -webkit-font-smoothing: antialiased; }
+    .glass-header { backdrop-filter: blur(12px); background-color: rgba(10, 10, 11, 0.8); border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+    .card-hover:hover img { transform: scale(1.05); }
   </style>
 </head>
-<body class="min-h-screen flex flex-col selection:bg-tuwa-accent selection:text-white font-sans">
-
-  <header class="glass-header sticky top-0 z-50 transition-all duration-300">
-    <div class="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
-      <a href="/" class="flex items-center gap-2 group">
-        <div class="w-8 h-8 rounded-lg bg-white flex items-center justify-center group-hover:bg-tuwa-accent transition-colors duration-300 shadow-[0_0_15px_rgba(255,255,255,0.2)]">
-          <span class="text-black font-heading font-bold text-lg group-hover:text-white transition-colors duration-300">T</span>
+<body>
+  <header class="fixed top-0 w-full z-50 glass-header">
+    <nav class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+      <div class="flex items-center space-x-8">
+        <a class="text-2xl font-extrabold tracking-tighter font-heading text-white" href="/">Tuwa</a>
+        <div class="hidden md:flex space-x-6 text-sm font-medium text-tuwa-muted">
+          <a class="text-white transition-colors" href="/">Stories</a>
+          <a class="hover:text-white transition-colors" href="/archive.html">Archive</a>
         </div>
-        <span class="font-heading font-bold text-xl tracking-tight text-white group-hover:text-tuwa-accent transition-colors duration-300">OpenTuwa</span>
-      </a>
-      <nav class="hidden md:flex gap-8 text-sm font-medium text-tuwa-muted">
-        <a href="/" class="text-white transition-colors">Stories</a>
-        <a href="#" class="hover:text-white transition-colors">Topics</a>
-        <a href="#" class="hover:text-white transition-colors">About</a>
-      </nav>
-    </div>
+      </div>
+    </nav>
   </header>
 
-  <main class="flex-grow max-w-6xl mx-auto w-full px-6 py-16">
-    
-    <div class="mb-16 animate-fade-in-up">
-      <h1 class="text-4xl md:text-5xl font-heading font-bold text-white mb-4 tracking-tight">Latest Stories</h1>
-      <p class="text-lg text-tuwa-muted max-w-2xl leading-relaxed">Explore the latest thoughts, tutorials, and insights from the OpenTuwa network.</p>
+  <main class="pt-32 pb-20 px-6 max-w-7xl mx-auto min-h-screen">
+    <div id="header-block" class="mb-16 border-b border-white/5 pb-10">
+      <h1 id="page-title" class="text-5xl md:text-6xl font-extrabold font-heading text-white mb-4">Latest Stories</h1>
+      <p id="page-subtitle" class="text-xl text-tuwa-muted">Insights, deep dives, and perspectives from the OpenTuwa network.</p>
     </div>
-
-    <div id="articles-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
-      <div class="animate-pulse">
-        <div class="w-full h-64 bg-tuwa-gray rounded-2xl mb-6"></div>
-        <div class="h-4 bg-tuwa-gray rounded w-1/4 mb-4"></div>
-        <div class="h-8 bg-tuwa-gray rounded w-3/4 mb-4"></div>
-        <div class="h-4 bg-tuwa-gray rounded w-full mb-2"></div>
-        <div class="h-4 bg-tuwa-gray rounded w-2/3"></div>
-      </div>
-      <div class="animate-pulse hidden md:block">
-        <div class="w-full h-64 bg-tuwa-gray rounded-2xl mb-6"></div>
-        <div class="h-4 bg-tuwa-gray rounded w-1/4 mb-4"></div>
-        <div class="h-8 bg-tuwa-gray rounded w-3/4 mb-4"></div>
-      </div>
+    <div id="articles-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+      <div class="col-span-full py-20 text-center text-tuwa-muted animate-pulse">Loading stories...</div>
     </div>
-
   </main>
 
-  <footer class="border-t border-white/5 py-12 mt-12 bg-tuwa-gray/30">
-    <div class="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
-      <p class="text-tuwa-muted text-sm">© 2026 Tuwa Media. All rights reserved.</p>
-      <div class="flex gap-6 text-sm text-tuwa-muted">
-        <a href="#" class="hover:text-white transition-colors">Twitter</a>
-        <a href="#" class="hover:text-white transition-colors">GitHub</a>
-      </div>
+  <section class="bg-tuwa-gray py-24 px-6 border-t border-white/5">
+    <div class="max-w-3xl mx-auto text-center">
+      <h2 class="text-4xl font-bold mb-6 text-white">Stay Ahead of the Curve</h2>
+      <p class="text-tuwa-muted mb-10 text-lg">Join thinkers and audience receiving our deep-dives.</p>
+      <form onsubmit="handleSubscribe(event)" class="flex flex-col md:flex-row gap-4 justify-center">
+        <input type="email" required class="bg-tuwa-black border border-white/10 rounded-full px-8 py-4 w-full md:w-96 text-white focus:outline-none focus:border-tuwa-accent transition-all" placeholder="Enter your email"/>
+        <button type="submit" class="bg-tuwa-accent hover:bg-blue-600 text-white font-bold py-4 px-10 rounded-full transition-all">Join the Lab</button>
+      </form>
     </div>
-  </footer>
+  </section>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', async () => {
-      const grid = document.getElementById('articles-grid');
-      
-      try {
-        const response = await fetch('/api/articles');
-        if (!response.ok) throw new Error('Failed to fetch');
-        
-        const articles = await response.json();
-        if (!articles.length) {
-          grid.innerHTML = '<p class="text-tuwa-muted text-lg col-span-full py-10">No stories found. Check back soon!</p>';
-          return;
+  <footer class="py-12 px-6 border-t border-white/5">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
+      <div class="text-xl font-extrabold font-heading text-white">OpenTuwa</div>
+      <div class="flex space-x-8 text-xs font-bold tracking-widest uppercase text-tuwa-muted">
+        <a class="hover:text-white transition-colors" href="https://opentuware.pages.dev/legal/" target="_blank">Legal</a>
+                
+
+
+      </div>
+      <div class="text-xs text-tuwa-muted">© 2026 OpenTuwa Foundation. All rights reserved.</div>
+    </div>
+<div class="social-links">
+                <a href="https://x.com/OpenTuwa" target="_blank" rel="noopener noreferrer" class="social-icon" aria-label="Follow us on X">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/>
+                    </svg>
+                </a>
+</div>
+  </footer>
+<style>
+        .social-links {
+            display: flex;
+            gap: 12px;
         }
 
-        grid.innerHTML = articles.map((article, index) => {
-          const dateStr = article.published_at ? new Date(article.published_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
-          const tagsHtml = article.tags ? article.tags.split(',').slice(0, 2).map(tag => 
-            `<span class="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] tracking-wider font-bold uppercase text-white/80">${tag.trim()}</span>`
-          ).join('<span class="w-2"></span>') : '';
+.social-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            color: var(--text);
+            text-decoration: none;
+            transition: var(--transition-smooth);
+        }
 
-          const imgUrl = article.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop';
+        .social-icon:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: var(--accent);
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
+        }
+
+        .social-icon svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        .social-icon img {
+            width: 20px;
+            height: 20px;
+            object-fit: contain;
+        }
+</style>
+
+  <script>
+    async function handleSubscribe(e) {
+        e.preventDefault();
+        const btn = e.target.querySelector('button');
+        const input = e.target.querySelector('input');
+        const ogText = btn.textContent;
+        btn.textContent = 'Joining...';
+        try {
+            const res = await fetch('/api/subscribe', { method: 'POST', body: JSON.stringify({ email: input.value }) });
+            if (res.ok) { btn.textContent = 'Subscribed!'; btn.classList.add('bg-green-500'); input.value = ''; }
+        } catch (err) { btn.textContent = 'Error'; }
+        setTimeout(() => { if(btn.textContent==='Error') btn.textContent = ogText; }, 3000);
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const grid = document.getElementById('articles-grid');
+      const urlParams = new URLSearchParams(window.location.search);
+      const tagFilter = urlParams.get('tag');
+      const authorFilter = urlParams.get('author');
+
+      if (tagFilter) {
+          document.getElementById('page-title').textContent = `Tagged: ${tagFilter}`;
+          document.getElementById('page-subtitle').textContent = `Exploring stories related to ${tagFilter}`;
+      }
+      
+      if (authorFilter) {
+          try {
+              const authorRes = await fetch(`/api/author?name=${encodeURIComponent(authorFilter)}`);
+              if (authorRes.ok) {
+                  const author = await authorRes.json();
+                  document.getElementById('header-block').innerHTML = `
+                      <div class="flex flex-col md:flex-row items-start md:items-center gap-6">
+                          <img src="${author.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop'}" class="w-24 h-24 rounded-full object-cover border-2 border-tuwa-accent" alt="${author.name}">
+                          <div>
+                              <h1 class="text-4xl md:text-5xl font-extrabold font-heading text-white mb-2">${author.name}</h1>
+                              <p class="text-tuwa-accent font-bold tracking-widest uppercase text-xs mb-3">${author.role || 'Contributor'}</p>
+                              <p class="text-tuwa-muted max-w-2xl">${author.bio || ''}</p>
+                          </div>
+                      </div>
+                  `;
+              }
+          } catch (e) {}
+      }
+      
+      try {
+        const response = await fetch('/api/article');
+        let articles = await response.json();
+        
+        if (tagFilter) articles = articles.filter(a => a.tags && a.tags.split(',').map(t => t.trim().toLowerCase()).includes(tagFilter.toLowerCase()));
+        if (authorFilter) articles = articles.filter(a => a.author && a.author.toLowerCase() === authorFilter.toLowerCase());
+        
+        if (articles.length === 0) { grid.innerHTML = '<div class="col-span-full py-20 text-center text-tuwa-muted">No stories found.</div>'; return; }
+
+        grid.innerHTML = articles.map(article => {
+          const dateStr = article.published_at ? new Date(article.published_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+          const tagsHtml = article.tags ? article.tags.split(',').slice(0, 2).map(t => `<button onclick="event.preventDefault(); window.location.href='/?tag=${encodeURIComponent(t.trim())}'" class="text-[10px] uppercase tracking-wider font-bold text-tuwa-accent hover:text-white transition-colors cursor-pointer relative z-10">${t.trim()}</button>`).join('<span class="text-tuwa-muted px-2">•</span>') : '';
+          const imgUrl = (article.image_url && article.image_url.trim() !== '') ? article.image_url : 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop';
           const authorName = article.author || 'Tuwa Media';
-          
-          // Stagger the animation delay based on index
-          const delay = index * 100;
 
           return `
-            <a href="/articles/${article.slug}" class="group block card-hover animate-fade-in-up" style="animation-delay: ${delay}ms; opacity: 0;">
-              <div class="w-full h-64 rounded-2xl overflow-hidden mb-6 relative bg-tuwa-gray border border-white/5">
-                <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <img src="${imgUrl}" alt="${article.title}" class="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105" loading="lazy">
+            <a href="/articles/${article.slug}" class="group block card-hover relative">
+              <div class="w-full h-64 rounded-xl overflow-hidden mb-6 relative bg-tuwa-gray border border-white/5">
+                <img src="${imgUrl}" alt="${article.title}" class="w-full h-full object-cover transition-transform duration-700 ease-out" loading="lazy">
               </div>
-              <div class="flex items-center mb-4">${tagsHtml}</div>
-              <h2 class="text-2xl font-bold font-heading text-white/95 mb-3 group-hover:text-tuwa-accent transition-colors leading-tight tracking-tight">${article.title}</h2>
-              <p class="text-tuwa-muted text-sm line-clamp-2 mb-5 leading-relaxed">${article.subtitle || article.seo_description || ''}</p>
+              <div class="flex items-center mb-3">${tagsHtml}</div>
+              <h2 class="text-2xl font-bold font-heading text-white mb-2 group-hover:text-tuwa-accent transition-colors leading-tight">${article.title}</h2>
+              <p class="text-tuwa-muted text-sm line-clamp-2 mb-4">${article.subtitle || article.seo_description || ''}</p>
               <div class="flex items-center text-xs text-tuwa-muted font-medium">
-                <div class="w-6 h-6 rounded-full bg-tuwa-gray border border-white/10 flex items-center justify-center mr-2 text-[10px] text-white/70">
-                  ${authorName.charAt(0).toUpperCase()}
-                </div>
-                <span class="hover:text-white transition-colors z-10">${authorName}</span>
-                <span class="px-2 opacity-50">•</span>
-                <span>${dateStr}</span>
-                <span class="px-2 opacity-50">•</span>
-                <span>${article.read_time_minutes || 5} min read</span>
+                <button onclick="event.preventDefault(); window.location.href='/?author=${encodeURIComponent(authorName)}'" class="hover:text-white transition-colors cursor-pointer relative z-10">${authorName}</button>
+                <span class="px-2">•</span><span>${dateStr}</span><span class="px-2">•</span><span>${article.read_time_minutes || 5} min read</span>
               </div>
             </a>
           `;
         }).join('');
-      } catch (error) { 
-        grid.innerHTML = `
-          <div class="col-span-full py-12 px-6 border border-white/10 bg-tuwa-gray/30 rounded-2xl flex flex-col items-center text-center">
-            <svg class="w-12 h-12 text-tuwa-muted mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-            <p class="text-tuwa-text font-medium text-lg">Unable to load stories</p>
-            <p class="text-tuwa-muted text-sm mt-1">${error.message}</p>
-          </div>`; 
-      }
+      } catch (error) { grid.innerHTML = `<div class="col-span-full py-20 text-center text-red-500">Failed to load stories.</div>`; }
     });
   </script>
 </body>
