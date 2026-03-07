@@ -29,7 +29,7 @@
         <a class="text-2xl font-extrabold tracking-tighter font-heading text-white" href="/">Tuwa</a>
         <div class="hidden md:flex space-x-6 text-sm font-medium text-tuwa-muted">
           <a class="hover:text-white transition-colors" href="/">Stories</a>
-          <a class="hover:text-white transition-colors" href="/archive.html">Archive</a>
+          <a class="hover:text-white transition-colors" href="/archive/index.html">Archive</a>
         </div>
       </div>
     </nav>
@@ -49,7 +49,10 @@
             <p id="article-subtitle" class="text-xl md:text-2xl text-tuwa-muted font-light max-w-2xl mx-auto leading-relaxed"></p>
             <div class="mt-12 flex items-center justify-center space-x-4 border-y border-white/5 py-8 flex-wrap gap-y-4">
               <div class="flex items-center space-x-3">
-                <div id="author-initials" class="w-10 h-10 rounded-full bg-tuwa-accent flex items-center justify-center font-bold text-xs text-white uppercase"></div>
+                <div id="author-avatar" class="w-10 h-10 rounded-full overflow-hidden bg-tuwa-accent flex items-center justify-center font-bold text-xs text-white uppercase">
+                  <img id="author-avatar-img" src="" alt="" class="w-full h-full object-cover hidden">
+                  <span id="author-initials" class="inline-block"></span>
+                </div>
                 <div class="text-left">
                   <p id="author-name" class="text-sm font-semibold text-white"></p>
                   <p class="text-xs text-tuwa-muted">Author</p>
@@ -78,61 +81,16 @@
     </section>
   </main>
 
-  <footer class="py-12 px-6 border-t border-white/5">
+    <footer class="py-12 px-6 border-t border-white/5">
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
       <div class="text-xl font-extrabold font-heading text-white">OpenTuwa</div>
       <div class="flex space-x-8 text-xs font-bold tracking-widest uppercase text-tuwa-muted">
         <a class="hover:text-white transition-colors" href="https://opentuware.pages.dev/legal/" target="_blank">Privacy</a>
       </div>
     </div>
-<div class="social-links">
-                <a href="https://x.com/OpenTuwa" target="_blank" rel="noopener noreferrer" class="social-icon" aria-label="Follow us on X">
-                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/>
-                    </svg>
-                </a>
-</div>
+      <div class="text-xs text-tuwa-muted">© 2026 OpenTuwa Foundation. All rights reserved.</div>
+    </div>
   </footer>
-<style>
-        .social-links {
-            display: flex;
-            gap: 12px;
-        }
-
-.social-icon {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--glass-border);
-            color: var(--text);
-            text-decoration: none;
-            transition: var(--transition-smooth);
-        }
-
-        .social-icon:hover {
-            background: rgba(255, 255, 255, 0.15);
-            border-color: var(--accent);
-            transform: translateY(-3px);
-            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
-        }
-
-        .social-icon svg {
-            width: 18px;
-            height: 18px;
-            fill: currentColor;
-        }
-
-        .social-icon img {
-            width: 20px;
-            height: 20px;
-            object-fit: contain;
-        }
-</style>
-
 
   <script>
     async function handleSubscribe(e) {
@@ -175,7 +133,46 @@
 
             const authorName = article.author || 'Tuwa Media';
             document.getElementById('author-name').innerHTML = `<a href="/?author=${encodeURIComponent(authorName)}" class="text-white hover:text-tuwa-accent transition-colors decoration-none">${authorName}</a>`;
-            document.getElementById('author-initials').textContent = authorName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+
+            // Try to fetch author record (avatar, bio, role). If avatar exists, show it; otherwise show initials.
+            try {
+              const authRes = await fetch(`/api/author?name=${encodeURIComponent(authorName)}`);
+              const avatarImg = document.getElementById('author-avatar-img');
+              const avatarContainer = document.getElementById('author-avatar');
+              const initialsEl = document.getElementById('author-initials');
+              if (authRes.ok) {
+                const author = await authRes.json();
+                if (author.avatar_url && author.avatar_url.trim() !== '') {
+                  avatarImg.src = author.avatar_url;
+                  avatarImg.alt = author.name || authorName;
+                  avatarImg.classList.remove('hidden');
+                  initialsEl.classList.add('hidden');
+                } else {
+                  // Fallback to default image (match index page fallback)
+                  avatarImg.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop';
+                  avatarImg.alt = authorName;
+                  avatarImg.classList.remove('hidden');
+                  initialsEl.classList.add('hidden');
+                }
+
+                // Make avatar clickable to go to author page
+                avatarContainer.style.cursor = 'pointer';
+                avatarContainer.addEventListener('click', (e) => { e.preventDefault(); window.location.href = `/?author=${encodeURIComponent(authorName)}`; });
+              } else {
+                // Fallback: use default image
+                avatarImg.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop';
+                avatarImg.alt = authorName;
+                avatarImg.classList.remove('hidden');
+                initialsEl.classList.add('hidden');
+              }
+            } catch (err) {
+              const avatarImg = document.getElementById('author-avatar-img');
+              const initialsEl = document.getElementById('author-initials');
+              avatarImg.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop';
+              avatarImg.alt = authorName;
+              avatarImg.classList.remove('hidden');
+              initialsEl.classList.add('hidden');
+            }
             
             document.getElementById('article-date').textContent = article.published_at ? new Date(article.published_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Recently published';
             document.getElementById('article-read-time').textContent = `${article.read_time_minutes || 5} min read`;

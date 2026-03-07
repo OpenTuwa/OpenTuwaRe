@@ -24,7 +24,7 @@
         <a class="text-2xl font-extrabold tracking-tighter font-heading text-white" href="/">Tuwa</a>
         <div class="hidden md:flex space-x-6 text-sm font-medium text-tuwa-muted">
           <a class="text-white transition-colors" href="/">Stories</a>
-          <a class="hover:text-white transition-colors" href="/archive.html">Archive</a>
+          <a class="hover:text-white transition-colors" href="/archive/index.html">Archive</a>
         </div>
       </div>
     </nav>
@@ -51,65 +51,16 @@
     </div>
   </section>
 
-  <footer class="py-12 px-6 border-t border-white/5">
+    <footer class="py-12 px-6 border-t border-white/5">
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
       <div class="text-xl font-extrabold font-heading text-white">OpenTuwa</div>
       <div class="flex space-x-8 text-xs font-bold tracking-widest uppercase text-tuwa-muted">
-        <a class="hover:text-white transition-colors" href="https://opentuware.pages.dev/legal/" target="_blank">Legal</a>
-                
-
-
+        <a class="hover:text-white transition-colors" href="https://opentuware.pages.dev/legal/" target="_blank">Privacy</a>
       </div>
+    </div>
       <div class="text-xs text-tuwa-muted">© 2026 OpenTuwa Foundation. All rights reserved.</div>
     </div>
-<div class="social-links">
-                <a href="https://x.com/OpenTuwa" target="_blank" rel="noopener noreferrer" class="social-icon" aria-label="Follow us on X">
-                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/>
-                    </svg>
-                </a>
-</div>
   </footer>
-<style>
-        .social-links {
-            display: flex;
-            gap: 12px;
-        }
-
-.social-icon {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--glass-border);
-            color: var(--text);
-            text-decoration: none;
-            transition: var(--transition-smooth);
-        }
-
-        .social-icon:hover {
-            background: rgba(255, 255, 255, 0.15);
-            border-color: var(--accent);
-            transform: translateY(-3px);
-            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
-        }
-
-        .social-icon svg {
-            width: 18px;
-            height: 18px;
-            fill: currentColor;
-        }
-
-        .social-icon img {
-            width: 20px;
-            height: 20px;
-            object-fit: contain;
-        }
-</style>
-
   <script>
     async function handleSubscribe(e) {
         e.preventDefault();
