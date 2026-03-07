@@ -357,6 +357,7 @@ avatarDiv.textContent = initials;
 // --- Init Tuwa Hybrid Subtitles (MP4 + YouTube) ---
             // --- Init Tuwa Hybrid Subtitles (MP4 + YouTube) ---
             // --- Init Tuwa Hybrid Subtitles (MP4 + YouTube) ---
+// --- Init Tuwa Hybrid Subtitles (MP4 + YouTube) ---
             async function initHybridSubtitles() {
               const subtitleBoxes = document.querySelectorAll('.tuwa-subtitle-box');
               let needsYouTubeAPI = false;
@@ -367,34 +368,47 @@ avatarDiv.textContent = initials;
                 const vttUrl = box.dataset.vtt;
                 const mediaEl = document.getElementById(mediaId);
                 
-                if (!mediaEl || !vttUrl) {
-                  console.warn('Subtitle Box missing mediaId or vttUrl', box);
-                  continue;
-                }
+                if (!mediaEl || !vttUrl) continue;
 
                 try {
-                  // 1. Fetch & Parse VTT (Upgraded Bulletproof Parser)
                   const response = await fetch(vttUrl);
-                  if (!response.ok) throw new Error(`VTT missing at ${vttUrl} (Status: ${response.status})`);
+                  if (!response.ok) throw new Error(`VTT missing at ${vttUrl}`);
+                  const vttText = await response.text();
                   
-                  // Convert Windows line endings to standard, then split by blank lines 
-                  // (The regex \n[ \t]*\n ensures it splits even if the blank line has invisible spaces)
-                  const vttText = (await response.text()).replace(/\r\n/g, '\n');
-                  const blocks = vttText.split(/\n[ \t]*\n/);
-                  
+                  // NEW: Bulletproof Line-by-Line Parser
+                  // This completely ignores missing blank lines in messy VTT files
                   const cues = [];
-                  for (const block of blocks) {
-                    if (block.includes('WEBVTT')) continue;
-                    const lines = block.trim().split('\n');
-                    const timeLineIndex = lines.findIndex(l => l.includes('-->'));
+                  const lines = vttText.replace(/\r\n/g, '\n').split('\n');
+                  let currentCue = null;
+
+                  for (let line of lines) {
+                    line = line.trim();
                     
-                    if (timeLineIndex !== -1) {
-                      const times = lines[timeLineIndex].split('-->');
-                      const start = parseVttTime(times[0]);
-                      const end = parseVttTime(times[1]);
-                      const text = lines.slice(timeLineIndex + 1).join('<br>'); 
-                      cues.push({ start, end, text });
+                    // Ignore VTT Headers
+                    if (line.startsWith('WEBVTT') || line.startsWith('Kind:') || line.startsWith('Language:')) continue;
+
+                    if (line.includes('-->')) {
+                      // Save the previous cue before starting a new one
+                      if (currentCue && currentCue.textLines.length > 0) {
+                        cues.push({ start: currentCue.start, end: currentCue.end, text: currentCue.textLines.join('<br>') });
+                      }
+                      
+                      const times = line.split('-->');
+                      currentCue = { start: parseVttTime(times[0]), end: parseVttTime(times[1]), textLines: [] };
+                    } else if (line !== '') {
+                      // Add text to the active cue
+                      if (currentCue) currentCue.textLines.push(line);
+                    } else if (line === '' && currentCue) {
+                      // A blank line saves the current cue
+                      if (currentCue.textLines.length > 0) {
+                        cues.push({ start: currentCue.start, end: currentCue.end, text: currentCue.textLines.join('<br>') });
+                      }
+                      currentCue = null; // reset
                     }
+                  }
+                  // Catch the very last cue at the end of the file
+                  if (currentCue && currentCue.textLines.length > 0) {
+                    cues.push({ start: currentCue.start, end: currentCue.end, text: currentCue.textLines.join('<br>') });
                   }
 
                   // 2. Render logic
@@ -410,19 +424,12 @@ avatarDiv.textContent = initials;
 
                   // 3. Route logic based on element type
                   if (mediaEl.tagName.toLowerCase() === 'video') {
-                    // Local MP4
-                    
-                    // FIX: Force the first subtitle to show immediately before they even click play!
+                    // Force the initial subtitle to render instantly
                     updateSubtitle(0);
                     
-                    // Sync during playback
                     mediaEl.addEventListener('timeupdate', () => updateSubtitle(mediaEl.currentTime));
-                    
-                    // Sync if they click around the timeline while paused
                     mediaEl.addEventListener('seeked', () => updateSubtitle(mediaEl.currentTime));
-
                   } else if (mediaEl.tagName.toLowerCase() === 'iframe') {
-                    // YouTube Iframe
                     needsYouTubeAPI = true;
                     ytPlayersQueue.push({ id: mediaId, render: updateSubtitle });
                   }
@@ -430,11 +437,10 @@ avatarDiv.textContent = initials;
                 } catch (error) {
                   console.error('Subtitle Engine Error:', error);
                   box.style.display = 'none';
-                  box.insertAdjacentHTML('afterend', `<p style="color:red; font-size:12px;">Subtitle Error: Check console</p>`); 
                 }
               }
 
-              // 4. Handle YouTube API initialization perfectly
+              // 4. Handle YouTube API
               if (needsYouTubeAPI) {
                 const setupYTPlayers = () => {
                   ytPlayersQueue.forEach(p => {
@@ -484,7 +490,7 @@ avatarDiv.textContent = initials;
               return secs;
             }
 
-            // Run the function
+            // Execute
             initHybridSubtitles();
             // --- End Init Tuwa Hybrid Subtitles ---
 
