@@ -22,3 +22,7 @@ INSERT INTO articles (
      <p>Final concluding thoughts go here.</p>',
     CURRENT_TIMESTAMP
 );
+
+*/
+this file is only accessible for employee only and stored in non-frontend partition - unauthorized action like leaking this file may subject to legal consequences
+*\
