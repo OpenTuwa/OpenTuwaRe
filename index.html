@@ -115,23 +115,36 @@
           // Fetch Author Details
           try {
             const authRes = await fetch(`/api/author?name=${encodeURIComponent(authorFilter)}`);
-            if (authRes.ok) {
-              const authData = await authRes.json();
+              if (authRes.ok) {
+                const authData = await authRes.json();
 
-              const displayName = authData.name || authorFilter;
-              document.getElementById('auth-name').textContent = displayName;
-              const avatarSrc = authData.avatar_url || authData.avatar || authData.image_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(displayName) + '&background=random';
-              document.getElementById('auth-avatar').src = avatarSrc;
-              document.getElementById('auth-role').textContent = authData.role || 'Contributor';
-              document.getElementById('auth-bio').textContent = authData.bio || `Stories written by ${displayName}.`;
+                // Prefer canonical DB name
+                const displayName = (authData.name || authorFilter).trim();
+                document.getElementById('auth-name').textContent = displayName;
 
-              if (authData.social_link) {
-                document.getElementById('auth-socials').innerHTML = `
-                  <a href="${authData.social_link}" target="_blank" class="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-full text-xs font-bold text-white transition-colors border border-white/5">
-                    Follow on Social
-                  </a>
-                `;
-              }
+                // Avatar handling: prefer avatar_url, avatar, image_url, then ui-avatars fallback
+                const avatarSrc = (authData.avatar_url || authData.avatar || authData.image_url || '').trim() || ('https://ui-avatars.com/api/?name=' + encodeURIComponent(displayName) + '&background=random');
+                document.getElementById('auth-avatar').src = avatarSrc;
+
+                // Role and bio from SQL
+                document.getElementById('auth-role').textContent = authData.role || 'Contributor';
+                document.getElementById('auth-bio').textContent = authData.bio || `Stories written by ${displayName}.`;
+
+                // Social links: accept comma-separated or single URL
+                const socialsEl = document.getElementById('auth-socials');
+                socialsEl.innerHTML = '';
+                if (authData.social_link) {
+                  const links = String(authData.social_link).split(',').map(s => s.trim()).filter(Boolean);
+                  links.forEach(link => {
+                    const href = link.startsWith('http') ? link : `https://${link}`;
+                    const a = document.createElement('a');
+                    a.href = href;
+                    a.target = '_blank';
+                    a.className = 'px-3 py-2 bg-white/5 hover:bg-white/10 rounded-full text-xs font-bold text-white transition-colors border border-white/5';
+                    a.textContent = link.replace(/^https?:\/\//, '').replace(/www\./, '');
+                    socialsEl.appendChild(a);
+                  });
+                }
 
               // SEO / Social Meta for author page
               const pageUrl = window.location.href;
