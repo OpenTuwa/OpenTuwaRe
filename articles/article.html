@@ -87,6 +87,33 @@
       transform: none;
       pointer-events: auto;
     }
+/* Tuwa Custom Subtitle Box */
+    .tuwa-subtitle-box {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 4rem;
+      margin-top: -1rem; 
+      margin-bottom: 2rem;
+      padding: 1rem 1.5rem;
+      background-color: #161618;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 0.75rem;
+      text-align: center;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #a1a1aa;
+      transition: all 0.3s ease;
+    }
+    .tuwa-subtitle-box .active-text {
+      color: #3b82f6;
+      animation: fadeIn 0.2s ease-in;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(2px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
   </style>
 </head>
 <body class="selection-highlight">
@@ -327,6 +354,113 @@ avatarDiv.textContent = initials;
 
             // 5. Inject Body Content
             document.getElementById('article-content').innerHTML = article.content_html || '<p>No content available.</p>';
+// --- Init Tuwa Hybrid Subtitles (MP4 + YouTube) ---
+            async function initHybridSubtitles() {
+              const subtitleBoxes = document.querySelectorAll('.tuwa-subtitle-box');
+              let needsYouTubeAPI = false;
+              const ytPlayersQueue = [];
+
+              for (const box of subtitleBoxes) {
+                const mediaId = box.dataset.video || box.dataset.youtube; // Fallback for your older format
+                const vttUrl = box.dataset.vtt;
+                const mediaEl = document.getElementById(mediaId);
+                
+                if (!mediaEl || !vttUrl) continue;
+
+                try {
+                  // 1. Fetch & Parse VTT
+                  const response = await fetch(vttUrl);
+                  if (!response.ok) throw new Error('VTT missing');
+                  const vttText = await response.text();
+                  
+                  const cues = [];
+                  const blocks = vttText.split(/(?:\r?\n){2,}/);
+                  for (const block of blocks) {
+                    if (block.includes('WEBVTT')) continue;
+                    const lines = block.split(/\r?\n/);
+                    const timeLineIndex = lines.findIndex(l => l.includes('-->'));
+                    if (timeLineIndex !== -1) {
+                      const times = lines[timeLineIndex].split('-->');
+                      const start = parseVttTime(times[0]);
+                      const end = parseVttTime(times[1]);
+                      const text = lines.slice(timeLineIndex + 1).join('<br>'); 
+                      cues.push({ start, end, text });
+                    }
+                  }
+
+                  // 2. Render logic
+                  const updateSubtitle = (currentTime) => {
+                    const activeCue = cues.find(c => currentTime >= c.start && currentTime <= c.end);
+                    if (activeCue) {
+                      const newHtml = `<span class="active-text">${activeCue.text}</span>`;
+                      if (box.innerHTML !== newHtml) box.innerHTML = newHtml;
+                    } else {
+                      if (box.innerHTML !== '') box.innerHTML = '';
+                    }
+                  };
+
+                  // 3. Route logic based on element type
+                  if (mediaEl.tagName.toLowerCase() === 'video') {
+                    // It's a local MP4
+                    mediaEl.addEventListener('timeupdate', () => updateSubtitle(mediaEl.currentTime));
+                  } else if (mediaEl.tagName.toLowerCase() === 'iframe') {
+                    // It's a YouTube Iframe
+                    needsYouTubeAPI = true;
+                    ytPlayersQueue.push({ id: mediaId, render: updateSubtitle });
+                  }
+
+                } catch (error) {
+                  console.warn('Subtitle error:', error);
+                  box.style.display = 'none';
+                }
+              }
+
+              // 4. Handle YouTube API initialization if needed
+              if (needsYouTubeAPI) {
+                const setupYTPlayers = () => {
+                  ytPlayersQueue.forEach(p => {
+                    new YT.Player(p.id, {
+                      events: {
+                        'onReady': (event) => {
+                          const player = event.target;
+                          setInterval(() => {
+                            if (player.getPlayerState() === YT.PlayerState.PLAYING) {
+                              p.render(player.getCurrentTime());
+                            }
+                          }, 100);
+                        }
+                      }
+                    });
+                  });
+                };
+
+                // Load YT script if not present, otherwise just setup players
+                if (!window.YT) {
+                  const tag = document.createElement('script');
+                  tag.src = "https://www.youtube.com/iframe_api";
+                  const firstScriptTag = document.getElementsByTagName('script')[0];
+                  firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+                  window.onYouTubeIframeAPIReady = setupYTPlayers;
+                } else if (window.YT && window.YT.Player) {
+                  setupYTPlayers();
+                }
+              }
+            }
+
+            function parseVttTime(timeStr) {
+              const parts = timeStr.trim().replace(',', '.').split(':');
+              let secs = 0;
+              if (parts.length === 3) {
+                secs = parseFloat(parts[0])*3600 + parseFloat(parts[1])*60 + parseFloat(parts[2]);
+              } else if (parts.length === 2) {
+                secs = parseFloat(parts[0])*60 + parseFloat(parts[1]);
+              }
+              return secs;
+            }
+
+            // Run the function
+            initHybridSubtitles();
+            // --- End Init Tuwa Hybrid Subtitles ---
 
             // Show article, hide loader
             statusEl.style.display = 'none';
