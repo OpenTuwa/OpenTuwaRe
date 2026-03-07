@@ -64,8 +64,12 @@ export async function onRequestGet(context) {
       return new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8' } });
     }
 
-    // If no author/tag, fallback to letting static index load (delegate to other handlers)
-    return fetch(request);
+    // If no author/tag, delegate to the next handler (static assets/pages)
+    if (context && typeof context.next === 'function') {
+      return await context.next();
+    }
+    // Fallback: return the original request (avoid recursive fetch in Cloudflare environment)
+    return new Response('Not handled', { status: 404 });
   } catch (err) {
     return new Response('Error', { status: 500 });
   }
