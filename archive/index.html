@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html class="scroll-smooth" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>OpenTuwa | Archive</title>
+  
+  <link href="https://fonts.googleapis.com" rel="preconnect"/>
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet"/>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'tuwa-black': '#0a0a0b', 'tuwa-gray': '#161618', 'tuwa-text': '#e5e5e5',
+            'tuwa-muted': '#a1a1aa', 'tuwa-accent': '#3b82f6',
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            heading: ['Plus Jakarta Sans', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background-color: #0a0a0b; color: #e5e5e5; -webkit-font-smoothing: antialiased; }
+    .glass-header { backdrop-filter: blur(12px); background-color: rgba(10, 10, 11, 0.8); border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+  </style>
+</head>
+<body>
+
+  <header class="fixed top-0 w-full z-50 glass-header">
+    <nav class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+      <div class="flex items-center space-x-8">
+        <a class="text-2xl font-extrabold tracking-tighter font-heading text-white" href="/">TUWA</a>
+        <div class="hidden md:flex space-x-6 text-sm font-medium text-tuwa-muted">
+          <a class="hover:text-white transition-colors" href="/">Stories</a>
+          <a class="hover:text-white transition-colors" href="#">Lab</a>
+          <a class="text-white transition-colors" href="/archive.html">Archive</a>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <main class="pt-32 pb-20 px-6 max-w-3xl mx-auto min-h-screen">
+    <div class="mb-16 border-b border-white/10 pb-10">
+      <h1 class="text-5xl md:text-6xl font-extrabold font-heading text-white mb-4">The Archive</h1>
+      <p class="text-xl text-tuwa-muted">A complete timeline of everything we've published.</p>
+    </div>
+
+    <div id="archive-container" class="space-y-16">
+      <div class="py-10 text-center text-tuwa-muted animate-pulse"></div>
+    </div>
+  </main>
+
+  <footer class="py-12 px-6 border-t border-white/5">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
+      <div class="text-xl font-extrabold font-heading text-white">TUWA</div>
+      <div class="flex space-x-8 text-xs font-bold tracking-widest uppercase text-tuwa-muted">
+        <a class="hover:text-white transition-colors" href="https://opentuware.pages.dev/legal/" target="_blank">Privacy</a>
+        <a class="hover:text-white transition-colors" href="#">Terms</a>
+        <a class="hover:text-white transition-colors" href="https://x.com/OpenTuwa" target="_blank">Twitter</a>
+        <a class="hover:text-white transition-colors" href="#">Github</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const container = document.getElementById('archive-container');
+      
+      try {
+        const response = await fetch('/api/article');
+        const articles = await response.json();
+        
+        if (articles.length === 0) {
+          container.innerHTML = '<div class="text-tuwa-muted">The archive is currently empty.</div>';
+          return;
+        }
+
+        // Group articles by Year automatically
+        const grouped = articles.reduce((acc, article) => {
+            const date = new Date(article.published_at || Date.now());
+            const year = date.getFullYear();
+            if (!acc[year]) acc[year] = [];
+            acc[year].push(article);
+            return acc;
+        }, {});
+
+        // Sort years descending
+        const sortedYears = Object.keys(grouped).sort((a, b) => b - a);
+
+        let html = '';
+        sortedYears.forEach(year => {
+            html += `
+                <section>
+                    <h2 class="text-3xl font-bold font-heading text-white mb-8 border-b border-white/5 pb-4">${year}</h2>
+                    <div class="space-y-6">
+            `;
+            
+            grouped[year].forEach(article => {
+                const date = new Date(article.published_at || Date.now());
+                const monthDay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                
+                html += `
+                    <a href="/articles/${article.slug}" class="group flex flex-col md:flex-row md:items-center justify-between gap-2 md:gap-8 hover:bg-white/[0.02] p-4 -mx-4 rounded-xl transition-colors">
+                        <div class="flex items-center gap-6 flex-1">
+                            <span class="text-sm text-tuwa-muted w-16 shrink-0 font-medium">${monthDay}</span>
+                            <h3 class="text-lg font-medium text-tuwa-text group-hover:text-tuwa-accent transition-colors leading-tight">
+                                ${article.title}
+                            </h3>
+                        </div>
+                        <div class="hidden sm:flex text-xs text-tuwa-muted shrink-0 uppercase tracking-widest font-bold">
+                            ${article.tags ? article.tags.split(',')[0].trim() : 'Article'}
+                        </div>
+                    </a>
+                `;
+            });
+            
+            html += `</div></section>`;
+        });
+
+        container.innerHTML = html;
+
+      } catch (error) {
+        container.innerHTML = `<div class="text-red-500">Failed to load archive: ${error.message}</div>`;
+      }
+    });
+  </script>
+</body>
+</html>

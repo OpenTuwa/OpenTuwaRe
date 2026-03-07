@@ -85,8 +85,7 @@
         <a class="text-2xl font-extrabold tracking-tighter font-heading text-white" href="/">TUWA</a>
         <div class="hidden md:flex space-x-6 text-sm font-medium text-tuwa-muted">
           <a class="hover:text-white transition-colors" href="#">Stories</a>
-          <a class="hover:text-white transition-colors" href="#">Lab</a>
-          <a class="hover:text-white transition-colors" href="#">Archive</a>
+          <a class="hover:text-white transition-colors" href="/archive">Archive</a>
         </div>
       </div>
       <div class="flex items-center space-x-6">
@@ -153,19 +152,19 @@
     </main>
 
   <footer class="py-12 px-6 border-t border-white/5" data-purpose="site-footer">
-    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
-      <div class="text-xl font-extrabold font-heading text-white">TUWA</div>
-      <div class="flex space-x-8 text-xs font-bold tracking-widest uppercase text-tuwa-muted">
-        <a class="hover:text-white transition-colors" href="#">Privacy</a>
-        <a class="hover:text-white transition-colors" href="#">Terms</a>
-        <a class="hover:text-white transition-colors" href="#">Twitter</a>
-        <a class="hover:text-white transition-colors" href="#">Github</a>
-      </div>
-      <div class="text-xs text-tuwa-muted">
-        © 2026 OpenTuwa Labs. All rights reserved.
-      </div>
+  <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
+    <div class="text-xl font-extrabold font-heading text-white">TUWA</div>
+    <div class="flex space-x-8 text-xs font-bold tracking-widest uppercase text-tuwa-muted">
+      <a class="hover:text-white transition-colors" href="https://opentuware.pages.dev/legal/" target="_blank">Privacy</a>
+      <a class="hover:text-white transition-colors" href="#">Terms</a>
+      <a class="hover:text-white transition-colors" href="https://x.com/OpenTuwa" target="_blank">Twitter</a>
+      <a class="hover:text-white transition-colors" href="#">Github</a>
     </div>
-  </footer>
+    <div class="text-xs text-tuwa-muted">
+      © 2026 OpenTuwa Foundation. All rights reserved.
+    </div>
+  </div>
+</footer>
   <script>
     document.addEventListener('DOMContentLoaded', async () => {
         // Extract the slug from the URL
@@ -197,12 +196,12 @@
                 heroSection.style.display = 'none'; // Hides entire hero block if empty
             }
 
-            // 3. Set Tags (Styled with your Tailwind classes)
-            if (article.tags && article.tags.trim() !== '') {
-                const tags = article.tags.split(',').map(tag => tag.trim());
-                document.getElementById('badge-container').innerHTML = 
-                    tags.map(tag => `<span class="px-3 py-1 border border-white/10 rounded-full text-[10px] tracking-widest font-bold uppercase tag-hover transition-colors cursor-pointer">${tag}</span>`).join('');
-            }
+// 3. Set Tags and Make Them Clickable Links
+if (article.tags && article.tags.trim() !== '') {
+    const tags = article.tags.split(',').map(tag => tag.trim());
+    document.getElementById('badge-container').innerHTML = 
+        tags.map(tag => `<a href="/?tag=${encodeURIComponent(tag)}" class="px-3 py-1 border border-white/10 rounded-full text-[10px] tracking-widest font-bold uppercase tag-hover transition-colors cursor-pointer inline-block text-white decoration-none">${tag}</a>`).join('');
+}
 
             // 4. Set Metadata (Author, Date, Read Time)
             const authorName = article.author || 'Tuwa Media';
