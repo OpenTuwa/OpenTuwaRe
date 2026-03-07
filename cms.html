@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cinematic CMS to D1 SQL</title>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --glass-bg: rgba(20, 30, 50, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --accent: #3b82f6;
+            --accent-hover: #60a5fa;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg-color) radial-gradient(circle at top right, #1e293b, transparent 40%);
+            color: var(--text-main);
+            margin: 0;
+            padding: 2rem;
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        * { box-sizing: border-box; }
+
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            max-height: calc(100vh - 4rem);
+            overflow-y: auto;
+        }
+
+        h2 { margin: 0 0 1rem 0; font-weight: 300; letter-spacing: -0.5px; }
+        
+        .form-group { display: flex; flex-direction: column; gap: 0.5rem; }
+        
+        label { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+        input, textarea {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        input:focus, textarea:focus { outline: none; border-color: var(--accent); background: rgba(0, 0, 0, 0.4); }
+        
+        textarea { resize: vertical; min-height: 120px; }
+        #content_html { min-height: 250px; font-family: monospace; font-size: 0.9rem; }
+        #sql_output { height: 100%; min-height: 400px; font-family: monospace; white-space: pre; color: #a5b4fc; }
+
+        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+        .toolbar { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: -0.5rem; }
+        
+        button {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            color: var(--text-main);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        button:hover { background: rgba(255, 255, 255, 0.1); }
+        
+        button.primary { background: var(--accent); border-color: var(--accent); font-weight: 600; padding: 0.75rem; font-size: 1rem;}
+        button.primary:hover { background: var(--accent-hover); }
+        
+        .hint { font-size: 0.75rem; color: var(--text-muted); margin-top: -0.25rem;}
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+        ::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+        @media (max-width: 1024px) { body { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+    <div class="glass-panel">
+        <h2>Write Article</h2>
+        
+        <div class="row">
+            <div class="form-group">
+                <label>Title</label>
+                <input type="text" id="title" placeholder="The Future of Cinematic UI" oninput="autoSlug()">
+            </div>
+            <div class="form-group">
+                <label>Slug (Auto-generated)</label>
+                <input type="text" id="slug" placeholder="the-future-of-cinematic-ui">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Subtitle</label>
+            <input type="text" id="subtitle" placeholder="How glassmorphism is evolving in 2026.">
+        </div>
+
+        <div class="row">
+            <div class="form-group">
+                <label>Author</label>
+                <input type="text" id="author" placeholder="Haykal M. Zaidi">
+            </div>
+            <div class="form-group">
+                <label>Read Time (Mins) - Auto</label>
+                <input type="number" id="read_time" placeholder="4">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Hero Image URL</label>
+            <input type="text" id="image_url" placeholder="https://... (Leave empty to hide)">
+        </div>
+
+        <div class="row">
+            <div class="form-group">
+                <label>SEO Description</label>
+                <input type="text" id="seo_description" placeholder="Explore the evolution of...">
+            </div>
+            <div class="form-group">
+                <label>Tags (Comma separated)</label>
+                <input type="text" id="tags" placeholder="Design,UI/UX,Tech">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Article Content</label>
+            <div class="toolbar">
+                <button onclick="insertTemplate('image')">📷 Insert Image</button>
+                <button onclick="insertTemplate('video')">🎥 Insert Video</button>
+            </div>
+            <div class="hint">Write normally. Press Enter twice for a new paragraph. Media tags won't be wrapped.</div>
+            <textarea id="content_html" placeholder="Start writing your story here..." oninput="calculateReadTime()"></textarea>
+        </div>
+
+        <div class="row">
+            <button class="primary" onclick="generateSQL()">Generate SQL Prompt</button>
+            <button onclick="clearForm()">Clear Form for Next</button>
+        </div>
+    </div>
+
+    <div class="glass-panel">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h2>Generated Prompts</h2>
+            <div style="display: flex; gap: 0.5rem;">
+                <button onclick="copySQL()">Copy All</button>
+                <button onclick="clearSQL()">Clear All</button>
+            </div>
+        </div>
+        <textarea id="sql_output" readonly placeholder="Your Cloudflare D1 prompts will accumulate here..."></textarea>
+    </div>
+
+    <script>
+        // Auto-generate slug from title
+        function autoSlug() {
+            const title = document.getElementById('title').value;
+            const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+            document.getElementById('slug').value = slug;
+        }
+
+        // Auto-calculate read time (roughly 200 words per minute)
+        function calculateReadTime() {
+            const text = document.getElementById('content_html').value;
+            const words = text.trim().split(/\s+/).length;
+            const minutes = Math.ceil(words / 200);
+            document.getElementById('read_time').value = text.trim().length > 0 ? minutes : '';
+        }
+
+        // Insert media templates at cursor position
+        function insertTemplate(type) {
+            const textarea = document.getElementById('content_html');
+            let template = '';
+            
+            if (type === 'image') {
+                const url = prompt("Enter Image URL:");
+                const alt = prompt("Enter Image Alt Text:");
+                if(url) template = `\n<img src="${url}" alt="${alt || 'Article Image'}">\n`;
+            } else if (type === 'video') {
+                const url = prompt("Enter Video .mp4 URL:");
+                if(url) template = `\n<video controls>\n    <source src="${url}" type="video/mp4">\n</video>\n`;
+            }
+
+            if (!template) return;
+
+            const startPos = textarea.selectionStart;
+            const endPos = textarea.selectionEnd;
+            textarea.value = textarea.value.substring(0, startPos) + template + textarea.value.substring(endPos, textarea.value.length);
+            textarea.focus();
+            textarea.selectionEnd = startPos + template.length;
+            calculateReadTime();
+        }
+
+        // Smart HTML formatting: wraps normal text blocks in <p> tags, ignores lines starting with <
+        function formatSmartHTML(rawText) {
+            const blocks = rawText.split('\n\n');
+            const formatted = blocks.map(block => {
+                const trimmed = block.trim();
+                if (!trimmed) return '';
+                if (trimmed.startsWith('<')) return trimmed; // Don't wrap existing HTML/components
+                return `<p>${trimmed}</p>`;
+            }).filter(b => b !== '');
+            return formatted.join('\n\n');
+        }
+
+        // Escape SQL single quotes
+        function esc(str) {
+            return str.replace(/'/g, "''");
+        }
+
+        function generateSQL() {
+            const slug = esc(document.getElementById('slug').value);
+            const title = esc(document.getElementById('title').value);
+            const subtitle = esc(document.getElementById('subtitle').value);
+            const author = esc(document.getElementById('author').value);
+            const readTime = document.getElementById('read_time').value || 1;
+            const imageUrl = esc(document.getElementById('image_url').value);
+            const seo = esc(document.getElementById('seo_description').value);
+            const tags = esc(document.getElementById('tags').value);
+            
+            const rawContent = document.getElementById('content_html').value;
+            const smartHtml = esc(formatSmartHTML(rawContent));
+
+            // Validate minimum required
+            if (!slug || !title) {
+                alert("Please fill in at least the Title and Slug.");
+                return;
+            }
+
+            const sql = `INSERT INTO articles (
+    slug, title, subtitle, author, read_time_minutes, image_url, seo_description, tags, content_html, published_at
+) VALUES (
+    '${slug}', 
+    '${title}', 
+    '${subtitle}', 
+    '${author}', 
+    ${readTime}, 
+    '${imageUrl}', 
+    '${seo}', 
+    '${tags}',
+'${smartHtml}',
+    CURRENT_TIMESTAMP
+);`;
+
+            const output = document.getElementById('sql_output');
+            // Add spacing if there are already queries in the output
+            if(output.value.trim().length > 0) {
+                output.value += '\n\n/* ----------------------------------- */\n\n';
+            }
+            output.value += sql;
+            
+            // Scroll to bottom of output
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearForm() {
+            if(confirm("Clear the form to start a new article?")) {
+                document.querySelectorAll('input').forEach(input => input.value = '');
+                document.getElementById('content_html').value = '';
+            }
+        }
+
+        function clearSQL() {
+            if(confirm("Clear all generated prompts?")) {
+                document.getElementById('sql_output').value = '';
+            }
+        }
+
+        function copySQL() {
+            const output = document.getElementById('sql_output');
+            if (!output.value) return;
+            output.select();
+            document.execCommand('copy');
+            alert("All SQL Prompts copied to clipboard!");
+        }
+    </script>
+</body>
+</html>
