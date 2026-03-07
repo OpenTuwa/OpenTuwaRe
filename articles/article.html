@@ -332,6 +332,19 @@ avatarDiv.textContent = initials;
             statusEl.style.display = 'none';
             containerEl.style.display = 'block';
 
+              // Wire site search input to redirect to index with ?q=
+              const siteSearch = document.getElementById('site-search');
+              if (siteSearch) {
+                siteSearch.addEventListener('keydown', (e) => {
+                  if (e.key === 'Enter') {
+                    const v = siteSearch.value.trim();
+                    if (v.length > 0) {
+                      window.location.href = `/?q=${encodeURIComponent(v)}`;
+                    }
+                  }
+                });
+              }
+
             // Reading progress: update bar as user scrolls through content
             const progressEl = document.getElementById('reading-progress');
             const contentEl = document.getElementById('article-content');

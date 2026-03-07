@@ -104,6 +104,7 @@
       const urlParams = new URLSearchParams(window.location.search);
       const tagFilter = urlParams.get('tag');
       const authorFilter = urlParams.get('author');
+      const qFilter = urlParams.get('q');
 
       // 1. Handle Header Display
       if (authorFilter) {
@@ -187,9 +188,22 @@
         }
 
         if (authorFilter) {
-            articles = articles.filter(a => 
-                a.author && a.author.trim().toLowerCase() === authorFilter.toLowerCase()
-            );
+          articles = articles.filter(a => 
+            a.author && a.author.trim().toLowerCase() === authorFilter.toLowerCase()
+          );
+        }
+
+        if (qFilter && qFilter.trim() !== '') {
+          const q = qFilter.trim().toLowerCase();
+          articles = articles.filter(a => {
+            const title = (a.title || '').toLowerCase();
+            const subtitle = (a.subtitle || a.seo_description || '').toLowerCase();
+            const tags = (a.tags || '').toLowerCase();
+            const author = (a.author || '').toLowerCase();
+            return title.includes(q) || subtitle.includes(q) || tags.includes(q) || author.includes(q);
+          });
+          document.getElementById('page-title').textContent = `Search: ${qFilter}`;
+          document.getElementById('page-subtitle').textContent = `Results for "${qFilter}"`;
         }
         
         if (articles.length === 0) {
