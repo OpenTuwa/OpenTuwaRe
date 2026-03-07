@@ -136,12 +136,30 @@
       <div class="max-w-3xl mx-auto text-center">
         <h2 class="text-4xl font-bold mb-6 text-white">Stay Ahead of the Curve</h2>
         <p class="text-tuwa-muted mb-10 text-lg">Join 40,000+ designers and engineers receiving our weekly deep-dives into the future of the web.</p>
-        <form class="flex flex-col md:flex-row gap-4 justify-center">
-          <input class="bg-tuwa-black border border-white/10 rounded-full px-8 py-4 w-full md:w-96 text-white focus:outline-none focus:border-tuwa-accent transition-all" placeholder="Enter your email" type="email"/>
-          <button class="bg-tuwa-accent hover:bg-blue-600 text-white font-bold py-4 px-10 rounded-full transition-all" type="submit">
-            Join the Lab
+        
+        <!-- Form Start -->
+        <form id="subscribe-form" class="flex flex-col md:flex-row gap-4 justify-center relative">
+          <input 
+            id="subscribe-email" 
+            name="email" 
+            required
+            class="bg-tuwa-black border border-white/10 rounded-full px-8 py-4 w-full md:w-96 text-white focus:outline-none focus:border-tuwa-accent focus:ring-1 focus:ring-tuwa-accent transition-all placeholder:text-tuwa-muted/50" 
+            placeholder="Enter your email" 
+            type="email"
+          />
+          <button 
+            id="subscribe-btn" 
+            class="bg-tuwa-accent hover:bg-blue-600 text-white font-bold py-4 px-10 rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[160px]" 
+            type="submit"
+          >
+            <span>Join the Lab</span>
           </button>
+          
+          <!-- Success/Error Message Container -->
+          <div id="subscribe-message" class="absolute -bottom-12 left-0 right-0 text-sm font-medium transition-opacity duration-300 opacity-0"></div>
         </form>
+        <!-- Form End -->
+
       </div>
     </section>
     </main>
@@ -259,6 +277,64 @@ avatarDiv.textContent = initials;
         header.classList.remove('py-2');
       }
     });
+// ... inside existing DOMContentLoaded ...
+
+    // --- Subscription Form Logic ---
+    const subForm = document.getElementById('subscribe-form');
+    if (subForm) {
+        subForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const emailInput = document.getElementById('subscribe-email');
+            const btn = document.getElementById('subscribe-btn');
+            const msg = document.getElementById('subscribe-message');
+            const originalBtnText = btn.innerHTML;
+            
+            // 1. Set Loading State
+            btn.disabled = true;
+            btn.innerHTML = `<svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+            msg.style.opacity = '0';
+            
+            try {
+                // 2. Send Data to API
+                const response = await fetch('/api/subscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: emailInput.value })
+                });
+                
+                const data = await response.json();
+                
+                // 3. Handle Response
+                msg.textContent = data.message || data.error;
+                msg.classList.remove('text-red-500', 'text-green-500');
+                
+                if (response.ok) {
+                    msg.classList.add('text-green-500');
+                    emailInput.value = ''; // Clear input
+                    btn.innerHTML = "Subscribed ✓";
+                    setTimeout(() => {
+                        btn.disabled = false;
+                        btn.innerHTML = originalBtnText;
+                    }, 3000);
+                } else {
+                    msg.classList.add('text-red-500');
+                    btn.disabled = false;
+                    btn.innerHTML = originalBtnText;
+                }
+                
+                msg.style.opacity = '1';
+
+            } catch (error) {
+                console.error(error);
+                msg.textContent = "Something went wrong. Try again.";
+                msg.classList.add('text-red-500');
+                msg.style.opacity = '1';
+                btn.disabled = false;
+                btn.innerHTML = originalBtnText;
+            }
+        });
+    }
   </script>
 </body>
 </html>
