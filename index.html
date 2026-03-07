@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html class="scroll-smooth" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>OpenTuwa | Stories</title>
+  
+  <link href="https://fonts.googleapis.com" rel="preconnect"/>
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet"/>
+  
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'tuwa-black': '#0a0a0b', 'tuwa-gray': '#161618', 'tuwa-text': '#e5e5e5',
+            'tuwa-muted': '#a1a1aa', 'tuwa-accent': '#3b82f6', 'tuwa-gold': '#d4af37'
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            heading: ['Plus Jakarta Sans', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background-color: #0a0a0b; color: #e5e5e5; -webkit-font-smoothing: antialiased; }
+    .glass-header { backdrop-filter: blur(12px); background-color: rgba(10, 10, 11, 0.8); border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+    .card-hover:hover img { transform: scale(1.05); }
+  </style>
+</head>
+<body>
+
+  <header class="fixed top-0 w-full z-50 glass-header">
+    <nav class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+      <div class="flex items-center space-x-8">
+        <a class="text-2xl font-extrabold tracking-tighter font-heading text-white" href="/">TUWA</a>
+        <div class="hidden md:flex space-x-6 text-sm font-medium text-tuwa-muted">
+          <a class="text-white transition-colors" href="/">Stories</a>
+          <a class="hover:text-white transition-colors" href="#">Lab</a>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <main class="pt-32 pb-20 px-6 max-w-7xl mx-auto">
+    <div class="mb-16">
+      <h1 class="text-5xl md:text-6xl font-extrabold font-heading text-white mb-4">Latest Stories</h1>
+      <p class="text-xl text-tuwa-muted">Insights, deep dives, and perspectives from the OpenTuwa network.</p>
+    </div>
+
+    <div id="article-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+      <div class="col-span-full py-20 text-center text-tuwa-muted animate-pulse">Loading stories...</div>
+    </div>
+  </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const grid = document.getElementById('article-grid');
+      
+      try {
+        const response = await fetch('/api/article');
+        const article = await response.json();
+        
+        if (article.length === 0) {
+          grid.innerHTML = '<div class="col-span-full py-20 text-center text-tuwa-muted">No stories published yet.</div>';
+          return;
+        }
+
+        grid.innerHTML = article.map(article => {
+          // Format date safely
+          const dateStr = article.published_at ? new Date(article.published_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+          
+          // Format tags safely
+          const tagsHtml = article.tags ? article.tags.split(',').slice(0, 2).map(t => 
+            `<span class="text-[10px] uppercase tracking-wider font-bold text-tuwa-accent">${t.trim()}</span>`
+          ).join('<span class="text-tuwa-muted px-2">•</span>') : '';
+
+          // Default image if missing
+          const imgUrl = (article.image_url && article.image_url.trim() !== '') ? article.image_url : 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop';
+
+          return `
+            <a href="/articles/${article.slug}" class="group block card-hover">
+              <div class="w-full h-64 rounded-xl overflow-hidden mb-6 relative bg-tuwa-gray border border-white/5">
+                <img src="${imgUrl}" alt="${article.title}" class="w-full h-full object-cover transition-transform duration-700 ease-out" loading="lazy">
+              </div>
+              <div class="flex items-center mb-3">
+                ${tagsHtml}
+              </div>
+              <h2 class="text-2xl font-bold font-heading text-white mb-2 group-hover:text-tuwa-accent transition-colors leading-tight">${article.title}</h2>
+              <p class="text-tuwa-muted text-sm line-clamp-2 mb-4">${article.subtitle || article.seo_description || ''}</p>
+              <div class="flex items-center text-xs text-tuwa-muted font-medium">
+                <span>${article.author || 'Tuwa Media'}</span>
+                <span class="px-2">•</span>
+                <span>${dateStr}</span>
+                <span class="px-2">•</span>
+                <span>${article.read_time_minutes || 5} min read</span>
+              </div>
+            </a>
+          `;
+        }).join('');
+      } catch (error) {
+        grid.innerHTML = `<div class="col-span-full py-20 text-center text-red-500">Failed to load stories: ${error.message}</div>`;
+      }
+    });
+  </script>
+</body>
+</html>
