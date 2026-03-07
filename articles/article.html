@@ -86,7 +86,7 @@
       <div class="hidden md:flex space-x-6 text-sm font-medium text-tuwa-muted">
         <a class="hover:text-white transition-colors" href="/">Stories</a>
         <a class="hover:text-white transition-colors" href="#">Lab</a>
-        <a class="hover:text-white transition-colors" href="/archive.html">Archive</a>
+        <a class="hover:text-white transition-colors" href="/archive">Archive</a>
       </div>
     </div>
   </nav>
@@ -135,7 +135,7 @@
     <section class="bg-tuwa-gray py-24 px-6 border-t border-white/5" data-purpose="subscription-cta">
       <div class="max-w-3xl mx-auto text-center">
         <h2 class="text-4xl font-bold mb-6 text-white">Stay Ahead of the Curve</h2>
-        <p class="text-tuwa-muted mb-10 text-lg">Join 40,000+ designers and engineers receiving our weekly deep-dives into the future of the web.</p>
+        <p class="text-tuwa-muted mb-10 text-lg">Join thinkers and researchers receiving our daily deep-dives into the view of the world.</p>
         
         <!-- Form Start -->
         <form id="subscribe-form" class="flex flex-col md:flex-row gap-4 justify-center relative">
@@ -166,12 +166,10 @@
 
   <footer class="py-12 px-6 border-t border-white/5" data-purpose="site-footer">
   <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
-    <div class="text-xl font-extrabold font-heading text-white">TUWA</div>
+    <div class="text-xl font-extrabold font-heading text-white">OpenTuwa</div>
     <div class="flex space-x-8 text-xs font-bold tracking-widest uppercase text-tuwa-muted">
-      <a class="hover:text-white transition-colors" href="https://opentuware.pages.dev/legal/" target="_blank">Privacy</a>
-      <a class="hover:text-white transition-colors" href="#">Terms</a>
+      <a class="hover:text-white transition-colors" href="https://opentuware.pages.dev/legal/" target="_blank">Terms & Privacy</a>
       <a class="hover:text-white transition-colors" href="https://x.com/OpenTuwa" target="_blank">Twitter</a>
-      <a class="hover:text-white transition-colors" href="#">Github</a>
     </div>
     <div class="text-xs text-tuwa-muted">
       © 2026 OpenTuwa Foundation. All rights reserved.
@@ -312,7 +310,7 @@ avatarDiv.textContent = initials;
                 if (response.ok) {
                     msg.classList.add('text-green-500');
                     emailInput.value = ''; // Clear input
-                    btn.innerHTML = "Subscribed ✓";
+                    btn.innerHTML = "Subscribed";
                     setTimeout(() => {
                         btn.disabled = false;
                         btn.innerHTML = originalBtnText;
