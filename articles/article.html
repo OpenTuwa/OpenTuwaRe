@@ -198,13 +198,32 @@ if (article.tags && article.tags.trim() !== '') {
         tags.map(tag => `<a href="/?tag=${encodeURIComponent(tag)}" class="px-3 py-1 border border-white/10 rounded-full text-[10px] tracking-widest font-bold uppercase tag-hover transition-colors cursor-pointer inline-block text-white decoration-none">${tag}</a>`).join('');
 }
 
-            // 4. Set Metadata (Author, Date, Read Time)
-            const authorName = article.author || 'Tuwa Media';
-            document.getElementById('author-name').textContent = authorName;
-            
-            // Generate initials for the avatar (e.g., "Alex Mercer" -> "AM")
-            const initials = authorName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-            document.getElementById('author-initials').textContent = initials;
+// ... inside the DOMContentLoaded try block ...
+
+// 4. Set Metadata (Author, Date, Read Time)
+const authorName = article.author || 'Tuwa Media';
+
+// Create a Link for the name
+const authorLink = document.createElement('a');
+authorLink.href = `/?author=${encodeURIComponent(authorName)}`;
+authorLink.className = "text-sm font-semibold text-white hover:text-tuwa-accent transition-colors";
+authorLink.textContent = authorName;
+
+// clear and append
+const nameContainer = document.getElementById('author-name');
+nameContainer.textContent = ''; 
+nameContainer.appendChild(authorLink);
+
+// Generate initials (keep existing logic)
+const initials = authorName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+const avatarDiv = document.getElementById('author-initials');
+
+// OPTIONAL: Make the Avatar Clickable too
+avatarDiv.style.cursor = 'pointer';
+avatarDiv.onclick = () => window.location.href = `/?author=${encodeURIComponent(authorName)}`;
+avatarDiv.textContent = initials;
+
+// ... rest of date/time logic ...
 
             const dateString = article.published_at 
                 ? new Date(article.published_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) 

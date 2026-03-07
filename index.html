@@ -47,53 +47,99 @@
     </nav>
   </header>
 
-  <main class="pt-32 pb-20 px-6 max-w-7xl mx-auto min-h-screen">
-    <div class="mb-16">
+  <!-- In your index.html -->
+
+<main class="pt-32 pb-20 px-6 max-w-7xl mx-auto min-h-screen">
+    
+    <!-- Default / Tag Header -->
+    <div id="default-header" class="mb-16">
       <h1 id="page-title" class="text-5xl md:text-6xl font-extrabold font-heading text-white mb-4">Latest Stories</h1>
       <p id="page-subtitle" class="text-xl text-tuwa-muted">Insights, deep dives, and perspectives from the OpenTuwa network.</p>
+    </div>
+
+    <!-- Author Profile Header (Hidden by default) -->
+    <div id="author-header" class="hidden mb-20 text-center max-w-2xl mx-auto">
+        <div class="relative inline-block mb-6">
+            <div class="absolute inset-0 bg-tuwa-accent blur-xl opacity-20 rounded-full"></div>
+            <img id="auth-avatar" src="" alt="Author" class="relative w-32 h-32 rounded-full object-cover border-2 border-white/10 shadow-2xl">
+        </div>
+        <h1 id="auth-name" class="text-4xl md:text-5xl font-extrabold font-heading text-white mb-3"></h1>
+        <div id="auth-role" class="text-tuwa-accent font-bold tracking-widest uppercase text-xs mb-4"></div>
+        <p id="auth-bio" class="text-lg text-tuwa-muted mb-6 leading-relaxed"></p>
+        <div id="auth-socials" class="flex justify-center gap-4">
+            <!-- Social links injected here -->
+        </div>
     </div>
 
     <div id="articles-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
       <div class="col-span-full py-20 text-center text-tuwa-muted animate-pulse">Loading stories...</div>
     </div>
-  </main>
+</main>
 
-  <footer class="py-12 px-6 border-t border-white/5">
-    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
-      <div class="text-xl font-extrabold font-heading text-white">TUWA</div>
-      <div class="flex space-x-8 text-xs font-bold tracking-widest uppercase text-tuwa-muted">
-        <a class="hover:text-white transition-colors" href="https://opentuware.pages.dev/legal/" target="_blank">Privacy</a>
-        <a class="hover:text-white transition-colors" href="#">Terms</a>
-        <a class="hover:text-white transition-colors" href="https://x.com/OpenTuwa" target="_blank">Twitter</a>
-        <a class="hover:text-white transition-colors" href="#">Github</a>
-      </div>
-      <div class="text-xs text-tuwa-muted">
-        © 2026 OpenTuwa Foundation. All rights reserved.
-      </div>
-    </div>
-  </footer>
-
-  <script>
+<script>
     document.addEventListener('DOMContentLoaded', async () => {
       const grid = document.getElementById('articles-grid');
+      const defaultHeader = document.getElementById('default-header');
+      const authorHeader = document.getElementById('author-header');
       
-      // Check if user clicked a tag
       const urlParams = new URLSearchParams(window.location.search);
       const tagFilter = urlParams.get('tag');
+      const authorFilter = urlParams.get('author');
 
-      if (tagFilter) {
-          document.getElementById('page-title').textContent = `Tagged: ${tagFilter}`;
+      // 1. Handle Header Display
+      if (authorFilter) {
+          // Switch to Author Mode
+          defaultHeader.classList.add('hidden');
+          authorHeader.classList.remove('hidden');
+          
+          // Fetch Author Details
+          try {
+              const authRes = await fetch(`/api/get-author?name=${encodeURIComponent(authorFilter)}`);
+              const authData = await authRes.json();
+              
+              document.getElementById('auth-name').textContent = authorFilter;
+              
+              if (authData) {
+                  document.getElementById('auth-avatar').src = authData.avatar_url || 'https://ui-avatars.com/api/?name=' + authorFilter + '&background=random';
+                  document.getElementById('auth-role').textContent = authData.role || 'Contributor';
+                  document.getElementById('auth-bio').textContent = authData.bio || `Stories written by ${authorFilter}.`;
+                  
+                  if (authData.social_link) {
+                      document.getElementById('auth-socials').innerHTML = `
+                          <a href="${authData.social_link}" target="_blank" class="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-full text-xs font-bold text-white transition-colors border border-white/5">
+                              Follow on Social
+                          </a>
+                      `;
+                  }
+              } else {
+                  // Fallback if author name exists in article but not in 'authors' table
+                  document.getElementById('auth-avatar').src = 'https://ui-avatars.com/api/?name=' + authorFilter + '&background=random';
+                  document.getElementById('auth-bio').textContent = `Articles contributed by ${authorFilter}.`;
+              }
+          } catch (e) {
+              console.error("Error fetching author details", e);
+          }
+
+      } else if (tagFilter) {
+          // Handle Tag Mode
+          document.getElementById('page-title').textContent = `Topic: ${tagFilter}`;
           document.getElementById('page-subtitle').textContent = `Exploring stories related to ${tagFilter}`;
       }
       
+      // 2. Fetch and Filter Articles
       try {
         const response = await fetch('/api/article');
         let articles = await response.json();
         
-        // Filter articles by tag if the URL has ?tag=XYZ
         if (tagFilter) {
             articles = articles.filter(a => 
                 a.tags && a.tags.split(',').map(t => t.trim().toLowerCase()).includes(tagFilter.toLowerCase())
+            );
+        }
+
+        if (authorFilter) {
+            articles = articles.filter(a => 
+                a.author && a.author.trim().toLowerCase() === authorFilter.toLowerCase()
             );
         }
         
@@ -105,12 +151,14 @@
         grid.innerHTML = articles.map(article => {
           const dateStr = article.published_at ? new Date(article.published_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
           
-          // Using a button with preventDefault so clicking the tag doesn't trigger the main article link
           const tagsHtml = article.tags ? article.tags.split(',').slice(0, 2).map(t => 
             `<button onclick="event.preventDefault(); window.location.href='/?tag=${encodeURIComponent(t.trim())}'" class="text-[10px] uppercase tracking-wider font-bold text-tuwa-accent hover:text-white transition-colors cursor-pointer relative z-10">${t.trim()}</button>`
           ).join('<span class="text-tuwa-muted px-2">•</span>') : '';
 
           const imgUrl = (article.image_url && article.image_url.trim() !== '') ? article.image_url : 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop';
+
+          // MAKE AUTHOR CLICKABLE HERE
+          const authorHtml = `<button onclick="event.preventDefault(); window.location.href='/?author=${encodeURIComponent(article.author)}'" class="hover:text-white hover:underline decoration-tuwa-accent/50 underline-offset-4 transition-all cursor-pointer">${article.author || 'Tuwa Media'}</button>`;
 
           return `
             <a href="/articles/${article.slug}" class="group block card-hover relative">
@@ -123,7 +171,7 @@
               <h2 class="text-2xl font-bold font-heading text-white mb-2 group-hover:text-tuwa-accent transition-colors leading-tight">${article.title}</h2>
               <p class="text-tuwa-muted text-sm line-clamp-2 mb-4">${article.subtitle || article.seo_description || ''}</p>
               <div class="flex items-center text-xs text-tuwa-muted font-medium">
-                <span>${article.author || 'Tuwa Media'}</span>
+                ${authorHtml}
                 <span class="px-2">•</span>
                 <span>${dateStr}</span>
                 <span class="px-2">•</span>
@@ -136,6 +184,6 @@
         grid.innerHTML = `<div class="col-span-full py-20 text-center text-red-500">Failed to load stories: ${error.message}</div>`;
       }
     });
-  </script>
+</script>
 </body>
 </html>
