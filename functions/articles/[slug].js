@@ -84,6 +84,18 @@ export async function onRequestGet(context) {
         videoMeta += `<meta name="twitter:player" content="${escapeHtml(secure)}">`;
         videoMeta += `<meta name="twitter:player:width" content="${width}">`;
         videoMeta += `<meta name="twitter:player:height" content="${height}">`;
+        // Also expose a same-origin embeddable player HTML so Facebook/X/WhatsApp can load a player
+        try {
+          const origin = new URL(request.url).origin;
+          const playerUrl = `${origin}/player/${encodeURIComponent(slug)}`;
+          videoMeta += `<meta property="og:video" content="${escapeHtml(playerUrl)}">`;
+          videoMeta += `<meta property="og:video:secure_url" content="${escapeHtml(playerUrl)}">`;
+          videoMeta += `<meta property="og:video:type" content="text/html">`;
+          videoMeta += `<meta name="twitter:card" content="player">`;
+          videoMeta += `<meta name="twitter:player" content="${escapeHtml(playerUrl)}">`;
+          videoMeta += `<meta name="twitter:player:width" content="${width}">`;
+          videoMeta += `<meta name="twitter:player:height" content="${height}">`;
+        } catch (e) {}
       } else if (videoType === 'text/html') {
         // iframe player (YouTube/Vimeo)
         const playerUrl = videoSrc;
