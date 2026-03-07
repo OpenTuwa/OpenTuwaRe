@@ -2,8 +2,17 @@ export async function onRequestGet(context) {
   const { env, params, request } = context;
   // Detect common crawler user-agents; only return prerendered HTML for bots
   const ua = (request && request.headers && request.headers.get('user-agent')) || '';
-  const botRegex = /(facebookexternalhit|facebot|twitterbot|linkedinbot|slackbot|telegrambot|whatsapp|googlebot|bingbot|duckduckbot|applebot)/i;
-  if (!botRegex.test(ua)) {
+  // Broadened list to include modern AI crawlers and preview bots; keep case-insensitive
+  const botRegex = /(facebookexternalhit|facebot|twitterbot|linkedinbot|slackbot|telegrambot|whatsapp|googlebot|gptbot|openai|bingbot|bingpreview|duckduckbot|applebot|yandex|slurp|baiduspider)/i;
+  // Allow forcing prerender via query parameter or well-known headers (useful for crawlers that don't set UA)
+  let forcePrerender = false;
+  try {
+    const u = new URL(request.url);
+    if (u.searchParams.has('prerender') || u.searchParams.has('_escaped_fragment_')) forcePrerender = true;
+  } catch (e) {}
+  const hdr = (request && request.headers) || new Headers();
+  if (hdr.get('x-prerender') === '1' || hdr.get('x-bufferbot') === '1' || hdr.get('x-chatgpt-proxy') === '1') forcePrerender = true;
+  if (!botRegex.test(ua) && !forcePrerender) {
     if (context && typeof context.next === 'function') {
       return await context.next();
     }
