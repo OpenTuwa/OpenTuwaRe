@@ -32,6 +32,16 @@ export async function onRequestGet(context) {
       }
     } catch (e) { images = []; }
     if (!images.length && image) images = [image];
+    // also extract <img src> occurrences from the article HTML to ensure all in-content images are exposed
+    try {
+      const imgMatches = Array.from(htmlContent.matchAll(/<img\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/ig));
+      for (const m of imgMatches) {
+        if (m && m[1]) {
+          const src = m[1];
+          if (!images.includes(src)) images.push(src);
+        }
+      }
+    } catch (e) {}
     // keywords/tags
     let keywords = '';
     try {
@@ -148,6 +158,10 @@ export async function onRequestGet(context) {
       ${images && images.length ? images.map(img=>`<meta property="og:image" content="${escapeHtml(img)}">`).join('') : ''}
       ${videoMeta}
       <meta property="og:url" content="${escapeHtml(url)}">
+      ${publishedAt ? `<meta property="article:published_time" content="${escapeHtml(isoDate(publishedAt) || '')}">` : ''}
+      ${updatedAt ? `<meta property="article:modified_time" content="${escapeHtml(isoDate(updatedAt) || '')}">` : ''}
+      ${article.section || article.category ? `<meta property="article:section" content="${escapeHtml(article.section || article.category || '')}">` : ''}
+      ${keywords ? (Array.isArray(article.tags) ? article.tags.map(t=>`<meta property="article:tag" content="${escapeHtml(t)}">`).join('') : (keywords ? `<meta property="article:tag" content="${escapeHtml(keywords)}">` : '')) : ''}
       <meta name="twitter:card" content="${images && images.length ? 'summary_large_image' : 'summary'}">
       <meta name="twitter:title" content="${escapeHtml(title)}">
       <meta name="twitter:description" content="${escapeHtml(description)}">
@@ -156,12 +170,13 @@ export async function onRequestGet(context) {
       <link rel="canonical" href="${escapeHtml(url)}">
       <!-- Structured data for Article / VideoObject to help search engines and AI understand content -->
       <script type="application/ld+json">${JSON.stringify(buildJsonLd({
-        url, title, description, images, authorName, publishedAt, updatedAt, keywords, videoSrc
+        url, title, description, images, authorName, publishedAt, updatedAt, keywords, videoSrc, articleBody: stripHtml(htmlContent)
       }))}</script>
     </head><body>
       <main style="font-family:Arial,Helvetica,sans-serif;max-width:800px;margin:4rem auto;padding:1rem;">
         <h1>${escapeHtml(title)}</h1>
         <p>${escapeHtml(description)}</p>
+        <article class="article-content">${htmlContent}</article>
         <p><a href="${escapeHtml(url)}">Read on OpenTuwa</a></p>
       </main>
     </body></html>`;
