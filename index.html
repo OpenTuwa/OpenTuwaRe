@@ -31,93 +31,77 @@
   </header>
 
   <main class="pt-32 pb-20 px-6 max-w-7xl mx-auto min-h-screen">
+    
     <div id="header-block" class="mb-16 border-b border-white/5 pb-10">
       <h1 id="page-title" class="text-5xl md:text-6xl font-extrabold font-heading text-white mb-4">Latest Stories</h1>
       <p id="page-subtitle" class="text-xl text-tuwa-muted">Insights, deep dives, and perspectives from the OpenTuwa network.</p>
     </div>
+
     <div id="articles-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
       <div class="col-span-full py-20 text-center text-tuwa-muted animate-pulse">Loading stories...</div>
     </div>
   </main>
 
-  <section class="bg-tuwa-gray py-24 px-6 border-t border-white/5">
-    <div class="max-w-3xl mx-auto text-center">
-      <h2 class="text-4xl font-bold mb-6 text-white">Stay Ahead of the Curve</h2>
-      <p class="text-tuwa-muted mb-10 text-lg">Join thinkers and audience receiving our deep-dives.</p>
-      <form onsubmit="handleSubscribe(event)" class="flex flex-col md:flex-row gap-4 justify-center">
-        <input type="email" required class="bg-tuwa-black border border-white/10 rounded-full px-8 py-4 w-full md:w-96 text-white focus:outline-none focus:border-tuwa-accent transition-all" placeholder="Enter your email"/>
-        <button type="submit" class="bg-tuwa-accent hover:bg-blue-600 text-white font-bold py-4 px-10 rounded-full transition-all">Join the Lab</button>
-      </form>
-    </div>
-  </section>
-
-    <footer class="py-12 px-6 border-t border-white/5">
-    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
-      <div class="text-xl font-extrabold font-heading text-white">OpenTuwa</div>
-      <div class="flex space-x-8 text-xs font-bold tracking-widest uppercase text-tuwa-muted">
-        <a class="hover:text-white transition-colors" href="https://opentuware.pages.dev/legal/" target="_blank">Privacy</a>
-      </div>
-    </div>
-      <div class="text-xs text-tuwa-muted">© 2026 OpenTuwa Foundation. All rights reserved.</div>
-    </div>
-  </footer>
   <script>
-    async function handleSubscribe(e) {
-        e.preventDefault();
-        const btn = e.target.querySelector('button');
-        const input = e.target.querySelector('input');
-        const ogText = btn.textContent;
-        btn.textContent = 'Joining...';
-        try {
-            const res = await fetch('/api/subscribe', { method: 'POST', body: JSON.stringify({ email: input.value }) });
-            if (res.ok) { btn.textContent = 'Subscribed!'; btn.classList.add('bg-green-500'); input.value = ''; }
-        } catch (err) { btn.textContent = 'Error'; }
-        setTimeout(() => { if(btn.textContent==='Error') btn.textContent = ogText; }, 3000);
-    }
-
     document.addEventListener('DOMContentLoaded', async () => {
       const grid = document.getElementById('articles-grid');
+      
       const urlParams = new URLSearchParams(window.location.search);
       const tagFilter = urlParams.get('tag');
       const authorFilter = urlParams.get('author');
 
+      // Handle Tag Filtering UI
       if (tagFilter) {
           document.getElementById('page-title').textContent = `Tagged: ${tagFilter}`;
           document.getElementById('page-subtitle').textContent = `Exploring stories related to ${tagFilter}`;
       }
       
+      // Handle Author Filtering UI & Fetch Author Data
       if (authorFilter) {
           try {
-            const authorRes = await fetch(`/api/author?name=${encodeURIComponent(authorFilter)}`);
-            if (authorRes.ok) {
-              const author = await authorRes.json();
-              const avatarSrc = author.avatar_url || author.avatar || author.image_url || author.image || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop';
-              document.getElementById('header-block').innerHTML = `
-                <div class="flex flex-col md:flex-row items-start md:items-center gap-6">
-                  <img src="${avatarSrc}" class="w-24 h-24 rounded-full object-cover border-2 border-tuwa-accent" alt="${author.name}">
-                  <div>
-                    <h1 class="text-4xl md:text-5xl font-extrabold font-heading text-white mb-2">${author.name}</h1>
-                    <p class="text-tuwa-accent font-bold tracking-widest uppercase text-xs mb-3">${author.role || 'Contributor'}</p>
-                    <p class="text-tuwa-muted max-w-2xl">${author.bio || ''}</p>
-                  </div>
-                </div>
-              `;
-            }
-          } catch (e) {}
+              const authorRes = await fetch(`/api/author?name=${encodeURIComponent(authorFilter)}`);
+              if (authorRes.ok) {
+                  const author = await authorRes.json();
+                  document.getElementById('header-block').innerHTML = `
+                      <div class="flex flex-col md:flex-row items-start md:items-center gap-6">
+                          <img src="${author.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop'}" 
+                               class="w-24 h-24 rounded-full object-cover border-2 border-tuwa-accent shadow-[0_0_15px_rgba(59,130,246,0.3)]" alt="${author.name}">
+                          <div>
+                              <h1 class="text-4xl md:text-5xl font-extrabold font-heading text-white mb-2">${author.name}</h1>
+                              <p class="text-tuwa-accent font-bold tracking-widest uppercase text-xs mb-3">${author.role || 'Contributor'}</p>
+                              <p class="text-tuwa-muted max-w-2xl">${author.bio || 'An insightful contributor to OpenTuwa.'}</p>
+                          </div>
+                      </div>
+                  `;
+              }
+          } catch (e) { console.error("Could not load author profile"); }
       }
       
+      // Fetch and Render Articles
       try {
         const response = await fetch('/api/article');
         let articles = await response.json();
         
-        if (tagFilter) articles = articles.filter(a => a.tags && a.tags.split(',').map(t => t.trim().toLowerCase()).includes(tagFilter.toLowerCase()));
-        if (authorFilter) articles = articles.filter(a => a.author && a.author.toLowerCase() === authorFilter.toLowerCase());
+        // Filter logic
+        if (tagFilter) {
+            articles = articles.filter(a => a.tags && a.tags.split(',').map(t => t.trim().toLowerCase()).includes(tagFilter.toLowerCase()));
+        }
+        if (authorFilter) {
+            articles = articles.filter(a => a.author && a.author.toLowerCase() === authorFilter.toLowerCase());
+        }
         
-        if (articles.length === 0) { grid.innerHTML = '<div class="col-span-full py-20 text-center text-tuwa-muted">No stories found.</div>'; return; }
+        if (articles.length === 0) {
+          grid.innerHTML = '<div class="col-span-full py-20 text-center text-tuwa-muted">No stories found for this filter.</div>';
+          return;
+        }
 
         grid.innerHTML = articles.map(article => {
           const dateStr = article.published_at ? new Date(article.published_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
-          const tagsHtml = article.tags ? article.tags.split(',').slice(0, 2).map(t => `<button onclick="event.preventDefault(); window.location.href='/?tag=${encodeURIComponent(t.trim())}'" class="text-[10px] uppercase tracking-wider font-bold text-tuwa-accent hover:text-white transition-colors cursor-pointer relative z-10">${t.trim()}</button>`).join('<span class="text-tuwa-muted px-2">•</span>') : '';
+          
+          const tagsHtml = article.tags ? article.tags.split(',').slice(0, 2).map(t => 
+            `<button onclick="event.preventDefault(); window.location.href='/?tag=${encodeURIComponent(t.trim())}'" class="text-[10px] uppercase tracking-wider font-bold text-tuwa-accent hover:text-white transition-colors cursor-pointer relative z-10">${t.trim()}</button>`
+          ).join('<span class="text-tuwa-muted px-2">•</span>') : '';
+
           const imgUrl = (article.image_url && article.image_url.trim() !== '') ? article.image_url : 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop';
           const authorName = article.author || 'Tuwa Media';
 
@@ -126,17 +110,24 @@
               <div class="w-full h-64 rounded-xl overflow-hidden mb-6 relative bg-tuwa-gray border border-white/5">
                 <img src="${imgUrl}" alt="${article.title}" class="w-full h-full object-cover transition-transform duration-700 ease-out" loading="lazy">
               </div>
-              <div class="flex items-center mb-3">${tagsHtml}</div>
+              <div class="flex items-center mb-3">
+                ${tagsHtml}
+              </div>
               <h2 class="text-2xl font-bold font-heading text-white mb-2 group-hover:text-tuwa-accent transition-colors leading-tight">${article.title}</h2>
               <p class="text-tuwa-muted text-sm line-clamp-2 mb-4">${article.subtitle || article.seo_description || ''}</p>
               <div class="flex items-center text-xs text-tuwa-muted font-medium">
                 <button onclick="event.preventDefault(); window.location.href='/?author=${encodeURIComponent(authorName)}'" class="hover:text-white transition-colors cursor-pointer relative z-10">${authorName}</button>
-                <span class="px-2">•</span><span>${dateStr}</span><span class="px-2">•</span><span>${article.read_time_minutes || 5} min read</span>
+                <span class="px-2">•</span>
+                <span>${dateStr}</span>
+                <span class="px-2">•</span>
+                <span>${article.read_time_minutes || 5} min read</span>
               </div>
             </a>
           `;
         }).join('');
-      } catch (error) { grid.innerHTML = `<div class="col-span-full py-20 text-center text-red-500">Failed to load stories.</div>`; }
+      } catch (error) {
+        grid.innerHTML = `<div class="col-span-full py-20 text-center text-red-500">Failed to load stories.</div>`;
+      }
     });
   </script>
 </body>
