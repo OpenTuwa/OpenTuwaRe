@@ -355,22 +355,26 @@ avatarDiv.textContent = initials;
             // 5. Inject Body Content
             document.getElementById('article-content').innerHTML = article.content_html || '<p>No content available.</p>';
 // --- Init Tuwa Hybrid Subtitles (MP4 + YouTube) ---
+            // --- Init Tuwa Hybrid Subtitles (MP4 + YouTube) ---
             async function initHybridSubtitles() {
               const subtitleBoxes = document.querySelectorAll('.tuwa-subtitle-box');
               let needsYouTubeAPI = false;
               const ytPlayersQueue = [];
 
               for (const box of subtitleBoxes) {
-                const mediaId = box.dataset.video || box.dataset.youtube; // Fallback for your older format
+                const mediaId = box.dataset.video || box.dataset.youtube; 
                 const vttUrl = box.dataset.vtt;
                 const mediaEl = document.getElementById(mediaId);
                 
-                if (!mediaEl || !vttUrl) continue;
+                if (!mediaEl || !vttUrl) {
+                  console.warn('Subtitle Box missing mediaId or vttUrl', box);
+                  continue;
+                }
 
                 try {
                   // 1. Fetch & Parse VTT
                   const response = await fetch(vttUrl);
-                  if (!response.ok) throw new Error('VTT missing');
+                  if (!response.ok) throw new Error(`VTT missing at ${vttUrl} (Status: ${response.status})`);
                   const vttText = await response.text();
                   
                   const cues = [];
@@ -410,12 +414,13 @@ avatarDiv.textContent = initials;
                   }
 
                 } catch (error) {
-                  console.warn('Subtitle error:', error);
+                  console.error('Subtitle Engine Error:', error);
                   box.style.display = 'none';
+                  box.insertAdjacentHTML('afterend', `<p style="color:red; font-size:12px;">Subtitle Error: Check console</p>`); // Helpful visual debug
                 }
               }
 
-              // 4. Handle YouTube API initialization if needed
+              // 4. Handle YouTube API initialization perfectly
               if (needsYouTubeAPI) {
                 const setupYTPlayers = () => {
                   ytPlayersQueue.forEach(p => {
@@ -424,6 +429,7 @@ avatarDiv.textContent = initials;
                         'onReady': (event) => {
                           const player = event.target;
                           setInterval(() => {
+                            // Only check time if playing to save memory
                             if (player.getPlayerState() === YT.PlayerState.PLAYING) {
                               p.render(player.getCurrentTime());
                             }
@@ -434,15 +440,25 @@ avatarDiv.textContent = initials;
                   });
                 };
 
-                // Load YT script if not present, otherwise just setup players
-                if (!window.YT) {
-                  const tag = document.createElement('script');
-                  tag.src = "https://www.youtube.com/iframe_api";
-                  const firstScriptTag = document.getElementsByTagName('script')[0];
-                  firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-                  window.onYouTubeIframeAPIReady = setupYTPlayers;
-                } else if (window.YT && window.YT.Player) {
+                // Check if YouTube API is fully loaded and ready
+                if (window.YT && window.YT.Player) {
                   setupYTPlayers();
+                } else {
+                  // If it's not loaded, load it and wait for the callback
+                  const oldOnReady = window.onYouTubeIframeAPIReady;
+                  window.onYouTubeIframeAPIReady = function() {
+                    if (oldOnReady) oldOnReady();
+                    setupYTPlayers();
+                  };
+                  
+                  // Only inject the script tag if it hasn't been injected yet
+                  if (!document.getElementById('yt-api-script')) {
+                    const tag = document.createElement('script');
+                    tag.id = 'yt-api-script';
+                    tag.src = "https://www.youtube.com/iframe_api";
+                    const firstScriptTag = document.getElementsByTagName('script')[0];
+                    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+                  }
                 }
               }
             }
