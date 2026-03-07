@@ -19,8 +19,8 @@
             'tuwa-gray': '#161618',
             'tuwa-text': '#e5e5e5',
             'tuwa-muted': '#a1a1aa',
-            'tuwa-accent': '#3b82f6', // Electric Blue
-            'tuwa-gold': '#d4af37'   // Muted Gold
+            'tuwa-accent': '#3b82f6', 
+            'tuwa-gold': '#d4af37'   
           },
           fontFamily: {
             sans: ['Inter', 'sans-serif'],
@@ -84,8 +84,9 @@
       <div class="flex items-center space-x-8">
         <a class="text-2xl font-extrabold tracking-tighter font-heading text-white" href="/">TUWA</a>
         <div class="hidden md:flex space-x-6 text-sm font-medium text-tuwa-muted">
-          <a class="hover:text-white transition-colors" href="#">Stories</a>
-          <a class="hover:text-white transition-colors" href="/archive">Archive</a>
+          <a class="hover:text-white transition-colors" href="/">Stories</a>
+          <a class="hover:text-white transition-colors" href="#">Lab</a>
+          <a class="hover:text-white transition-colors" href="/archive.html">Archive</a>
         </div>
       </div>
       <div class="flex items-center space-x-6">
@@ -96,6 +97,7 @@
       </div>
     </nav>
   </header>
+
   <main>
     <div id="status" class="py-40 text-center text-tuwa-muted">
         <h2 class="text-2xl font-bold animate-pulse">Loading article...</h2>
@@ -107,6 +109,7 @@
           <img id="hero-img" alt="Article Hero" class="w-full h-full object-cover transform scale-105 hover:scale-100 transition-transform duration-[3000ms]" src=""/>
           <div class="absolute inset-0 hero-gradient-overlay"></div>
         </section>
+
         <section class="relative -mt-40 z-10 px-6" data-purpose="article-meta-section">
           <div class="max-w-4xl mx-auto text-center">
             
@@ -133,9 +136,10 @@
             </div>
           </div>
         </section>
-        <article id="article-content" class="max-w-[720px] mx-auto px-6 py-20 article-content text-tuwa-text" data-purpose="main-story-content">
-            </article>
-        </div>
+
+        <article id="article-content" class="max-w-[720px] mx-auto px-6 py-20 article-content text-tuwa-text" data-purpose="main-story-content"></article>
+        
+    </div>
 
     <section class="bg-tuwa-gray py-24 px-6 border-t border-white/5" data-purpose="subscription-cta">
       <div class="max-w-3xl mx-auto text-center">
@@ -149,25 +153,25 @@
         </form>
       </div>
     </section>
-    </main>
+  </main>
 
   <footer class="py-12 px-6 border-t border-white/5" data-purpose="site-footer">
-  <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
-    <div class="text-xl font-extrabold font-heading text-white">TUWA</div>
-    <div class="flex space-x-8 text-xs font-bold tracking-widest uppercase text-tuwa-muted">
-      <a class="hover:text-white transition-colors" href="https://opentuware.pages.dev/legal/" target="_blank">Privacy</a>
-      <a class="hover:text-white transition-colors" href="#">Terms</a>
-      <a class="hover:text-white transition-colors" href="https://x.com/OpenTuwa" target="_blank">Twitter</a>
-      <a class="hover:text-white transition-colors" href="#">Github</a>
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
+      <div class="text-xl font-extrabold font-heading text-white">TUWA</div>
+      <div class="flex space-x-8 text-xs font-bold tracking-widest uppercase text-tuwa-muted">
+        <a class="hover:text-white transition-colors" href="https://opentuware.pages.dev/legal/" target="_blank">Privacy</a>
+        <a class="hover:text-white transition-colors" href="#">Terms</a>
+        <a class="hover:text-white transition-colors" href="https://x.com/OpenTuwa" target="_blank">Twitter</a>
+        <a class="hover:text-white transition-colors" href="#">Github</a>
+      </div>
+      <div class="text-xs text-tuwa-muted">
+        © 2026 OpenTuwa Foundation. All rights reserved.
+      </div>
     </div>
-    <div class="text-xs text-tuwa-muted">
-      © 2026 OpenTuwa Foundation. All rights reserved.
-    </div>
-  </div>
-</footer>
+  </footer>
+
   <script>
     document.addEventListener('DOMContentLoaded', async () => {
-        // Extract the slug from the URL
         const pathSegments = window.location.pathname.split('/').filter(Boolean);
         const slug = pathSegments[pathSegments.length - 1] || 'default-slug';
 
@@ -175,39 +179,35 @@
         const containerEl = document.getElementById('article-container');
 
         try {
-            // Fetch data from Cloudflare D1 via [slug].js
             const response = await fetch(`/api/article/${slug}`);
             if (!response.ok) throw new Error('Article could not be found.');
             
             const article = await response.json();
 
-            // 1. Set Title & Subtitle
             document.title = `${article.title || 'Article'} | OpenTuwa`;
             document.getElementById('article-title').textContent = article.title;
             if (article.subtitle) document.getElementById('article-subtitle').textContent = article.subtitle;
 
-            // 2. Set Hero Image (Conditional logic)
             const heroSection = document.getElementById('hero-section');
             const heroImg = document.getElementById('hero-img');
             if (article.image_url && article.image_url.trim() !== '') {
                 heroImg.src = article.image_url;
-                heroSection.style.display = 'block'; // Shows section if image exists
+                heroSection.style.display = 'block';
             } else {
-                heroSection.style.display = 'none'; // Hides entire hero block if empty
+                heroSection.style.display = 'none';
             }
 
-// 3. Set Tags and Make Them Clickable Links
-if (article.tags && article.tags.trim() !== '') {
-    const tags = article.tags.split(',').map(tag => tag.trim());
-    document.getElementById('badge-container').innerHTML = 
-        tags.map(tag => `<a href="/?tag=${encodeURIComponent(tag)}" class="px-3 py-1 border border-white/10 rounded-full text-[10px] tracking-widest font-bold uppercase tag-hover transition-colors cursor-pointer inline-block text-white decoration-none">${tag}</a>`).join('');
-}
+            // Tags (Clickable Links to Homepage Tag Filter)
+            if (article.tags && article.tags.trim() !== '') {
+                const tags = article.tags.split(',').map(tag => tag.trim());
+                document.getElementById('badge-container').innerHTML = 
+                    tags.map(tag => `<a href="/?tag=${encodeURIComponent(tag)}" class="px-3 py-1 border border-white/10 rounded-full text-[10px] tracking-widest font-bold uppercase tag-hover transition-colors cursor-pointer inline-block text-white decoration-none">${tag}</a>`).join('');
+            }
 
-            // 4. Set Metadata (Author, Date, Read Time)
+            // Author (Clickable Link to Homepage Author Profile)
             const authorName = article.author || 'Tuwa Media';
-            document.getElementById('author-name').textContent = authorName;
+            document.getElementById('author-name').innerHTML = `<a href="/?author=${encodeURIComponent(authorName)}" class="text-white hover:text-tuwa-accent transition-colors decoration-none">${authorName}</a>`;
             
-            // Generate initials for the avatar (e.g., "Alex Mercer" -> "AM")
             const initials = authorName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
             document.getElementById('author-initials').textContent = initials;
 
@@ -217,10 +217,8 @@ if (article.tags && article.tags.trim() !== '') {
             document.getElementById('article-date').textContent = dateString;
             document.getElementById('article-read-time').textContent = `${article.read_time_minutes || 5} min read`;
 
-            // 5. Inject Body Content
             document.getElementById('article-content').innerHTML = article.content_html || '<p>No content available.</p>';
 
-            // Show article, hide loader
             statusEl.style.display = 'none';
             containerEl.style.display = 'block';
 
@@ -235,7 +233,6 @@ if (article.tags && article.tags.trim() !== '') {
         }
     });
 
-    // Subtle header fade on scroll (from your original code)
     window.addEventListener('scroll', () => {
       const header = document.querySelector('header');
       if (window.scrollY > 50) {
