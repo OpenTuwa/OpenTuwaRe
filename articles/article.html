@@ -184,6 +184,25 @@
 </footer>
   <script>
     document.addEventListener('DOMContentLoaded', async () => {
+      // Helpers to update meta tags for SEO and social previews
+      function setMetaName(name, content) {
+        if (!content && content !== '') return;
+        let el = document.querySelector('meta[name="' + name + '"]');
+        if (!el) { el = document.createElement('meta'); el.setAttribute('name', name); document.head.appendChild(el); }
+        el.setAttribute('content', content || '');
+      }
+      function setMetaProperty(prop, content) {
+        if (!content && content !== '') return;
+        let el = document.querySelector('meta[property="' + prop + '"]');
+        if (!el) { el = document.createElement('meta'); el.setAttribute('property', prop); document.head.appendChild(el); }
+        el.setAttribute('content', content || '');
+      }
+      function setCanonical(url) {
+        if (!url) return;
+        let el = document.querySelector('link[rel="canonical"]');
+        if (!el) { el = document.createElement('link'); el.setAttribute('rel', 'canonical'); document.head.appendChild(el); }
+        el.setAttribute('href', url);
+      }
         // Extract the slug from the URL
         const pathSegments = window.location.pathname.split('/').filter(Boolean);
         const slug = pathSegments[pathSegments.length - 1] || 'default-slug';
@@ -202,6 +221,22 @@
             document.title = `${article.title || 'Article'} | OpenTuwa`;
             document.getElementById('article-title').textContent = article.title;
             if (article.subtitle) document.getElementById('article-subtitle').textContent = article.subtitle;
+
+            // 1b. Update meta tags for SEO and social previews
+            const pageUrl = window.location.href;
+            const seoDescription = article.seo_description || article.subtitle || (article.excerpt || '');
+            const ogImage = (article.image_url && article.image_url.trim() !== '') ? article.image_url : 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop';
+            setMetaName('description', seoDescription);
+            setMetaProperty('og:type', 'article');
+            setMetaProperty('og:title', article.title || 'Article');
+            setMetaProperty('og:description', seoDescription);
+            setMetaProperty('og:image', ogImage);
+            setMetaProperty('og:url', pageUrl);
+            setMetaName('twitter:card', ogImage ? 'summary_large_image' : 'summary');
+            setMetaName('twitter:title', article.title || 'Article');
+            setMetaName('twitter:description', seoDescription);
+            setMetaName('twitter:image', ogImage);
+            setCanonical(pageUrl);
 
             // 2. Set Hero Image (Conditional logic)
             const heroSection = document.getElementById('hero-section');

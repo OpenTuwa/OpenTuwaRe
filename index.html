@@ -77,6 +77,26 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', async () => {
+      // Meta helpers for SEO and social previews
+      function setMetaName(name, content) {
+        if (!content && content !== '') return;
+        let el = document.querySelector('meta[name="' + name + '"]');
+        if (!el) { el = document.createElement('meta'); el.setAttribute('name', name); document.head.appendChild(el); }
+        el.setAttribute('content', content || '');
+      }
+      function setMetaProperty(prop, content) {
+        if (!content && content !== '') return;
+        let el = document.querySelector('meta[property="' + prop + '"]');
+        if (!el) { el = document.createElement('meta'); el.setAttribute('property', prop); document.head.appendChild(el); }
+        el.setAttribute('content', content || '');
+      }
+      function setCanonical(url) {
+        if (!url) return;
+        let el = document.querySelector('link[rel="canonical"]');
+        if (!el) { el = document.createElement('link'); el.setAttribute('rel', 'canonical'); document.head.appendChild(el); }
+        el.setAttribute('href', url);
+      }
+
       const grid = document.getElementById('articles-grid');
       const defaultHeader = document.getElementById('default-header');
       const authorHeader = document.getElementById('author-header');
@@ -93,37 +113,67 @@
           
           // Fetch Author Details
           try {
-              const authRes = await fetch(`/api/get-author?name=${encodeURIComponent(authorFilter)}`);
+            const authRes = await fetch(`/api/author?name=${encodeURIComponent(authorFilter)}`);
+            if (authRes.ok) {
               const authData = await authRes.json();
-              
-              document.getElementById('auth-name').textContent = authorFilter;
-              
-              if (authData) {
-                  document.getElementById('auth-avatar').src = authData.avatar_url || 'https://ui-avatars.com/api/?name=' + authorFilter + '&background=random';
-                  document.getElementById('auth-role').textContent = authData.role || 'Contributor';
-                  document.getElementById('auth-bio').textContent = authData.bio || `Stories written by ${authorFilter}.`;
-                  
-                  if (authData.social_link) {
-                      document.getElementById('auth-socials').innerHTML = `
-                          <a href="${authData.social_link}" target="_blank" class="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-full text-xs font-bold text-white transition-colors border border-white/5">
-                              Follow on Social
-                          </a>
-                      `;
-                  }
-              } else {
-                  // Fallback if author name exists in article but not in 'authors' table
-                  document.getElementById('auth-avatar').src = 'https://ui-avatars.com/api/?name=' + authorFilter + '&background=random';
-                  document.getElementById('auth-bio').textContent = `Articles contributed by ${authorFilter}.`;
+
+              const displayName = authData.name || authorFilter;
+              document.getElementById('auth-name').textContent = displayName;
+              const avatarSrc = authData.avatar_url || authData.avatar || authData.image_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(displayName) + '&background=random';
+              document.getElementById('auth-avatar').src = avatarSrc;
+              document.getElementById('auth-role').textContent = authData.role || 'Contributor';
+              document.getElementById('auth-bio').textContent = authData.bio || `Stories written by ${displayName}.`;
+
+              if (authData.social_link) {
+                document.getElementById('auth-socials').innerHTML = `
+                  <a href="${authData.social_link}" target="_blank" class="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-full text-xs font-bold text-white transition-colors border border-white/5">
+                    Follow on Social
+                  </a>
+                `;
               }
+
+              // SEO / Social Meta for author page
+              const pageUrl = window.location.href;
+              setMetaProperty('og:type', 'profile');
+              setMetaProperty('og:title', `${displayName} | OpenTuwa`);
+              setMetaProperty('og:description', authData.bio || `Articles by ${displayName}`);
+              setMetaProperty('og:image', avatarSrc);
+              setMetaProperty('og:url', pageUrl);
+              setMetaName('twitter:card', avatarSrc ? 'summary_large_image' : 'summary');
+              setMetaName('twitter:title', `${displayName} | OpenTuwa`);
+              setMetaName('twitter:description', authData.bio || `Articles by ${displayName}`);
+              setMetaName('twitter:image', avatarSrc);
+              setCanonical(pageUrl);
+
+            } else {
+              // Fallback rendering
+              document.getElementById('auth-name').textContent = authorFilter;
+              document.getElementById('auth-avatar').src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(authorFilter) + '&background=random';
+              document.getElementById('auth-bio').textContent = `Articles contributed by ${authorFilter}.`;
+              // Minimal meta for fallback
+              setMetaProperty('og:title', `${authorFilter} | OpenTuwa`);
+              setMetaProperty('og:description', `Articles by ${authorFilter}`);
+              setCanonical(window.location.href);
+            }
           } catch (e) {
-              console.error("Error fetching author details", e);
+            console.error("Error fetching author details", e);
           }
 
-      } else if (tagFilter) {
+        } else if (tagFilter) {
           // Handle Tag Mode
           document.getElementById('page-title').textContent = `Topic: ${tagFilter}`;
           document.getElementById('page-subtitle').textContent = `Exploring stories related to ${tagFilter}`;
-      }
+          // Set SEO meta for tag pages
+          const tagPageUrl = window.location.href;
+          setMetaProperty('og:type', 'website');
+          setMetaProperty('og:title', `Tagged: ${tagFilter} | OpenTuwa`);
+          setMetaProperty('og:description', `Stories and articles related to ${tagFilter}`);
+          setMetaProperty('og:image', 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop');
+          setMetaName('twitter:card', 'summary_large_image');
+          setMetaName('twitter:title', `Tagged: ${tagFilter} | OpenTuwa`);
+          setMetaName('twitter:description', `Stories and articles related to ${tagFilter}`);
+          setCanonical(tagPageUrl);
+        }
       
       // 2. Fetch and Filter Articles
       try {
