@@ -93,8 +93,13 @@
         <input id="site-search" placeholder="Search stories" class="bg-tuwa-black/60 text-sm text-white placeholder:text-tuwa-muted/60 rounded-full px-4 py-2 w-64 focus:outline-none focus:ring-1 focus:ring-tuwa-accent" />
       </div>
       <div class="flex items-center space-x-3">
-        <a class="text-xs text-tuwa-muted hover:text-white" href="#">Subscribe</a>
-        <a class="text-xs text-tuwa-muted hover:text-white" href="#">Sign in</a>
+       <a 
+  class="text-xs text-tuwa-muted hover:text-white" 
+  href="#subscribe" 
+  onclick="event.preventDefault(); document.querySelector('[data-purpose=\'subscription-cta\']').scrollIntoView({ behavior: 'smooth' });"
+>
+  Subscribe
+</a>
       </div>
     </div>
     </div>
