@@ -112,19 +112,9 @@
 
     <div id="article-container" style="display: none;">
         
-        <section id="hero-section" class="relative w-full h-[72vh] overflow-hidden" data-purpose="article-hero">
-          <div id="hero-bg" class="absolute inset-0 bg-center bg-cover transform scale-105 transition-transform duration-[3000ms]" style="background-size: cover;background-position:center;"></div>
+        <section id="hero-section" class="relative w-full h-[80vh] overflow-hidden" data-purpose="article-hero">
+          <img id="hero-img" alt="Article Hero" class="w-full h-full object-cover transform scale-105" src=""/>
           <div class="absolute inset-0 hero-gradient-overlay"></div>
-          <div class="absolute inset-0" style="background:linear-gradient(rgba(10,10,11,0.25), rgba(10,10,11,0.6));mix-blend-mode:multiply;"></div>
-          <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div style="width:100%;max-width:1100px;padding:0 1.5rem;">
-              <div class="text-center text-white drop-shadow-lg">
-                <div id="badge-container-top" class="flex justify-center gap-3 mb-6"></div>
-                <h1 id="hero-title" class="text-4xl md:text-6xl font-extrabold leading-tight"></h1>
-                <p id="hero-sub" class="text-lg md:text-xl text-tuwa-muted mt-3 max-w-3xl mx-auto"></p>
-              </div>
-            </div>
-          </div>
         </section>
         <section class="relative -mt-40 z-10 px-6" data-purpose="article-meta-section">
           <div class="max-w-4xl mx-auto text-center">
@@ -277,22 +267,14 @@
             setMetaName('twitter:image', ogImage);
             setCanonical(pageUrl);
 
-            // 2. Set Hero background (masked) and title overlay
+            // 2. Set Hero Image (Conditional logic)
             const heroSection = document.getElementById('hero-section');
-            const heroBg = document.getElementById('hero-bg');
+            const heroImg = document.getElementById('hero-img');
             if (article.image_url && article.image_url.trim() !== '') {
-              // Use layered background + blend to mask low-quality images visually
-              const imgUrl = article.image_url.replace(/"/g, '%22');
-              heroBg.style.backgroundImage = `linear-gradient(rgba(10,10,11,0.15), rgba(10,10,11,0.55)), url('${imgUrl}')`;
-              heroBg.style.filter = 'saturate(1.05) contrast(0.95)';
-              heroSection.style.display = 'block';
-              // set hero overlay title/sub
-              document.getElementById('hero-title').textContent = article.title;
-              document.getElementById('hero-sub').textContent = article.subtitle || '';
-              // show top badges as well
-              document.getElementById('badge-container-top').innerHTML = document.getElementById('badge-container').innerHTML;
+              heroImg.src = article.image_url;
+              heroSection.style.display = 'block'; // Shows section if image exists
             } else {
-              heroSection.style.display = 'none';
+              heroSection.style.display = 'none'; // Hides entire hero block if empty
             }
 
 // 3. Set Tags and Make Them Clickable Links
