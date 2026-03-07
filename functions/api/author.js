@@ -12,7 +12,31 @@ export async function onRequestGet(context) {
     ).bind(name).all();
 
     if (!results || results.length === 0) {
-      return new Response("Author not found", { status: 404 });
+      // If no dedicated author row, try to derive a minimal author object from articles
+      try {
+        const { results: artResults } = await env.DB.prepare(
+          "SELECT author, image_url FROM articles WHERE LOWER(author) = LOWER(?) LIMIT 1"
+        ).bind(name).all();
+
+        if (artResults && artResults.length > 0) {
+          const a = artResults[0];
+          const avatar_url = a.image_url || '';
+          const minimal = { name: name, role: null, bio: null, avatar_url, social_link: null };
+          return Response.json(minimal);
+        }
+      } catch (e) {
+        // ignore and fall through to generic fallback
+      }
+
+      // Return a neutral JSON fallback (200) so frontend can render safe defaults
+      const fallbackNotFound = {
+        name: name,
+        role: null,
+        bio: null,
+        avatar_url: '',
+        social_link: null
+      };
+      return Response.json(fallbackNotFound, { status: 200 });
     }
 
     // Normalize common avatar fields to `avatar_url` for clients
