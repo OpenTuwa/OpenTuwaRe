@@ -142,13 +142,13 @@
               const initialsEl = document.getElementById('author-initials');
               if (authRes.ok) {
                 const author = await authRes.json();
-                if (author.avatar_url && author.avatar_url.trim() !== '') {
-                  avatarImg.src = author.avatar_url;
+                const avatarSrc = (author.avatar_url || author.avatar || author.image_url || author.image || '').trim();
+                if (avatarSrc) {
+                  avatarImg.src = avatarSrc;
                   avatarImg.alt = author.name || authorName;
                   avatarImg.classList.remove('hidden');
                   initialsEl.classList.add('hidden');
                 } else {
-                  // Fallback to default image (match index page fallback)
                   avatarImg.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop';
                   avatarImg.alt = authorName;
                   avatarImg.classList.remove('hidden');

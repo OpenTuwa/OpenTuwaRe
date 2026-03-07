@@ -88,20 +88,21 @@
       
       if (authorFilter) {
           try {
-              const authorRes = await fetch(`/api/author?name=${encodeURIComponent(authorFilter)}`);
-              if (authorRes.ok) {
-                  const author = await authorRes.json();
-                  document.getElementById('header-block').innerHTML = `
-                      <div class="flex flex-col md:flex-row items-start md:items-center gap-6">
-                          <img src="${author.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop'}" class="w-24 h-24 rounded-full object-cover border-2 border-tuwa-accent" alt="${author.name}">
-                          <div>
-                              <h1 class="text-4xl md:text-5xl font-extrabold font-heading text-white mb-2">${author.name}</h1>
-                              <p class="text-tuwa-accent font-bold tracking-widest uppercase text-xs mb-3">${author.role || 'Contributor'}</p>
-                              <p class="text-tuwa-muted max-w-2xl">${author.bio || ''}</p>
-                          </div>
-                      </div>
-                  `;
-              }
+            const authorRes = await fetch(`/api/author?name=${encodeURIComponent(authorFilter)}`);
+            if (authorRes.ok) {
+              const author = await authorRes.json();
+              const avatarSrc = author.avatar_url || author.avatar || author.image_url || author.image || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop';
+              document.getElementById('header-block').innerHTML = `
+                <div class="flex flex-col md:flex-row items-start md:items-center gap-6">
+                  <img src="${avatarSrc}" class="w-24 h-24 rounded-full object-cover border-2 border-tuwa-accent" alt="${author.name}">
+                  <div>
+                    <h1 class="text-4xl md:text-5xl font-extrabold font-heading text-white mb-2">${author.name}</h1>
+                    <p class="text-tuwa-accent font-bold tracking-widest uppercase text-xs mb-3">${author.role || 'Contributor'}</p>
+                    <p class="text-tuwa-muted max-w-2xl">${author.bio || ''}</p>
+                  </div>
+                </div>
+              `;
+            }
           } catch (e) {}
       }
       
