@@ -5,7 +5,16 @@ export async function onRequestGet(context) {
     const author = url.searchParams.get('author');
     const tag = url.searchParams.get('tag');
 
+    // Detect crawler user-agents; only return prerendered HTML for bots
+    const ua = (request && request.headers && request.headers.get('user-agent')) || '';
+    const botRegex = /(facebookexternalhit|facebot|twitterbot|linkedinbot|slackbot|telegrambot|whatsapp|googlebot|bingbot|duckduckbot|applebot)/i;
+
     if (author && author.trim() !== '') {
+      // If request is not from a bot, delegate to the normal static handler so browsers see the full page
+      if (!botRegex.test(ua)) {
+        if (context && typeof context.next === 'function') return await context.next();
+        return new Response(null, { status: 204 });
+      }
       // lookup author in DB
       const { results } = await env.DB.prepare("SELECT * FROM authors WHERE LOWER(name) = LOWER(?)").bind(author).all();
       const a = (results && results[0]) || null;
@@ -38,6 +47,11 @@ export async function onRequestGet(context) {
     }
 
     if (tag && tag.trim() !== '') {
+      // If request is not from a bot, delegate to the normal static handler so browsers see the full page
+      if (!botRegex.test(ua)) {
+        if (context && typeof context.next === 'function') return await context.next();
+        return new Response(null, { status: 204 });
+      }
       const title = `Tagged: ${tag} | OpenTuwa`;
       const desc = `Stories and articles related to ${tag}`;
       const urlStr = url.toString();
