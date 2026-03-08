@@ -166,7 +166,7 @@
       async function loadContributors() {
         const container = document.getElementById('authors-container');
         try {
-          const response = await fetch('/api/authors');
+          const response = await fetch('/api/authors_1');
           if (!response.ok) throw new Error('Failed to fetch authors');
           
           const authors = await response.json();
