@@ -17,6 +17,9 @@ export default function ArticleLayout() {
   const [showSidebar, setShowSidebar] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // State for Author verification
+  const [authorRole, setAuthorRole] = useState(null);
+
   // State for Subscribe Form
   const [email, setEmail] = useState('');
   const [subStatus, setSubStatus] = useState({ loading: false, message: '', type: '' });
@@ -51,6 +54,21 @@ export default function ArticleLayout() {
 
     fetchData();
   }, [slug]);
+
+  // Fetch author role for verified badge
+  useEffect(() => {
+    if (!article?.author) return;
+    const fetchAuthorRole = async () => {
+      try {
+        const res = await fetch(`/api/authors_1?name=${encodeURIComponent(article.author)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setAuthorRole(data.role || null);
+        }
+      } catch (e) { /* ignore */ }
+    };
+    fetchAuthorRole();
+  }, [article]);
 
   // 2. Scroll Listeners (Progress Bar, Header Blur, Trending Sidebar)
   useEffect(() => {
@@ -311,7 +329,7 @@ export default function ArticleLayout() {
                   {authorInitials}
                 </div>
                 <div className="text-left">
-                  <p className="text-sm font-semibold text-white hover:text-tuwa-accent transition-colors">{authorName}</p>
+                  <p className="text-sm font-semibold text-white hover:text-tuwa-accent transition-colors flex items-center gap-1">{authorName}{(authorRole === 'Editorial Team' || authorRole === 'Developer') && <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="12" fill="#1D9BF0"/><path d="M9.5 12.5L11 14L15 10" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}</p>
                   <p className="text-xs text-tuwa-muted">Author</p>
                 </div>
               </div>
