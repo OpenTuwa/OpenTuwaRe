@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html class="scroll-smooth" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>About | OpenTuwa</title>
+  <meta name="description" content="OpenTuwa is an independent platform for essays, research, and media." />
+  
+  <link href="https://fonts.googleapis.com" rel="preconnect"/>
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet"/>
+  
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'tuwa-black': '#0a0a0b',
+            'tuwa-gray': '#161618',
+            'tuwa-text': '#e5e5e5',
+            'tuwa-muted': '#8a8a93', 
+            'tuwa-accent': '#3b82f6', 
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            heading: ['Plus Jakarta Sans', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #0a0a0b;
+      color: #e5e5e5;
+      -webkit-font-smoothing: antialiased;
+    }
+    ::selection {
+      background-color: #e5e5e5;
+      color: #0a0a0b;
+    }
+    .editorial-link {
+      text-decoration: underline;
+      text-decoration-color: #52525b;
+      text-underline-offset: 4px;
+      transition: all 0.2s ease;
+    }
+    .editorial-link:hover {
+      text-decoration-color: #e5e5e5;
+    }
+  </style>
+</head>
+<body class="font-sans antialiased min-h-screen flex flex-col">
+
+  <header class="w-full bg-tuwa-black border-b border-white/10 z-50">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div class="flex items-baseline space-x-8">
+        <a class="text-xl font-bold tracking-tight font-heading text-white" href="/">OpenTuwa</a>
+        <nav class="hidden md:flex space-x-6 text-sm font-medium text-tuwa-muted">
+          <a class="hover:text-white transition-colors" href="/">Stories</a>
+          <a class="text-white transition-colors" href="/about">About</a>
+        </nav>
+      </div>
+      <div>
+        <a class="text-xs text-tuwa-text hover:text-white font-medium transition-colors" href="#subscribe-section">Subscribe</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-grow pt-16 pb-24 max-w-7xl mx-auto w-full px-6">
+    
+    <div class="py-16 border-b border-white/10">
+      <h1 class="text-4xl md:text-5xl font-heading font-extrabold text-white tracking-tight mb-6">
+        About OpenTuwa
+      </h1>
+      <p class="text-lg text-tuwa-muted max-w-3xl leading-relaxed">
+        An independent platform built for long-form essays, research, and media exploring foundational ideas.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-12 mt-16">
+      
+      <div class="md:col-span-7 lg:col-span-8 space-y-12 text-tuwa-text leading-relaxed">
+        
+        <section>
+          <h2 class="text-xl font-heading font-bold text-white mb-4 uppercase tracking-wide text-sm">The Project</h2>
+          <p class="mb-4 text-tuwa-muted">
+            OpenTuwa started as a personal initiative to cut through the noise. Most of the internet is focused on fast reactions and daily news cycles. This platform is built for the opposite: stepping back and taking the time to write, research, and think deeply about history, society, and philosophy.
+          </p>
+          <p class="text-tuwa-muted">
+            It is a ground-up, independent project. There is no corporate backing or massive editorial board behind this—just a dedication to exploring concepts thoroughly through articles and contextual media.
+          </p>
+        </section>
+
+        <hr class="border-white/10">
+
+        <section>
+          <h2 class="text-xl font-heading font-bold text-white mb-4 uppercase tracking-wide text-sm">An Open Platform</h2>
+          <p class="mb-4 text-tuwa-muted">
+            The "Open" in OpenTuwa means exactly that. While it began as a solo effort, the architecture of this site is built to host multiple voices. 
+          </p>
+          <p class="text-tuwa-muted">
+            It is an open space for independent writers, researchers, and creators who want to publish their essays or share their media. By bringing together different contributors over time, the goal is to build a modest but rigorous library of critical thought.
+          </p>
+        </section>
+
+      </div>
+
+      <aside class="md:col-span-5 lg:col-span-4 space-y-10">
+        <div class="bg-tuwa-black border-l border-white/10 pl-6 lg:pl-10">
+          <h3 class="text-xs font-bold uppercase tracking-widest text-tuwa-muted mb-8 border-b border-white/10 pb-4">
+            Contributors
+          </h3>
+          
+          <div id="authors-container" class="space-y-8">
+            <p class="text-xs text-tuwa-muted font-mono">Loading authors...</p>
+          </div>
+          
+          <div class="mt-10 pt-6 border-t border-white/10">
+            <a href="/archive" class="text-sm font-medium text-tuwa-muted hover:text-white transition-colors">
+              Read the Articles →
+            </a>
+          </div>
+        </div>
+      </aside>
+
+    </div>
+  </main>
+
+  <section id="subscribe-section" class="border-t border-white/10 bg-tuwa-black">
+    <div class="max-w-4xl mx-auto px-6 py-16 flex flex-col md:flex-row items-start md:items-center justify-between gap-10">
+      <div class="md:w-1/2">
+        <h2 class="text-lg font-heading font-bold text-white mb-2">Follow the Project</h2>
+        <p class="text-tuwa-muted text-sm leading-relaxed">
+          Drop your email to get notified when new articles or media are published. No spam.
+        </p>
+      </div>
+      
+      <div class="md:w-1/2 w-full">
+        <form id="subscribe-form" class="relative">
+          <div class="flex flex-col sm:flex-row gap-0 border border-white/20 focus-within:border-white transition-colors">
+            <input id="subscribe-email" name="email" required class="flex-grow bg-transparent px-4 py-3 text-white focus:outline-none placeholder:text-tuwa-muted/50 rounded-none w-full text-sm" placeholder="Email address" type="email"/>
+            <button id="subscribe-btn" class="bg-white hover:bg-gray-200 text-tuwa-black font-semibold py-3 px-6 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap rounded-none border-l border-white/20 text-sm" type="submit">Subscribe</button>
+          </div>
+          <div id="subscribe-message" class="absolute top-full left-0 mt-2 text-xs font-medium transition-opacity duration-300 opacity-0"></div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <footer class="border-t border-white/10 bg-tuwa-black py-8 px-6 text-xs">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+      <div class="text-tuwa-muted">© 2026 OpenTuwa.</div>
+      <div class="flex space-x-6 text-tuwa-muted">
+        <a class="hover:text-white transition-colors" href="https://opentuware.pages.dev/legal/" target="_blank">Legal</a>
+        <a class="hover:text-white transition-colors" href="https://x.com/OpenTuwa" target="_blank">Twitter / X</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      
+      // Fetch Authors from D1
+      async function loadContributors() {
+        const container = document.getElementById('authors-container');
+        try {
+          const response = await fetch('/api/authors');
+          if (!response.ok) throw new Error('Failed to fetch authors');
+          
+          const authors = await response.json();
+          
+          if (!authors || authors.length === 0) {
+            container.innerHTML = `<p class="text-sm text-tuwa-muted">No authors found.</p>`;
+            return;
+          }
+
+          const authorsHTML = authors.map(author => {
+            const avatar = author.avatar_url || author.avatar || author.image_url || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" fill="%23161618"><rect width="100" height="100"/></svg>';
+            const link = author.link || author.twitter_url || author.social_link;
+
+            return `
+              <div class="flex items-start space-x-4">
+                <img src="${avatar}" alt="${author.name}" class="w-10 h-10 object-cover grayscale border border-white/10" loading="lazy">
+                <div class="flex-1">
+                  <h4 class="text-white font-medium text-sm">${author.name}</h4>
+                  <p class="text-[10px] text-tuwa-muted uppercase tracking-wider mt-1 mb-2">${author.role || 'Contributor'}</p>
+                  ${author.bio ? `<p class="text-xs text-tuwa-muted leading-relaxed mb-2">${author.bio}</p>` : ''}
+                  ${link ? `<a href="${link}" target="_blank" rel="noopener noreferrer" class="text-[11px] editorial-link text-tuwa-muted">View profile ↗</a>` : ''}
+                </div>
+              </div>
+            `;
+          }).join('');
+
+          container.innerHTML = authorsHTML;
+
+        } catch (error) {
+          console.error(error);
+          container.innerHTML = `<p class="text-xs text-red-400">Could not load contributor list.</p>`;
+        }
+      }
+
+      loadContributors();
+
+      // Subscribe Form
+      const form = document.getElementById('subscribe-form');
+      const emailInput = document.getElementById('subscribe-email');
+      const btn = document.getElementById('subscribe-btn');
+      const msg = document.getElementById('subscribe-message');
+      
+      if(form) {
+          form.addEventListener('submit', async (e) => {
+              e.preventDefault();
+              
+              const originalBtnText = btn.innerText;
+              btn.disabled = true;
+              btn.innerText = "Wait...";
+              msg.style.opacity = '0';
+
+              try {
+                  const response = await fetch('/api/subscribe', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ email: emailInput.value })
+                  });
+                  
+                  const data = await response.json();
+                  
+                  msg.textContent = data.message || data.error;
+                  msg.className = `absolute top-full left-0 mt-2 text-xs font-medium transition-opacity duration-300 ${response.ok ? 'text-green-400' : 'text-red-400'}`;
+                  
+                  if (response.ok) {
+                      emailInput.value = ''; 
+                      btn.innerText = "Done";
+                      setTimeout(() => {
+                          btn.disabled = false;
+                          btn.innerText = originalBtnText;
+                          msg.style.opacity = '0';
+                      }, 4000);
+                  } else {
+                      btn.disabled = false;
+                      btn.innerText = originalBtnText;
+                  }
+                  
+                  msg.style.opacity = '1';
+
+              } catch (error) {
+                  msg.textContent = "System error. Please try again.";
+                  msg.className = "absolute top-full left-0 mt-2 text-xs font-medium transition-opacity duration-300 text-red-400 opacity-100";
+                  btn.disabled = false;
+                  btn.innerText = originalBtnText;
+              }
+          });
+      }
+    });
+  </script>
+</body>
+</html>
