@@ -67,7 +67,7 @@ export default function About() {
       <header className="w-full bg-tuwa-black border-b border-white/10 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-baseline space-x-8">
-            <a className="text-xl font-bold tracking-tight font-heading text-white" href="/">OpenTuwa</a>
+            <a className="text-2xl font-extrabold tracking-tighter font-heading text-white" href="/">OpenTuwa</a>
             <nav className="hidden md:flex space-x-6 text-sm font-medium text-tuwa-muted">
               <a className="hover:text-white transition-colors" href="/">Stories</a>
               <a className="text-white transition-colors" href="/about">About</a>

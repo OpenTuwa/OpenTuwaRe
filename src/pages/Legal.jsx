@@ -79,7 +79,7 @@ export default function Legal() {
   return (
     <div className="tuwa-upgrade font-sans antialiased bg-[#030303] text-white min-h-screen">
       <nav className="top-nav relative z-50 p-4 border-b border-white/10 flex justify-between items-center">
-        <span className="nav-brand font-bold text-xl" data-i18n="header_title">OpenTuwa&reg; Legal</span>
+        <span className="text-2xl font-extrabold tracking-tighter font-heading text-white" data-i18n="header_title">OpenTuwa&reg; Legal</span>
         
         <div className="nav-tabs-container relative flex-1 max-w-md mx-8 overflow-hidden">
             <div 

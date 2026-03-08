@@ -396,7 +396,7 @@ export default function ArticleLayout() {
 
       <footer className="py-12 px-6 border-t border-white/5">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
-          <div className="text-xl font-extrabold font-heading text-white">OpenTuwa</div>
+          <div className="text-2xl font-extrabold tracking-tighter font-heading text-white">OpenTuwa</div>
           <div className="flex space-x-8 text-xs font-bold tracking-widest uppercase text-tuwa-muted">
             <a className="hover:text-white transition-colors" href="/legal">Terms & Privacy</a>
             <a className="hover:text-white transition-colors" href="/about">About OpenTuwa</a>

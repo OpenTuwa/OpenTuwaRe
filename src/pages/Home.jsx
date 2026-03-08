@@ -66,7 +66,7 @@ export default function Home() {
     <div className="tuwa-upgrade bg-[#0a0a0b] min-h-screen text-white">
       {/* Navigation (Simplified for brevity - keep your existing nav code here) */}
       <header className="fixed top-0 w-full z-50 backdrop-blur-md bg-black/80 border-b border-white/5 h-20 flex items-center px-6">
-        <a href="/" className="text-2xl font-bold tracking-tighter">Tuwa</a>
+        <a href="/" className="text-2xl font-extrabold tracking-tighter font-heading text-white">Tuwa</a>
       </header>
 
       <main id="main" className="pt-32 pb-20 px-6 max-w-7xl mx-auto">
