@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Add this to ensure the background is dark immediately */
+body {
+  @apply bg-tuwa-black text-white;
+}
