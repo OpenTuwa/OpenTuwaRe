@@ -18,3 +18,9 @@
     font-family: 'Plus Jakarta Sans', sans-serif !important;
   }
 }
+@layer components {
+  /* This forces the Inter font specifically for the 2xl size */
+  .text-2xl {
+    font-family: 'Inter', sans-serif !important;
+  }
+}
