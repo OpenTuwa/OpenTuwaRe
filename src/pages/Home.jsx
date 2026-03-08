@@ -26,7 +26,7 @@ export default function Home() {
         // 2. Fetch Author Profile if authorParam exists
         if (authorParam) {
           try {
-            const resAuthor = await fetch(`/api/author?name=${encodeURIComponent(authorParam)}`);
+            const resAuthor = await fetch(`/api/authors_1?name=${encodeURIComponent(authorParam)}`);
             if (resAuthor.ok) {
               const auth = await resAuthor.json();
               setAuthorData(auth);
