@@ -300,12 +300,10 @@ export default function ArticleLayout() {
               ))}
             </div>
             
- <h1 
-  style={{ color: '#f8fafc' }} // This is slate-50 hex code
-  className="text-5xl md:text-7xl font-extrabold mb-6 leading-[1.1]"
->
-  {article.title}
-</h1>
+<div className="prose prose-invert lg:prose-xl"> 
+  <h1 className="text-slate-50">
+    {article.title}
+  </h1>
             {article.subtitle && <p className="text-xl md:text-2xl text-tuwa-muted font-light max-w-2xl mx-auto leading-relaxed">{article.subtitle}</p>}
             
             <div className="mt-12 flex items-center justify-center space-x-4 border-y border-white/5 py-8 flex-wrap gap-y-4">
