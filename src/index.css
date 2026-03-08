@@ -2,7 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Add this to ensure the background is dark immediately */
-body {
-  @apply bg-tuwa-black text-white;
+@layer base {
+  body {
+    @apply bg-[#0a0a0b] text-white antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+
+  /* Target the specific "tuwa-upgrade" class you use in JSX */
+  .tuwa-upgrade {
+    @apply font-sans antialiased;
+  }
+  
+  /* Ensure headings always use Plus Jakarta Sans */
+  h1, h2, h3, .font-heading {
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+  }
 }
