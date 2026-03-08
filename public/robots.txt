@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://opentuwa.com/sitemap.xml
+Sitemap: https://opentuwa.com/news-sitemap.xml

@@ -154,11 +154,14 @@ export async function onRequestGet(context) {
       }
     }
 
-    const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
       <title>${escapeHtml(title)} | OpenTuwa</title>
       <meta name="description" content="${escapeHtml(description)}">
-      <meta name="robots" content="index, follow, max-image-preview:large">
+      <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
       ${keywords ? `<meta name="keywords" content="${escapeHtml(keywords)}">` : ''}
+      ${keywords ? `<meta name="news_keywords" content="${escapeHtml(keywords)}">` : ''}
+      <meta name="original-source" content="${escapeHtml(url)}">
+      <meta name="syndication-source" content="${escapeHtml(url)}">
       ${images && images.length ? `<meta property="og:image" content="${escapeHtml(images[0])}">` : ''}
       ${images && images.length && imageAlt ? `<meta property="og:image:alt" content="${escapeHtml(imageAlt)}">` : ''}
       <meta property="og:type" content="article">
@@ -221,11 +224,12 @@ function stripHtml(html) {
 }
 
 function buildJsonLd(opts) {
-  const { url, title, description, images, authorName, publishedAt, updatedAt, keywords, videoSrc } = opts || {};
+  const { url, title, description, images, authorName, publishedAt, updatedAt, keywords, videoSrc, articleBody } = opts || {};
   const origin = (() => { try { return new URL(url).origin; } catch (e) { return ''; } })();
+  const pubYear = (() => { try { return new Date(publishedAt).getFullYear(); } catch (e) { return new Date().getFullYear(); } })();
   const ld = {
     '@context': 'https://schema.org',
-    '@type': 'Article',
+    '@type': 'NewsArticle',
     'mainEntityOfPage': { '@type': 'WebPage', '@id': url },
     'headline': title,
     'description': description,
@@ -239,7 +243,11 @@ function buildJsonLd(opts) {
     'datePublished': isoDate(publishedAt),
     'dateModified': isoDate(updatedAt),
     'keywords': keywords || undefined,
-    'articleBody': stripHtml(description || '')
+    'articleBody': articleBody || stripHtml(description || ''),
+    'isAccessibleForFree': true,
+    'inLanguage': 'en',
+    'copyrightHolder': { '@type': 'Organization', 'name': 'OpenTuwa' },
+    'copyrightYear': pubYear
   };
   // add video object when available
   if (videoSrc) {
