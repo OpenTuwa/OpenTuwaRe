@@ -34,7 +34,7 @@ export default function About() {
     e.preventDefault();
     setSubStatus({ loading: true, message: '', type: '' });
     try {
-      const response = await fetch('/api/subscribe', {
+      const response = await fetch('/api/subscribe_contribute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
