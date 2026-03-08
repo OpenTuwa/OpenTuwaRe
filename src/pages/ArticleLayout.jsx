@@ -426,7 +426,7 @@ if (needsYouTubeAPI) {
           <section id="subscription-cta" className="bg-tuwa-gray py-24 px-6 border-t border-white/5">
             <div className="max-w-3xl mx-auto text-center">
               <h2 className="text-4xl font-bold mb-6 text-white">Stay Ahead of the Curve</h2>
-              <p className="text-tuwa-muted mb-10 text-lg">Join thinkers and researchers receiving our daily deep-dives into the view of the world.</p>
+              <p className="text-tuwa-muted mb-10 text-lg">Join thinkers, researchers and journalists receiving our daily deep-dives into the view of the world.</p>
 
               <form onSubmit={handleSubscribe} className="flex flex-col md:flex-row gap-4 justify-center relative">
                 <input
