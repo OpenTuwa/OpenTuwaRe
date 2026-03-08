@@ -304,6 +304,7 @@ export default function ArticleLayout() {
   <h1 className="text-slate-50">
     {article.title}
   </h1>
+</div>
             {article.subtitle && <p className="text-xl md:text-2xl text-tuwa-muted font-light max-w-2xl mx-auto leading-relaxed">{article.subtitle}</p>}
             
             <div className="mt-12 flex items-center justify-center space-x-4 border-y border-white/5 py-8 flex-wrap gap-y-4">
