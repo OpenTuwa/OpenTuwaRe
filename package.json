@@ -1,0 +1,17 @@
+{
+  "name": "opentuwa-tailwind",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build:css": "tailwindcss -i src/styles.css -o assets/tuwa-tailwind.css --minify",
+    "watch:css": "tailwindcss -i src/styles.css -o assets/tuwa-tailwind.css --watch",
+    "scan:styles": "node scripts/find-styles.js"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.6",
+    "postcss": "^8.4.24",
+    "autoprefixer": "^10.4.14",
+    "@tailwindcss/typography": "^0.5.9",
+    "@tailwindcss/forms": "^0.5.4"
+  }
+}

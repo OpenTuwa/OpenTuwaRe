@@ -9,115 +9,11 @@
   <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet"/>
   
-  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            'tuwa-black': '#0a0a0b',
-            'tuwa-gray': '#161618',
-            'tuwa-text': '#e5e5e5',
-            'tuwa-muted': '#a1a1aa',
-            'tuwa-accent': '#3b82f6', // Electric Blue
-            'tuwa-gold': '#d4af37'   // Muted Gold
-          },
-          fontFamily: {
-            sans: ['Inter', 'sans-serif'],
-            heading: ['Plus Jakarta Sans', 'sans-serif'],
-          },
-          lineHeight: {
-            'article': '1.8',
-          }
-        }
-      }
-    }
-  </script>
-  <style data-purpose="custom-typography">
-    body {
-      background-color: #0a0a0b;
-      color: #e5e5e5;
-      -webkit-font-smoothing: antialiased;
-    }
-    h1, h2, h3, h4 {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      letter-spacing: -0.02em;
-    }
-    .article-content p {
-      margin-bottom: 2rem;
-      font-size: 1.125rem;
-    }
-    .selection-highlight::selection {
-      background: #3b82f6;
-      color: white;
-    }
-    
-    /* Ensure any custom media in SQL content_html scales nicely */
-    .article-content img,
-    .article-content video,
-    .article-content iframe {
-      max-width: 100%;
-      height: auto;
-      border-radius: 0.75rem;
-      margin: 2rem 0;
-    }
-  </style>
-  <style data-purpose="layout-refinements">
-    .glass-header {
-      backdrop-filter: blur(12px);
-      background-color: rgba(10, 10, 11, 0.8);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    }
-    .hero-gradient-overlay {
-      background: linear-gradient(to bottom, transparent 0%, #0a0a0b 100%);
-    }
-    .tag-hover:hover {
-      border-color: #3b82f6;
-      color: #3b82f6;
-    }
-    /* Right sidebar hidden by default; shown when `show-sidebar` is added during scroll */
-    #right-sidebar {
-      opacity: 0;
-      transform: translateX(8px);
-      transition: opacity 260ms cubic-bezier(.2,.9,.2,1), transform 260ms cubic-bezier(.2,.9,.2,1);
-      pointer-events: none;
-    }
-    #right-sidebar.show-sidebar {
-      opacity: 1;
-      transform: none;
-      pointer-events: auto;
-    }
-/* Tuwa Custom Subtitle Box */
-    .tuwa-subtitle-box {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 4rem;
-      margin-top: -1rem; 
-      margin-bottom: 2rem;
-      padding: 1rem 1.5rem;
-      background-color: #161618;
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      border-radius: 0.75rem;
-      opacity: 0.8;
-      text-align: center;
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      font-size: 1.125rem;
-      font-weight: 600;
-      color: #a1a1aa;
-      transition: all 0.3s ease;
-    }
-    .tuwa-subtitle-box .active-text {
-      color: #FFFFFF;
-      animation: fadeIn 0.2s ease-in;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(2px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-  </style>
+  <!-- Using local Tailwind build: /assets/tuwa-tailwind.css; legacy styles migrated into `src/styles.css` -->
+  <!-- local Tailwind build in use; legacy tuwa-ui removed -->
+  <link rel="stylesheet" href="/assets/tuwa-tailwind.css">
 </head>
-<body class="selection-highlight">
+<body class="tuwa-upgrade selection-highlight">
 
   <header class="fixed top-0 w-full z-50 transition-all duration-500 border-b border-transparent" data-purpose="sticky-navigation">
   <nav class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
@@ -145,15 +41,15 @@
     </div>
   </nav>
 
-<!-- Reading progress -->
-<div id="reading-progress" style="position:fixed;left:0;top:0;height:3px;background:linear-gradient(90deg,#3b82f6,#d4af37);width:0%;z-index:60;transition:width 120ms linear"></div>
+<!-- Reading progress (Tailwind utilities) -->
+<div id="reading-progress" class="fixed left-0 top-0 h-[3px] bg-gradient-to-r from-tuwa-accent to-tuwa-gold w-0 z-60 transition-all duration-150"></div>
 </header>
   <main>
     <div id="status" class="py-40 text-center text-tuwa-muted">
         <h2 class="text-2xl font-bold animate-pulse">Loading article...</h2>
     </div>
 
-    <div id="article-container" style="display: none;">
+    <div id="article-container" class="hidden">
         
         <section id="hero-section" class="relative w-full h-[80vh] overflow-hidden" data-purpose="article-hero">
           <img id="hero-img" alt="Article Hero" class="w-full h-full object-cover transform scale-105" src=""/>
@@ -188,7 +84,7 @@
             </div>
           </div>
         </section>
-        <article id="article-content" class="max-w-[720px] mx-auto px-6 py-20 article-content text-tuwa-text" data-purpose="main-story-content">
+        <article id="article-content" class="max-w-[720px] mx-auto px-6 py-20 prose prose-invert prose-xl text-tuwa-text" data-purpose="main-story-content">
             </article>
 
         <!-- Right sidebar: trending & more -->
@@ -628,12 +524,12 @@ initHybridSubtitles();
       }
 
       if (window.scrollY > threshold) {
-        header.classList.add('glass-header');
+        header.classList.add('backdrop-blur-md', 'bg-[rgba(10,10,11,0.8)]', 'border-b', 'border-white/5');
         // show links
         navLinks.classList.remove('opacity-0', 'pointer-events-none');
         navLinks.classList.add('opacity-100', 'pointer-events-auto');
       } else {
-        header.classList.remove('glass-header');
+        header.classList.remove('backdrop-blur-md', 'bg-[rgba(10,10,11,0.8)]', 'border-b', 'border-white/5');
         // hide links
         navLinks.classList.remove('opacity-100', 'pointer-events-auto');
         navLinks.classList.add('opacity-0', 'pointer-events-none');

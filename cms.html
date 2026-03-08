@@ -4,16 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cinematic CMS to D1 SQL</title>
-    <style>
-        :root {
-            --bg-color: #0b0f19;
-            --glass-bg: rgba(20, 30, 50, 0.4);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --accent: #3b82f6;
-            --accent-hover: #60a5fa;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-        }
+    <!-- Tailwind + Tuwa UI overlay (safe) -->
+        <!-- local Tailwind build in use; legacy tuwa-ui removed -->
+        <link rel="stylesheet" href="/assets/tuwa-tailwind.css">
+        <!-- Using local Tailwind build: /assets/tuwa-tailwind.css; migrated CMS styles into `src/styles.css` -->
 
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -143,8 +137,9 @@
             } 
         }
     </style>
+  
 </head>
-<body>
+<body class="tuwa-upgrade">
 
     <div class="glass-panel" id="editor-panel">
         <h2>Write Article</h2>
@@ -217,14 +212,14 @@
     <div class="glass-panel" id="preview-panel">
         <h2>Live Preview</h2>
         <div id="live_preview_container">
-            <span style="color: #94a3b8; font-style: italic;">Your content preview will appear here...</span>
+            <span class="italic text-tuwa-muted">Your content preview will appear here...</span>
         </div>
     </div>
 
     <div class="glass-panel" id="sql-panel">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="flex justify-between items-center">
             <h2>Generated Prompts</h2>
-            <div style="display: flex; gap: 0.5rem;">
+            <div class="flex gap-2">
                 <button onclick="copySQL()">Copy All</button>
                 <button onclick="clearSQL()">Clear All</button>
             </div>
@@ -321,7 +316,7 @@
             const previewContainer = document.getElementById('live_preview_container');
             
             if (!rawContent.trim()) {
-                previewContainer.innerHTML = '<span style="color: #94a3b8; font-style: italic;">Your content preview will appear here...</span>';
+                previewContainer.innerHTML = '<span class="italic text-tuwa-muted">Your content preview will appear here...</span>';
                 return;
             }
 

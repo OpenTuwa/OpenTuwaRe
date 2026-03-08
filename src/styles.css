@@ -1,0 +1,150 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Tuwa design tokens (mapped into Tailwind theme) */
+:root {
+  --tuwa-black: #0a0a0b;
+  --tuwa-gray: #161618;
+  --tuwa-text: #e5e5e5;
+  --tuwa-muted: #a1a1aa;
+  --tuwa-accent: #3b82f6;
+  --tuwa-gold: #d4af37;
+}
+
+@layer base {
+  body { @apply bg-tuwa-black text-tuwa-text; }
+  .font-heading { font-family: theme('fontFamily.heading'); }
+}
+
+@layer components {
+  .tuwa-container { @apply mx-auto px-4 max-w-7xl; }
+}
+
+@layer utilities {
+}
+
+/* -------------------------------------------------------------------------- */
+/* Legacy page styles migrated here (scoped under .tuwa-upgrade).               */
+/* These duplicate the existing inline <style> blocks so the Tailwind build   */
+/* can include them. Originals are left in-place to avoid any disruption.     */
+/* -------------------------------------------------------------------------- */
+
+.tuwa-upgrade {
+  /* about/index.html */
+}
+
+/* about/index.html styles */
+.tuwa-upgrade body { background-color: #0a0a0b; color: #e5e5e5; -webkit-font-smoothing: antialiased; }
+.tuwa-upgrade ::selection { background-color: #e5e5e5; color: #0a0a0b; }
+.tuwa-upgrade .editorial-link { text-decoration: underline; text-decoration-color: #52525b; text-underline-offset: 4px; transition: all 0.2s ease; }
+.tuwa-upgrade .editorial-link:hover { text-decoration-color: #e5e5e5; }
+
+/* archive/index.html */
+.tuwa-upgrade .glass-header { /* removed - now implemented with Tailwind utilities */ }
+
+/* articles/article.html - typography and layout refinements */
+.tuwa-upgrade h1, .tuwa-upgrade h2, .tuwa-upgrade h3, .tuwa-upgrade h4 { font-family: 'Plus Jakarta Sans', sans-serif; letter-spacing: -0.02em; }
+.tuwa-upgrade .selection-highlight::selection { background: #3b82f6; color: white; }
+.tuwa-upgrade .hero-gradient-overlay { background: linear-gradient(to bottom, transparent 0%, #0a0a0b 100%); }
+.tuwa-upgrade .tag-hover:hover { border-color: #3b82f6; color: #3b82f6; }
+.tuwa-upgrade #right-sidebar { opacity: 0; transform: translateX(8px); transition: opacity 260ms cubic-bezier(.2,.9,.2,1), transform 260ms cubic-bezier(.2,.9,.2,1); pointer-events: none; }
+.tuwa-upgrade #right-sidebar.show-sidebar { opacity: 1; transform: none; pointer-events: auto; }
+.tuwa-upgrade .tuwa-subtitle-box { display:flex; align-items:center; justify-content:center; min-height:4rem; margin-top:-1rem; margin-bottom:2rem; padding:1rem 1.5rem; background-color:#161618; border:1px solid rgba(255,255,255,0.05); border-radius:0.75rem; opacity:0.8; text-align:center; font-family:'Plus Jakarta Sans',sans-serif; font-size:1.125rem; font-weight:600; color:#a1a1aa; transition:all 0.3s ease; }
+.tuwa-upgrade .tuwa-subtitle-box .active-text { color:#FFFFFF; animation: fadeIn 0.2s ease-in; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: translateY(0); } }
+
+/* cms.html: variables and layout (scoped) */
+.tuwa-upgrade :root { --bg-color: #0b0f19; --glass-bg: rgba(20,30,50,0.4); --glass-border: rgba(255,255,255,0.1); --accent: #3b82f6; --accent-hover: #60a5fa; --text-main: #f8fafc; --text-muted: #94a3b8; }
+.tuwa-upgrade .glass-panel { background: var(--glass-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--glass-border); border-radius: 16px; padding: 2rem; display:flex; flex-direction:column; gap:1.25rem; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); max-height:calc(100vh - 4rem); overflow-y:auto; }
+.tuwa-upgrade #live_preview_container { background: rgba(10,10,11,0.8); border:1px solid var(--glass-border); border-radius:8px; padding:1.5rem; flex-grow:1; overflow-y:auto; color:#e5e5e5; line-height:1.8; font-size:1.125rem; }
+.tuwa-upgrade #live_preview_container p { margin-bottom: 2rem; }
+.tuwa-upgrade #live_preview_container h3 { font-family: 'Plus Jakarta Sans', sans-serif; font-size:1.5rem; color:white; margin-top:2rem; margin-bottom:1rem; }
+.tuwa-upgrade #live_preview_container blockquote { border-left: 4px solid var(--accent); padding-left: 1rem; color: var(--text-muted); font-style: italic; margin:1.5rem 0; }
+.tuwa-upgrade #live_preview_container img, .tuwa-upgrade #live_preview_container video { max-width:100%; border-radius:0.75rem; margin:2rem 0; }
+
+/* index.html: glass header and card hover */
+.tuwa-upgrade .card-hover:hover img { transform: scale(1.05); }
+
+/* Migrate small utilities from assets/tuwa-ui.css into Tailwind components */
+@layer components {
+  .tuwa-container { @apply mx-auto px-4 max-w-[var(--tuwa-max-w)]; }
+  .card-hover-img-transition img { transition: transform 0.6s cubic-bezier(.2,.9,.2,1); }
+}
+
+@layer utilities {
+  /* kept intentionally empty - prefer Tailwind theme utilities like `text-tuwa-muted` */
+}
+
+/* legal/index.html: platform vars (scoped) */
+.tuwa-upgrade :root { --vh: 100vh; --accent: #f5f5f7; --accent-glow: rgba(245,245,247,0.3); --bg: #030303; --text: #f0f0f0; --text-muted: rgba(255,255,255,0.6); --nav-bg: rgba(10,10,10,0.85); }
+
+/* Full legal page styles (migrated from legal/index.html, scoped) */
+.tuwa-upgrade {
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --transition-smooth: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+  --glass-surface: rgba(20, 20, 20, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.1);
+}
+
+.tuwa-upgrade *, .tuwa-upgrade *::before, .tuwa-upgrade *::after { box-sizing: inherit; }
+.tuwa-upgrade { box-sizing: border-box; font-size: 62.5%; scroll-behavior: smooth; overflow-x: hidden; }
+.tuwa-upgrade * { scrollbar-width: none !important; -ms-overflow-style: none !important; }
+.tuwa-upgrade *::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
+
+.tuwa-upgrade { font-family: "Plus Jakarta Sans", sans-serif; background-color: var(--bg); background-image: radial-gradient(circle at 50% 10%, #1a1a1a 0%, #121212 70%); background-attachment: fixed; color: var(--text); line-height: 1.6; font-size: 1.6rem; min-height: 100vh; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+html[dir="rtl"] .tuwa-upgrade { font-family: "Alexandria", sans-serif !important; }
+
+.tuwa-upgrade .top-nav { position: sticky; top: 0; z-index: 100; background: var(--nav-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid var(--glass-border); padding: 15px 40px; display: flex; align-items: center; gap: 20px; max-width: 100vw; }
+.tuwa-upgrade .nav-brand { font-weight: 700; font-size: 1.6rem; color: var(--text); flex-shrink: 0; }
+.tuwa-upgrade .nav-tabs-container { position: relative; display: flex; flex-grow: 1; min-width: 0; }
+.tuwa-upgrade .nav-tabs { display: flex; align-items: center; gap: 10px; overflow-x: auto; white-space: nowrap; width: 100%; padding-right: 20px; }
+.tuwa-upgrade .tab-btn { background: transparent; border: none; color: var(--text-muted); font-family: inherit; font-size: 1.5rem; font-weight: 500; cursor: pointer; padding: 8px 16px; border-radius: var(--radius-sm); transition: var(--transition-smooth); flex-shrink: 0; }
+.tuwa-upgrade .tab-btn:hover { color: var(--text); }
+.tuwa-upgrade .tab-btn.active { background: rgba(255,255,255,0.15); color: #fff; font-weight: 700; }
+.tuwa-upgrade .lang-dropdown-container { position: relative; flex-shrink: 0; margin-inline-start: auto; }
+.tuwa-upgrade .lang-dropdown-btn { background: transparent; border: 1px solid transparent; color: var(--text-muted); font-family: inherit; font-size: 1.3rem; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: var(--radius-sm); transition: var(--transition-smooth); }
+.tuwa-upgrade .lang-dropdown-btn:hover, .tuwa-upgrade .lang-dropdown-btn[aria-expanded="true"] { color: var(--text); background: rgba(255,255,255,0.08); }
+
+.tuwa-upgrade .page-container { max-width: 1200px; margin: 40px auto; padding: 0 40px; display: grid; grid-template-columns: 250px 1fr; gap: 60px; }
+.tuwa-upgrade .sidebar { position: sticky; top: 100px; height: max-content; }
+.tuwa-upgrade .toc-list { list-style: none; display: flex; flex-direction: column; gap: 15px; }
+.tuwa-upgrade .toc-list a { text-decoration: none; color: var(--accent); text-shadow: 0 2px 5px rgba(255,255,255,0.4); font-weight: 500; font-size: 1.5rem; transition: var(--transition-smooth); display: block; }
+.tuwa-upgrade .toc-list a:hover { color: #fff; text-shadow: 0 2px 10px rgba(255,255,255,0.7); transform: translateX(5px); }
+
+.tuwa-upgrade .content-area { animation: fadeIn 0.5s ease-out; }
+.tuwa-upgrade .policy-section { display: none; }
+.tuwa-upgrade .policy-section.active { display: block; animation: fadeIn 0.4s ease-out; }
+.tuwa-upgrade .doc-title { font-size: clamp(3rem, 4vw, 4.5rem); font-weight: 900; letter-spacing: -1px; margin-bottom: 10px; color: #fff; }
+.tuwa-upgrade .doc-meta { font-size: 1.4rem; color: var(--text-muted); margin-bottom: 40px; }
+.tuwa-upgrade .glass-panel { background: var(--glass-surface); border: 0px solid var(--glass-border); border-radius: var(--radius-lg); padding: 40px; margin-bottom: 30px; }
+.tuwa-upgrade .doc-section { margin-bottom: 35px; scroll-margin-top: 100px; }
+.tuwa-upgrade .doc-section h2 { font-size: 2.2rem; font-weight: 700; margin-bottom: 15px; color: #fff; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; }
+.tuwa-upgrade .doc-text { color: rgba(255,255,255,0.85); margin-bottom: 15px; font-size: 1.6rem; }
+.tuwa-upgrade .doc-list { list-style: none; margin-bottom: 20px; }
+.tuwa-upgrade .doc-list li { position: relative; padding-left: 20px; margin-bottom: 12px; color: rgba(255,255,255,0.85); }
+.tuwa-upgrade .doc-list li::before { content: "•"; position: absolute; left: 0; color: var(--accent); text-shadow: 0 1px 3px rgba(255,255,255,0.4); font-weight: bold; }
+.tuwa-upgrade strong { color: #fff; }
+.tuwa-upgrade .footer-note { margin-top: 50px; padding-top: 20px; border-top: 1px solid var(--glass-border); color: var(--text-muted); font-size: 1.4rem; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+@media screen and (max-width: 900px) {
+  .tuwa-upgrade .page-container { grid-template-columns: 1fr; padding: 0 20px; }
+  .tuwa-upgrade .sidebar { display: none; }
+  .tuwa-upgrade .top-nav { padding: 15px 20px; gap: 12px; }
+  .tuwa-upgrade .hide-mobile { display: none; }
+  .tuwa-upgrade .lang-dropdown-menu { inset-inline-end: 0; min-width: 160px; max-width: calc(100vw - 40px); }
+  .tuwa-upgrade .scroll-indicator { display: flex; align-items: center; justify-content: flex-end; position: absolute; inset-inline-end: 0; top: 0; bottom: 0; width: 45px; background: linear-gradient(to right, transparent, rgba(10,10,10,0.95) 60%); color: rgba(255,255,255,0.7); pointer-events: none; transition: opacity 0.3s ease; }
+  .tuwa-upgrade .scroll-indicator.hidden { opacity: 0; }
+  html[dir="rtl"] .tuwa-upgrade .scroll-indicator { background: linear-gradient(to left, transparent, rgba(10,10,10,0.95) 60%); }
+  .tuwa-upgrade .glass-panel { padding: 25px; }
+  .tuwa-upgrade .footer-wrapper { flex-direction: column; align-items: flex-start; }
+}
+
+
+/* End migrated legacy styles */
+

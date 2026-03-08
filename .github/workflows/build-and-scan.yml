@@ -1,0 +1,28 @@
+name: Build Tailwind and Scan
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Install dependencies
+        run: npm ci
+      - name: Build Tailwind CSS
+        run: npm run build:css
+      - name: Run style scan
+        run: npm run scan:styles
+      - name: Upload built CSS
+        uses: actions/upload-artifact@v4
+        with:
+          name: tuwa-tailwind
+          path: assets/tuwa-tailwind.css

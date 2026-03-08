@@ -9,38 +9,32 @@
   <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet"/>
   
-  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            'tuwa-black': '#0a0a0b', 'tuwa-gray': '#161618', 'tuwa-text': '#e5e5e5',
-            'tuwa-muted': '#a1a1aa', 'tuwa-accent': '#3b82f6', 'tuwa-gold': '#d4af37'
-          },
-          fontFamily: {
-            sans: ['Inter', 'sans-serif'],
-            heading: ['Plus Jakarta Sans', 'sans-serif'],
-          }
-        }
-      }
-    }
-  </script>
-  <style>
-    body { background-color: #0a0a0b; color: #e5e5e5; -webkit-font-smoothing: antialiased; }
-    .glass-header { backdrop-filter: blur(12px); background-color: rgba(10, 10, 11, 0.8); border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
-    .card-hover:hover img { transform: scale(1.05); }
-  </style>
+  <!-- Using local Tailwind build: /assets/tuwa-tailwind.css -->
+  <!-- local Tailwind build in use; legacy tuwa-ui removed -->
+  <link rel="stylesheet" href="/assets/tuwa-tailwind.css">
 </head>
-<body>
+<body class="tuwa-upgrade">
 
-  <header class="fixed top-0 w-full z-50 glass-header">
-    <nav class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-      <div class="flex items-center space-x-8">
+  <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:top-24 focus:left-6 z-60 bg-white/5 text-white px-3 py-2 rounded">Skip to content</a>
+
+  <header role="banner" class="fixed top-0 w-full z-50 backdrop-blur-md bg-[rgba(10,10,11,0.8)] border-b border-white/5">
+    <nav role="navigation" aria-label="Main" class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+      <div class="flex items-center space-x-4">
         <a class="text-2xl font-extrabold tracking-tighter font-heading text-white" href="/">Tuwa</a>
-        <div class="hidden md:flex space-x-6 text-sm font-medium text-tuwa-muted">
+        <div class="hidden md:flex space-x-6 text-sm font-medium text-tuwa-muted" id="primaryNav">
           <a class="text-white transition-colors" href="/">Stories</a>
           <a class="hover:text-white transition-colors" href="/archive">Archive</a>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <button id="navToggle" aria-controls="mobileNav" aria-expanded="false" class="md:hidden p-2 rounded bg-white/3 text-white hover:bg-white/5 focus:outline-none focus:ring-2 focus:ring-tuwa-accent" aria-label="Toggle navigation">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h18M3 6h18M3 18h18"></path></svg>
+        </button>
+
+        <div id="mobileNav" class="fixed inset-x-4 top-20 z-40 rounded-lg bg-[rgba(10,10,11,0.95)] border border-white/5 p-4 shadow-lg md:hidden hidden" role="menu" aria-labelledby="navToggle">
+          <a role="menuitem" href="/" class="block px-3 py-2 rounded text-white hover:bg-white/5">Stories</a>
+          <a role="menuitem" href="/archive" class="block px-3 py-2 rounded text-tuwa-muted hover:text-white hover:bg-white/5">Archive</a>
         </div>
       </div>
     </nav>
@@ -48,7 +42,7 @@
 
   <!-- In your index.html -->
 
-<main class="pt-32 pb-20 px-6 max-w-7xl mx-auto min-h-screen">
+<main id="main" role="main" class="pt-32 pb-20 px-6 max-w-7xl mx-auto min-h-screen">
     
     <!-- Default / Tag Header -->
     <div id="default-header" class="mb-16">
@@ -124,7 +118,9 @@
 
                 // Avatar handling: prefer avatar_url, avatar, image_url, then ui-avatars fallback
                 const avatarSrc = (authData.avatar_url || authData.avatar || authData.image_url || '').trim() || ('https://ui-avatars.com/api/?name=' + encodeURIComponent(displayName) + '&background=random');
-                document.getElementById('auth-avatar').src = avatarSrc;
+                const authAvatarEl = document.getElementById('auth-avatar');
+                authAvatarEl.src = avatarSrc;
+                authAvatarEl.loading = 'lazy';
 
                 // Role and bio from SQL
                 document.getElementById('auth-role').textContent = authData.role || 'Contributor';
@@ -239,7 +235,7 @@
           return `
             <a href="/articles/${article.slug}" class="group block card-hover relative">
               <div class="w-full h-64 rounded-xl overflow-hidden mb-6 relative bg-tuwa-gray border border-white/5">
-                <img src="${imgUrl}" alt="${article.title}" class="w-full h-full object-cover transition-transform duration-700 ease-out" loading="lazy">
+                <img src="${imgUrl}" alt="${article.title}" class="w-full h-full object-cover transition-transform duration-700 ease-out" loading="lazy" decoding="async" width="1200" height="720">
               </div>
               <div class="flex items-center mb-3">
                 ${tagsHtml}
@@ -256,8 +252,26 @@
             </a>
           `;
         }).join('');
-      } catch (error) {
+            } catch (error) {
         grid.innerHTML = `<div class="col-span-full py-20 text-center text-red-500">Failed to load stories: ${error.message}</div>`;
+      }
+
+      // Mobile nav toggle logic (accessible)
+      const navToggle = document.getElementById('navToggle');
+      const mobileNav = document.getElementById('mobileNav');
+      if (navToggle && mobileNav) {
+        navToggle.addEventListener('click', () => {
+          const expanded = navToggle.getAttribute('aria-expanded') === 'true';
+          navToggle.setAttribute('aria-expanded', String(!expanded));
+          mobileNav.classList.toggle('hidden');
+        });
+        // close when clicking outside
+        document.addEventListener('click', (e) => {
+          if (!mobileNav.contains(e.target) && !navToggle.contains(e.target)) {
+            mobileNav.classList.add('hidden');
+            navToggle.setAttribute('aria-expanded', 'false');
+          }
+        });
       }
     });
 </script>
