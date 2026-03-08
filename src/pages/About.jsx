@@ -159,7 +159,7 @@ export default function About() {
               className="bg-tuwa-accent hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-full transition-all disabled:opacity-50 min-w-[140px] text-sm"
               type="submit"
             >
-              {subStatus.loading ? 'Wait...' : 'Subscribe'}
+              {subStatus.loading ? 'Wait...' : 'Work together'}
             </button>
 
             <div className={`absolute -bottom-8 left-0 right-0 text-sm font-medium transition-opacity duration-300 ${subStatus.message ? 'opacity-100' : 'opacity-0'} ${subStatus.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>
