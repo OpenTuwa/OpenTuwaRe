@@ -140,9 +140,9 @@ export default function About() {
       {/* Subscribe Section */}
       <section id="subscribe-section" className="border-t border-white/10 bg-tuwa-gray">
         <div className="max-w-3xl mx-auto px-6 py-16 text-center">
-          <h2 className="text-2xl font-heading font-bold text-white mb-3">Stay in the Loop</h2>
+          <h2 className="text-2xl font-heading font-bold text-white mb-3">Contribute with us</h2>
           <p className="text-tuwa-muted text-sm leading-relaxed mb-8">
-            Drop your email to get notified when we publish. No spam.
+            Drop your email to get notified.
           </p>
 
           <form onSubmit={handleSubscribe} className="flex flex-col md:flex-row gap-4 justify-center relative max-w-lg mx-auto">
