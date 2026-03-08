@@ -3,7 +3,7 @@ export async function onRequestGet(context) {
   // Detect common crawler user-agents; only return prerendered HTML for bots
   const ua = (request && request.headers && request.headers.get('user-agent')) || '';
   // Broadened list to include modern AI crawlers and preview bots; keep case-insensitive
-  const botRegex = /(facebookexternalhit|facebot|twitterbot|linkedinbot|slackbot|telegrambot|whatsapp|googlebot|gptbot|openai|bingbot|bingpreview|duckduckbot|applebot|yandex|slurp|baiduspider)/i;
+  const botRegex = /(facebookexternalhit|facebot|twitterbot|linkedinbot|slackbot|telegrambot|whatsapp|googlebot|google-inspectiontool|googleother|gptbot|openai|bingbot|bingpreview|duckduckbot|applebot|yandex|slurp|baiduspider|mediapartners-google|adsbot-google|petalbot|sogou|seznambot)/i;
   // Allow forcing prerender via query parameter or well-known headers (useful for crawlers that don't set UA)
   let forcePrerender = false;
   try {
@@ -32,6 +32,13 @@ export async function onRequestGet(context) {
     const authorName = article.author_name || article.author || 'OpenTuwa';
     const publishedAt = article.published_at || article.created_at || article.date_published || '';
     const updatedAt = article.updated_at || article.modified_at || article.date_updated || publishedAt;
+    const section = article.section || article.category || '';
+
+    // Get content HTML early so it's available for image extraction
+    const htmlContent = (article.content_html || '').toString();
+    const articleBodyText = stripHtml(htmlContent);
+    const wordCount = articleBodyText ? articleBodyText.split(/\s+/).filter(Boolean).length : 0;
+
     // build images array (support a JSON field or single image_url)
     let images = [];
     try {
@@ -53,17 +60,27 @@ export async function onRequestGet(context) {
     } catch (e) {}
     // keywords/tags
     let keywords = '';
+    let tagsArray = [];
     try {
       if (article.tags) {
-        if (Array.isArray(article.tags)) keywords = article.tags.join(', ');
-        else if (typeof article.tags === 'string') keywords = article.tags;
+        if (Array.isArray(article.tags)) { tagsArray = article.tags; keywords = article.tags.join(', '); }
+        else if (typeof article.tags === 'string') {
+          // Try parsing as JSON array first (D1 stores TEXT, may be JSON-encoded)
+          try {
+            const p = JSON.parse(article.tags);
+            if (Array.isArray(p)) { tagsArray = p.map(t => String(t).trim()).filter(Boolean); keywords = tagsArray.join(', '); }
+            else { tagsArray = article.tags.split(',').map(t => t.trim()).filter(Boolean); keywords = tagsArray.join(', '); }
+          } catch (e) {
+            tagsArray = article.tags.split(',').map(t => t.trim()).filter(Boolean);
+            keywords = tagsArray.join(', ');
+          }
+        }
       }
     } catch (e) { keywords = ''; }
 
     // Detect inline video or iframe sources in content_html (for social players)
     let videoSrc = '';
     let videoType = '';
-    const htmlContent = (article.content_html || '').toString();
     try {
       // 1) <video src="..."> pattern
       const vMatch = htmlContent.match(/<video\b[^>]*\bsrc=["']([^"']+)["']/i);
@@ -105,7 +122,9 @@ export async function onRequestGet(context) {
       videoSrc = '';
       videoType = '';
     }
-    const url = new URL(request.url).toString();
+    const reqUrl = new URL(request.url);
+    const origin = reqUrl.origin;
+    const url = reqUrl.toString();
 
     // Build meta tags, adding video tags when a playable source is present
     let videoMeta = '';
@@ -126,7 +145,6 @@ export async function onRequestGet(context) {
         videoMeta += `<meta name="twitter:player:height" content="${height}">`;
         // Also expose a same-origin embeddable player HTML so Facebook/X/WhatsApp can load a player
         try {
-          const origin = new URL(request.url).origin;
           const playerUrl = `${origin}/player/${encodeURIComponent(slug)}`;
           videoMeta += `<meta property="og:video" content="${escapeHtml(playerUrl)}">`;
           videoMeta += `<meta property="og:video:secure_url" content="${escapeHtml(playerUrl)}">`;
@@ -154,41 +172,52 @@ export async function onRequestGet(context) {
       }
     }
 
+    // Truncate headline for JSON-LD (Google requires <= 110 chars)
+    const ldHeadline = title.length > 110 ? title.substring(0, 107) + '...' : title;
+
+    // Formatted dates for visible content
+    const pubIso = isoDate(publishedAt) || '';
+    const modIso = isoDate(updatedAt) || '';
+    const pubReadable = pubIso ? new Date(pubIso).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
+
     const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
       <title>${escapeHtml(title)} | OpenTuwa</title>
       <meta name="description" content="${escapeHtml(description)}">
-      <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+      <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
       ${keywords ? `<meta name="keywords" content="${escapeHtml(keywords)}">` : ''}
       ${keywords ? `<meta name="news_keywords" content="${escapeHtml(keywords)}">` : ''}
       <meta name="original-source" content="${escapeHtml(url)}">
       <meta name="syndication-source" content="${escapeHtml(url)}">
-      ${images && images.length ? `<meta property="og:image" content="${escapeHtml(images[0])}">` : ''}
-      ${images && images.length && imageAlt ? `<meta property="og:image:alt" content="${escapeHtml(imageAlt)}">` : ''}
+      <meta property="og:site_name" content="OpenTuwa">
+      <meta property="og:locale" content="en_US">
       <meta property="og:type" content="article">
       <meta property="og:title" content="${escapeHtml(title)}">
       <meta property="og:description" content="${escapeHtml(description)}">
       ${images && images.length ? images.map(img=>`<meta property="og:image" content="${escapeHtml(img)}">`).join('') : ''}
+      ${images && images.length && imageAlt ? `<meta property="og:image:alt" content="${escapeHtml(imageAlt)}">` : ''}
       ${videoMeta}
       <meta property="og:url" content="${escapeHtml(url)}">
-      ${publishedAt ? `<meta property="article:published_time" content="${escapeHtml(isoDate(publishedAt) || '')}">` : ''}
-      ${updatedAt ? `<meta property="article:modified_time" content="${escapeHtml(isoDate(updatedAt) || '')}">` : ''}
-      ${article.section || article.category ? `<meta property="article:section" content="${escapeHtml(article.section || article.category || '')}">` : ''}
-      ${keywords ? (Array.isArray(article.tags) ? article.tags.map(t=>`<meta property="article:tag" content="${escapeHtml(t)}">`).join('') : (keywords ? `<meta property="article:tag" content="${escapeHtml(keywords)}">` : '')) : ''}
+      ${pubIso ? `<meta property="article:published_time" content="${escapeHtml(pubIso)}">` : ''}
+      ${modIso ? `<meta property="article:modified_time" content="${escapeHtml(modIso)}">` : ''}
+      ${section ? `<meta property="article:section" content="${escapeHtml(section)}">` : ''}
+      ${tagsArray.length ? tagsArray.map(t=>`<meta property="article:tag" content="${escapeHtml(t)}">`).join('') : (keywords ? `<meta property="article:tag" content="${escapeHtml(keywords)}">` : '')}
       <meta name="twitter:card" content="${images && images.length ? 'summary_large_image' : 'summary'}">
       <meta name="twitter:title" content="${escapeHtml(title)}">
       <meta name="twitter:description" content="${escapeHtml(description)}">
       ${images && images.length ? `<meta name="twitter:image" content="${escapeHtml(images[0])}">` : ''}
       ${images && images.length && imageAlt ? `<meta name="twitter:image:alt" content="${escapeHtml(imageAlt)}">` : ''}
       <link rel="canonical" href="${escapeHtml(url)}">
-      <!-- Structured data for Article / VideoObject to help search engines and AI understand content -->
-      <script type="application/ld+json">${JSON.stringify(buildJsonLd({
-        url, title, description, images, authorName, publishedAt, updatedAt, keywords, videoSrc, articleBody: stripHtml(htmlContent)
+      <link rel="alternate" type="application/rss+xml" title="OpenTuwa RSS Feed" href="${escapeHtml(origin + '/feed.xml')}">
+      <script type="application/ld+json">${safeJsonLd(buildJsonLd({
+        url, title: ldHeadline, description, images, authorName, publishedAt, updatedAt, keywords, videoSrc, articleBody: articleBodyText, wordCount, section, origin
       }))}</script>
     </head><body>
-      <main style="font-family:Arial,Helvetica,sans-serif;max-width:800px;margin:4rem auto;padding:1rem;">
-        <h1>${escapeHtml(title)}</h1>
-        <p>${escapeHtml(description)}</p>
-        <article class="article-content">${htmlContent}</article>
+      <main style="font-family:Arial,Helvetica,sans-serif;max-width:800px;margin:4rem auto;padding:1rem;" itemscope itemtype="https://schema.org/NewsArticle">
+        <meta itemprop="mainEntityOfPage" content="${escapeHtml(url)}">
+        <h1 itemprop="headline">${escapeHtml(title)}</h1>
+        <p>By <span itemprop="author" itemscope itemtype="https://schema.org/Person"><span itemprop="name">${escapeHtml(authorName)}</span></span>${pubReadable ? ` &mdash; <time itemprop="datePublished" datetime="${escapeHtml(pubIso)}">${escapeHtml(pubReadable)}</time>` : ''}</p>
+        <p itemprop="description">${escapeHtml(description)}</p>
+        <article class="article-content" itemprop="articleBody">${htmlContent}</article>
         <p><a href="${escapeHtml(url)}">Read on OpenTuwa</a></p>
       </main>
     </body></html>`;
@@ -218,15 +247,20 @@ function isoDate(val) {
   } catch (e) { return undefined; }
 }
 
+// Safely serialize JSON-LD for embedding in <script> tags — prevents </script> injection
+function safeJsonLd(obj) {
+  return JSON.stringify(obj).replace(/<\//g, '<\\/');
+}
+
 function stripHtml(html) {
   if (!html) return '';
   return String(html).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 function buildJsonLd(opts) {
-  const { url, title, description, images, authorName, publishedAt, updatedAt, keywords, videoSrc, articleBody } = opts || {};
-  const origin = (() => { try { return new URL(url).origin; } catch (e) { return ''; } })();
-  const pubYear = (() => { try { return new Date(publishedAt).getFullYear(); } catch (e) { return new Date().getFullYear(); } })();
+  const { url, title, description, images, authorName, publishedAt, updatedAt, keywords, videoSrc, articleBody, wordCount, section, origin } = opts || {};
+  const computedOrigin = origin || (() => { try { return new URL(url).origin; } catch (e) { return ''; } })();
+  const pubYear = (() => { try { const y = new Date(publishedAt).getFullYear(); return isNaN(y) ? new Date().getFullYear() : y; } catch (e) { return new Date().getFullYear(); } })();
   const ld = {
     '@context': 'https://schema.org',
     '@type': 'NewsArticle',
@@ -238,12 +272,15 @@ function buildJsonLd(opts) {
     'publisher': {
       '@type': 'Organization',
       'name': 'OpenTuwa',
-      'logo': { '@type': 'ImageObject', 'url': origin ? (origin + '/img/logo.png') : undefined }
+      'url': computedOrigin || undefined,
+      'logo': computedOrigin ? { '@type': 'ImageObject', 'url': computedOrigin + '/img/logo.png' } : undefined
     },
     'datePublished': isoDate(publishedAt),
     'dateModified': isoDate(updatedAt),
     'keywords': keywords || undefined,
     'articleBody': articleBody || stripHtml(description || ''),
+    'wordCount': wordCount || undefined,
+    'articleSection': section || undefined,
     'isAccessibleForFree': true,
     'inLanguage': 'en',
     'copyrightHolder': { '@type': 'Organization', 'name': 'OpenTuwa' },

@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cinematic CMS to D1 SQL</title>
+<style>
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg-color) radial-gradient(circle at top right, #1e293b, transparent 40%);
+            color: var(--text-main);
+            margin: 0;
+            padding: 2rem;
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-areas: 
+                "editor preview"
+                "sql sql";
+            gap: 2rem;
+        }
+
+        * { box-sizing: border-box; }
+
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            max-height: calc(100vh - 4rem);
+            overflow-y: auto;
+        }
+
+        #editor-panel { grid-area: editor; }
+        #preview-panel { grid-area: preview; }
+        #sql-panel { 
+            grid-area: sql; 
+            max-height: 400px; /* Keep the SQL panel from taking over the screen */
+        }
+
+        h2 { margin: 0 0 1rem 0; font-weight: 300; letter-spacing: -0.5px; }
+        
+        .form-group { display: flex; flex-direction: column; gap: 0.5rem; }
+        
+        label { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+        input, textarea {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        input:focus, textarea:focus { outline: none; border-color: var(--accent); background: rgba(0, 0, 0, 0.4); }
+        
+        textarea { resize: vertical; min-height: 120px; }
+        #content_html { min-height: 250px; font-family: monospace; font-size: 0.9rem; }
+        #sql_output { height: 100%; min-height: 200px; font-family: monospace; white-space: pre; color: #a5b4fc; }
+
+        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+        .toolbar { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: -0.5rem; }
+        
+        button {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            color: var(--text-main);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        button:hover { background: rgba(255, 255, 255, 0.1); }
+        button.primary { background: var(--accent); border-color: var(--accent); font-weight: 600; padding: 0.75rem; font-size: 1rem;}
+        button.primary:hover { background: var(--accent-hover); }
+        
+        .hint { font-size: 0.75rem; color: var(--text-muted); margin-top: -0.25rem;}
+
+        /* Live Preview Specific Styles */
+        #live_preview_container {
+            background: rgba(10, 10, 11, 0.8); /* Matches Tuwa black */
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            flex-grow: 1;
+            overflow-y: auto;
+            color: #e5e5e5; /* Matches tuwa-text */
+            line-height: 1.8;
+            font-size: 1.125rem;
+        }
+
+        #live_preview_container p { margin-bottom: 2rem; }
+        #live_preview_container h3 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1.5rem; color: white; margin-top: 2rem; margin-bottom: 1rem;}
+        #live_preview_container blockquote { border-left: 4px solid var(--accent); padding-left: 1rem; color: var(--text-muted); font-style: italic; margin: 1.5rem 0;}
+        #live_preview_container img, #live_preview_container video { max-width: 100%; border-radius: 0.75rem; margin: 2rem 0; }
+        #live_preview_container a { color: var(--accent); text-decoration: none; }
+        #live_preview_container a:hover { text-decoration: underline; }
+        
+        /* Mockup of the Tuwa subtitle box for the preview */
+        .tuwa-subtitle-box-preview {
+            display: flex; align-items: center; justify-content: center; min-height: 4rem; margin: 1rem 0 2rem 0; padding: 1rem;
+            background-color: #161618; border: 1px dashed rgba(255, 255, 255, 0.2); border-radius: 0.75rem;
+            color: #a1a1aa; font-family: monospace; font-size: 0.85rem; text-align: center;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+        ::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+        @media (max-width: 1024px) { 
+            body { 
+                grid-template-columns: 1fr; 
+                grid-template-areas: "editor" "preview" "sql";
+            } 
+        }
+    </style>
+  
+</head>
+<body class="tuwa-upgrade">
+
+    <div class="glass-panel" id="editor-panel">
+        <h2>Write Article</h2>
+        
+        <div class="row">
+            <div class="form-group">
+                <label>Title</label>
+                <input type="text" id="title" placeholder="The Future of Cinematic UI" oninput="autoSlug()">
+            </div>
+            <div class="form-group">
+                <label>Slug (Auto-generated)</label>
+                <input type="text" id="slug" placeholder="the-future-of-cinematic-ui">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Subtitle</label>
+            <input type="text" id="subtitle" placeholder="How glassmorphism is evolving in 2026.">
+        </div>
+
+        <div class="row">
+            <div class="form-group">
+                <label>Author</label>
+                <input type="text" id="author" placeholder="Haykal M. Zaidi">
+            </div>
+            <div class="form-group">
+                <label>Read Time (Mins) - Auto</label>
+                <input type="number" id="read_time" placeholder="4">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Hero Image URL</label>
+            <input type="text" id="image_url" placeholder="https://... (Leave empty to hide)">
+        </div>
+
+        <div class="row">
+            <div class="form-group">
+                <label>SEO Description</label>
+                <input type="text" id="seo_description" placeholder="Explore the evolution of...">
+            </div>
+            <div class="form-group">
+                <label>Tags (Comma separated)</label>
+                <input type="text" id="tags" placeholder="Design,UI/UX,Tech">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Article Content</label>
+            <div class="toolbar">
+                <button type="button" onclick="insertTemplate('bold')"><b>B</b></button>
+                <button type="button" onclick="insertTemplate('italic')"><i>I</i></button>
+                <button type="button" onclick="insertTemplate('h3')">H3</button>
+                <button type="button" onclick="insertTemplate('quote')">❞ Quote</button>
+                <button type="button" onclick="insertTemplate('link')">🔗 Link</button>
+                <button type="button" onclick="insertTemplate('image')">📷 Image</button>
+                <button type="button" onclick="insertTemplate('video')">🎥 Video</button>
+                <button type="button" onclick="insertTemplate('subtitle')">💬 Subtitle Box</button>
+            </div>
+            <div class="hint">Write normally. Press Enter twice for a new paragraph. Media tags won't be wrapped.</div>
+            <textarea id="content_html" placeholder="Start writing your story here..." oninput="handleInput()"></textarea>
+        </div>
+
+        <div class="row">
+            <button class="primary" onclick="generateSQL()">Generate SQL Prompt</button>
+            <button onclick="clearForm()">Clear Form for Next</button>
+        </div>
+    </div>
+
+    <div class="glass-panel" id="preview-panel">
+        <h2>Live Preview</h2>
+        <div id="live_preview_container">
+            <span class="italic text-tuwa-muted">Your content preview will appear here...</span>
+        </div>
+    </div>
+
+    <div class="glass-panel" id="sql-panel">
+        <div class="flex justify-between items-center">
+            <h2>Generated Prompts</h2>
+            <div class="flex gap-2">
+                <button onclick="copySQL()">Copy All</button>
+                <button onclick="clearSQL()">Clear All</button>
+            </div>
+        </div>
+        <textarea id="sql_output" readonly placeholder="Your Cloudflare D1 prompts will accumulate here..."></textarea>
+    </div>
+
+    <script>
+        // Auto-generate slug from title
+        function autoSlug() {
+            const title = document.getElementById('title').value;
+            const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+            document.getElementById('slug').value = slug;
+        }
+
+        // Handle typing events in the textarea
+        function handleInput() {
+            calculateReadTime();
+            updatePreview();
+        }
+
+        // Auto-calculate read time (roughly 200 words per minute)
+        function calculateReadTime() {
+            const text = document.getElementById('content_html').value;
+            const words = text.trim().split(/\s+/).length;
+            const minutes = Math.ceil(words / 200);
+            document.getElementById('read_time').value = text.trim().length > 0 ? minutes : '';
+        }
+
+        // Insert media templates or formatting at cursor position
+        function insertTemplate(type) {
+            const textarea = document.getElementById('content_html');
+            const startPos = textarea.selectionStart;
+            const endPos = textarea.selectionEnd;
+            const selectedText = textarea.value.substring(startPos, endPos);
+            let template = '';
+
+            if (type === 'bold') {
+                template = `<strong>${selectedText || 'bold text'}</strong>`;
+            } else if (type === 'italic') {
+                template = `<em>${selectedText || 'italic text'}</em>`;
+            } else if (type === 'h3') {
+                template = `\n<h3>${selectedText || 'Heading 3'}</h3>\n`;
+            } else if (type === 'quote') {
+                template = `\n<blockquote>${selectedText || 'Quote text'}</blockquote>\n`;
+            } else if (type === 'link') {
+                const url = prompt("Enter link URL:", "https://");
+                if (url) {
+                    template = `<a href="${url}" target="_blank" class="text-tuwa-accent hover:underline">${selectedText || 'link text'}</a>`;
+                }
+            } else if (type === 'image') {
+                const url = prompt("Enter Image URL:");
+                const alt = prompt("Enter Image Alt Text:");
+                if(url) template = `\n<img src="${url}" alt="${alt || 'Article Image'}">\n`;
+            } else if (type === 'video') {
+                const id = prompt("Enter a unique Video ID (e.g., vid-1):", "vid-1");
+                const url = prompt("Enter Video .mp4 URL:");
+                if(url && id) template = `\n<video id="${id}" controls>\n    <source src="${url}" type="video/mp4">\n</video>\n`;
+            } else if (type === 'subtitle') {
+                const videoId = prompt("Enter the target Video ID to sync with:");
+                const vttUrl = prompt("Enter VTT URL:");
+                if (videoId && vttUrl) {
+                    template = `\n<div class="tuwa-subtitle-box" data-video="${videoId}" data-vtt="${vttUrl}"></div>\n`;
+                }
+            }
+
+            if (!template) return;
+
+            textarea.value = textarea.value.substring(0, startPos) + template + textarea.value.substring(endPos, textarea.value.length);
+            textarea.focus();
+            
+            // Move cursor to the end of the newly inserted content
+            textarea.selectionEnd = startPos + template.length;
+            
+            // Update the UI
+            handleInput();
+        }
+
+        // Smart HTML formatting: wraps normal text blocks in <p> tags, ignores lines starting with <
+        function formatSmartHTML(rawText) {
+            const blocks = rawText.split('\n\n');
+            const formatted = blocks.map(block => {
+                const trimmed = block.trim();
+                if (!trimmed) return '';
+                if (trimmed.startsWith('<')) return trimmed; // Don't wrap existing HTML/components
+                return `<p>${trimmed}</p>`;
+            }).filter(b => b !== '');
+            return formatted.join('\n\n');
+        }
+
+        // Updates the Live Preview panel
+        function updatePreview() {
+            const rawContent = document.getElementById('content_html').value;
+            const previewContainer = document.getElementById('live_preview_container');
+            
+            if (!rawContent.trim()) {
+                previewContainer.innerHTML = '<span class="italic text-tuwa-muted">Your content preview will appear here...</span>';
+                return;
+            }
+
+            let smartHtml = formatSmartHTML(rawContent);
+            
+            // For the preview panel only: replace the tuwa-subtitle-box with a visible mockup placeholder
+            // so the editor knows it was inserted correctly.
+            smartHtml = smartHtml.replace(
+                /<div class="tuwa-subtitle-box" data-video="(.*?)" data-vtt="(.*?)"><\/div>/g, 
+                '<div class="tuwa-subtitle-box-preview">[Tuwa Subtitle Box] Syncing to: $1 | VTT: $2</div>'
+            );
+
+            previewContainer.innerHTML = smartHtml;
+        }
+
+        // Escape SQL single quotes
+        function esc(str) {
+            return str.replace(/'/g, "''");
+        }
+
+        function generateSQL() {
+            const slug = esc(document.getElementById('slug').value);
+            const title = esc(document.getElementById('title').value);
+            const subtitle = esc(document.getElementById('subtitle').value);
+            const author = esc(document.getElementById('author').value);
+            const readTime = document.getElementById('read_time').value || 1;
+            const imageUrl = esc(document.getElementById('image_url').value);
+            const seo = esc(document.getElementById('seo_description').value);
+            const tags = esc(document.getElementById('tags').value);
+            
+            const rawContent = document.getElementById('content_html').value;
+            const smartHtml = esc(formatSmartHTML(rawContent));
+
+            // Validate minimum required
+            if (!slug || !title) {
+                alert("Please fill in at least the Title and Slug.");
+                return;
+            }
+
+            const sql = `INSERT INTO articles (
+    slug, title, subtitle, author, read_time_minutes, image_url, seo_description, tags, content_html, published_at
+) VALUES (
+    '${slug}', 
+    '${title}', 
+    '${subtitle}', 
+    '${author}', 
+    ${readTime}, 
+    '${imageUrl}', 
+    '${seo}', 
+    '${tags}',
+'${smartHtml}',
+    CURRENT_TIMESTAMP
+);`;
+
+            const output = document.getElementById('sql_output');
+            // Add spacing if there are already queries in the output
+            if(output.value.trim().length > 0) {
+                output.value += '\n\n/* ----------------------------------- */\n\n';
+            }
+            output.value += sql;
+            
+            // Scroll to bottom of output
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearForm() {
+            if(confirm("Clear the form to start a new article?")) {
+                document.querySelectorAll('input').forEach(input => input.value = '');
+                document.getElementById('content_html').value = '';
+                updatePreview();
+            }
+        }
+
+        function clearSQL() {
+            if(confirm("Clear all generated prompts?")) {
+                document.getElementById('sql_output').value = '';
+            }
+        }
+
+        function copySQL() {
+            const output = document.getElementById('sql_output');
+            if (!output.value) return;
+            output.select();
+            document.execCommand('copy');
+            alert("All SQL Prompts copied to clipboard!");
+        }
+    </script>
+</body>
+</html>

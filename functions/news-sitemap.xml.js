@@ -8,14 +8,14 @@ export async function onRequestGet(context) {
   let articles = [];
   try {
     const { results } = await env.DB.prepare(
-      "SELECT slug, title, published_at, created_at, date_published, tags FROM articles WHERE COALESCE(published_at, created_at, date_published) >= ? ORDER BY COALESCE(published_at, created_at, date_published) DESC LIMIT 1000"
+      "SELECT slug, title, published_at, created_at, date_published FROM articles WHERE COALESCE(published_at, created_at, date_published) >= ? ORDER BY COALESCE(published_at, created_at, date_published) DESC LIMIT 1000"
     ).bind(cutoff).all();
     articles = results || [];
   } catch (e) {
-    // Fallback: get recent articles without date filter
+    // Fallback: get recent articles without date filter and filter in JS
     try {
       const { results } = await env.DB.prepare(
-        "SELECT slug, title, published_at, created_at, date_published, tags FROM articles ORDER BY COALESCE(published_at, created_at, date_published) DESC LIMIT 50"
+        "SELECT slug, title, published_at, created_at, date_published FROM articles ORDER BY COALESCE(published_at, created_at, date_published) DESC LIMIT 50"
       ).bind().all();
       articles = (results || []).filter(a => {
         const d = new Date(a.published_at || a.created_at || a.date_published);
@@ -32,12 +32,6 @@ export async function onRequestGet(context) {
     const pubDate = a.published_at || a.created_at || a.date_published;
     const isoDate = toISO(pubDate);
     if (!isoDate) continue;
-    let keywords = '';
-    try {
-      if (a.tags) {
-        keywords = Array.isArray(a.tags) ? a.tags.join(', ') : (typeof a.tags === 'string' ? a.tags : '');
-      }
-    } catch (e) {}
     xml += `
   <url>
     <loc>${esc(origin + '/articles/' + a.slug)}</loc>
@@ -47,8 +41,7 @@ export async function onRequestGet(context) {
         <news:language>en</news:language>
       </news:publication>
       <news:publication_date>${esc(isoDate)}</news:publication_date>
-      <news:title>${esc(a.title || '')}</news:title>${keywords ? `
-      <news:keywords>${esc(keywords)}</news:keywords>` : ''}
+      <news:title>${esc(a.title || '')}</news:title>
     </news:news>
   </url>`;
   }
