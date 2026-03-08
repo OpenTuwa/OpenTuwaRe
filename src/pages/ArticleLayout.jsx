@@ -218,6 +218,7 @@ if (needsYouTubeAPI) {
           };
         }
       }
+    };
 
     // Small delay to ensure injected HTML is fully in the DOM
     setTimeout(initHybridSubtitles, 500);
