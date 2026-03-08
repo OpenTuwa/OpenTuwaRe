@@ -300,8 +300,8 @@ export default function ArticleLayout() {
               ))}
             </div>
             
-<h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-6 tracking-tight">
-  {article.title}
+<h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-6 tracking-tight !text-white">
+  <span className="!text-white">{article.title}</span>
 </h1>
             {article.subtitle && <p className="text-xl md:text-2xl text-tuwa-muted font-light max-w-2xl mx-auto leading-relaxed">{article.subtitle}</p>}
             

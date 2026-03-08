@@ -22,5 +22,12 @@
   /* This forces the Inter font specifically for the 2xl size */
   .text-2xl {
     font-family: 'Inter', sans-serif !important;
+/* Force headers to remain white even if extensions inject spans/fonts */
+.tuwa-upgrade h1, 
+.tuwa-upgrade h1 *, 
+.tuwa-upgrade .prose h1 {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+}
   }
 }
