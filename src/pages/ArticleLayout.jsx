@@ -184,22 +184,40 @@ export default function ArticleLayout() {
         }
       }
 
-      if (needsYouTubeAPI && window.YT) {
-         ytPlayersQueue.forEach(p => {
-          new window.YT.Player(p.id, {
-            events: {
-              'onReady': (event) => {
-                setInterval(() => {
-                  if (event.target.getPlayerState() === window.YT.PlayerState.PLAYING) {
-                    p.render(event.target.getCurrentTime());
-                  }
-                }, 100);
+if (needsYouTubeAPI) {
+        const initializeYTPlayers = () => {
+          ytPlayersQueue.forEach(p => {
+            new window.YT.Player(p.id, {
+              events: {
+                'onReady': (event) => {
+                  // Update subtitles every 100ms while playing
+                  setInterval(() => {
+                    if (event.target.getPlayerState() === window.YT.PlayerState.PLAYING) {
+                      p.render(event.target.getCurrentTime());
+                    }
+                  }, 100);
+                }
               }
-            }
+            });
           });
-        });
+        };
+
+        // If the API is already loaded, run it immediately
+        if (window.YT && window.YT.Player) {
+          initializeYTPlayers();
+        } else {
+          // Otherwise, inject the YouTube script into the page
+          const tag = document.createElement('script');
+          tag.src = "https://www.youtube.com/iframe_api";
+          const firstScriptTag = document.getElementsByTagName('script')[0];
+          firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+          // YouTube looks for this exact global function when it finishes loading
+          window.onYouTubeIframeAPIReady = () => {
+            initializeYTPlayers();
+          };
+        }
       }
-    };
 
     // Small delay to ensure injected HTML is fully in the DOM
     setTimeout(initHybridSubtitles, 500);
