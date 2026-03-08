@@ -26,7 +26,14 @@ export async function onRequestGet(context) {
 
     // If no name is provided, return all authors as usual
     const { results } = await env.DB.prepare("SELECT * FROM authors ORDER BY id ASC").all();
-    return Response.json(results || []);
+    const authors = (results || []).map(a => {
+      a.avatar = a.avatar_url;
+      if (a.avatar && a.avatar.includes('jsdelivr')) {
+        a.avatar = a.avatar.replace('https://cdn.jsdelivr.net/gh/OpenTuwa/OpenTuwaRe@main/', '/');
+      }
+      return a;
+    });
+    return Response.json(authors);
 
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message }), { status: 500 });
