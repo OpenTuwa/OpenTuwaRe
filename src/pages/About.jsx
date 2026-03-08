@@ -209,7 +209,7 @@ export default function About() {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="text-tuwa-muted">© 2026 OpenTuwa.</div>
           <div className="flex space-x-6 text-tuwa-muted">
-            <a className="hover:text-white transition-colors" href="https://opentuware.pages.dev/legal/" target="_blank" rel="noreferrer">Legal</a>
+            <a className="hover:text-white transition-colors" href="https://opentuware.pages.dev/legal?" target="_blank" rel="noreferrer">Legal</a>
             <a className="hover:text-white transition-colors" href="https://x.com/OpenTuwa" target="_blank" rel="noreferrer">Twitter / X</a>
           </div>
         </div>

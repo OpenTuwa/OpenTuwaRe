@@ -129,7 +129,7 @@ export default function Archive() {
                   return (
                     <a 
                       key={index} 
-                      href={`/articles/${article.slug}`} 
+                      href={`/articles/${article.slug}?`} 
                       className="group flex flex-col md:flex-row md:items-center justify-between gap-2 md:gap-8 hover:bg-white/[0.02] p-4 -mx-4 rounded-xl transition-colors"
                     >
                       <div className="flex items-center gap-6 flex-1">
@@ -157,7 +157,7 @@ export default function Archive() {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="text-2xl font-extrabold tracking-tighter font-heading text-white">OpenTuwa</div>
           <div className="flex flex-wrap justify-center md:justify-end space-x-8 text-xs font-bold tracking-widest uppercase text-tuwa-muted">
-            <a className="hover:text-white transition-colors" href="/legal">Terms & Privacy</a>
+            <a className="hover:text-white transition-colors" href="/legal?">Terms & Privacy</a>
             <a className="hover:text-white transition-colors" href="/about">About OpenTuwa</a>
             <a className="hover:text-white transition-colors" href="https://x.com/OpenTuwa" target="_blank" rel="noopener noreferrer">X (formerly Twitter)</a>
           </div>

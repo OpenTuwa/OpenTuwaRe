@@ -121,7 +121,7 @@ export default function Home() {
             <div className="col-span-full py-20 text-center text-tuwa-muted animate-pulse">Loading...</div>
           ) : articles.length > 0 ? (
             articles.map((article, index) => (
-              <a key={index} href={`/articles/${article.slug}`} className="group block">
+              <a key={index} href={`/articles/${article.slug}?`} className="group block">
                 <div className="w-full h-64 rounded-xl overflow-hidden mb-6 relative bg-tuwa-gray border border-white/5">
                   <img 
                     src={article.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop'} 

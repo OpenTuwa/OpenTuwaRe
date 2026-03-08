@@ -362,7 +362,7 @@ export default function ArticleLayout() {
             <h4 className="text-white font-bold mb-3">Trending</h4>
             <div className="space-y-3 text-sm">
               {recommended.map(a => (
-                <a key={a.slug} href={`/articles/${a.slug}`} className="flex items-start gap-3 hover:underline">
+                <a key={a.slug} href={`/articles/${a.slug}?`} className="flex items-start gap-3 hover:underline">
                   <img src={a.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=400&auto=format&fit=crop'} className="w-12 h-8 object-cover rounded-md" alt={a.title} />
                   <div>
                     <div className="text-sm text-white font-semibold line-clamp-2">{a.title}</div>
@@ -380,7 +380,7 @@ export default function ArticleLayout() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {recommended.length === 0 ? <div className="text-tuwa-muted">No recommendations available.</div> : null}
             {recommended.map(a => (
-              <a key={a.slug} href={`/articles/${a.slug}`} className="block rounded-xl overflow-hidden bg-tuwa-gray border border-white/5 p-4 hover:bg-white/5 transition-colors">
+              <a key={a.slug} href={`/articles/${a.slug}?`} className="block rounded-xl overflow-hidden bg-tuwa-gray border border-white/5 p-4 hover:bg-white/5 transition-colors">
                 <div className="w-full h-40 mb-3 overflow-hidden rounded-md">
                   <img src={a.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop'} alt={a.title} className="w-full h-full object-cover" />
                 </div>
@@ -424,7 +424,7 @@ export default function ArticleLayout() {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="text-2xl font-extrabold tracking-tighter font-heading text-white">OpenTuwa</div>
           <div className="flex space-x-8 text-xs font-bold tracking-widest uppercase text-tuwa-muted">
-            <a className="hover:text-white transition-colors" href="/legal">Terms & Privacy</a>
+            <a className="hover:text-white transition-colors" href="/legal?">Terms & Privacy</a>
             <a className="hover:text-white transition-colors" href="/about">About OpenTuwa</a>
             <a className="hover:text-white transition-colors" href="https://x.com/OpenTuwa" target="_blank" rel="noreferrer">X (formerly Twitter)</a>
           </div>
