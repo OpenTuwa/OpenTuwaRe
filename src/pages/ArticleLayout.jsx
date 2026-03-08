@@ -1,5 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import Footer from '../components/Footer';
+import useScrollReveal from '../hooks/useScrollReveal';
+
+function RevealSection({ children, className = '' }) {
+  const ref = useScrollReveal();
+  return <div ref={ref} className={`reveal ${className}`}>{children}</div>;
+}
 
 export default function ArticleLayout() {
   const { slug } = useParams(); // Automatically grabs the URL slug!
@@ -293,7 +300,7 @@ if (needsYouTubeAPI) {
       <header className={`fixed top-0 w-full z-50 transition-all duration-500 border-b ${headerScrolled ? 'backdrop-blur-md bg-[rgba(10,10,11,0.8)] border-white/5' : 'border-transparent'}`} data-purpose="sticky-navigation">
         <nav className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center space-x-8">
-            <a className="text-2xl font-extrabold tracking-tighter font-heading text-white" href="/">Tuwa</a>
+            <a className="text-2xl font-extrabold tracking-tighter font-heading text-white" href="/">OpenTuwa</a>
             <div className={`hidden lg:flex items-center space-x-6 text-sm font-medium text-tuwa-muted transition-opacity ${headerScrolled ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
               <a className="hover:text-white transition-colors" href="/">Stories</a>
               <a className="hover:text-white transition-colors" href="/archive">Archive</a>
@@ -394,64 +401,56 @@ if (needsYouTubeAPI) {
         </aside>
 
         {/* Recommendations Section */}
-        <section className="max-w-4xl mx-auto px-6 pb-20">
-          <h3 className="text-2xl font-bold text-white mb-6">Recommended For You</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {recommended.length === 0 ? <div className="text-tuwa-muted">No recommendations available.</div> : null}
-            {recommended.map(a => (
-              <a key={a.slug} href={`/articles/${a.slug}?`} className="block rounded-xl overflow-hidden bg-tuwa-gray border border-white/5 p-4 hover:bg-white/5 transition-colors">
-                <div className="w-full h-40 mb-3 overflow-hidden rounded-md">
-                  <img src={a.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop'} alt={a.title} className="w-full h-full object-cover" />
-                </div>
-                <h4 className="text-lg font-bold text-white mb-1 line-clamp-2">{a.title}</h4>
-                <div className="text-xs text-tuwa-muted">
-                  {a.published_at ? new Date(a.published_at).toLocaleDateString() : ''} • {a.read_time_minutes || 5} min
-                </div>
-              </a>
-            ))}
-          </div>
-        </section>
+        <RevealSection>
+          <section className="max-w-4xl mx-auto px-6 pb-20">
+            <h3 className="text-2xl font-bold text-white mb-6">Recommended For You</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {recommended.length === 0 ? <div className="text-tuwa-muted">No recommendations available.</div> : null}
+              {recommended.map(a => (
+                <a key={a.slug} href={`/articles/${a.slug}?`} className="block rounded-xl overflow-hidden bg-tuwa-gray border border-white/5 p-4 hover:bg-white/5 transition-colors">
+                  <div className="w-full h-40 mb-3 overflow-hidden rounded-md">
+                    <img src={a.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop'} alt={a.title} className="w-full h-full object-cover" />
+                  </div>
+                  <h4 className="text-lg font-bold text-white mb-1 line-clamp-2">{a.title}</h4>
+                  <div className="text-xs text-tuwa-muted">
+                    {a.published_at ? new Date(a.published_at).toLocaleDateString() : ''} • {a.read_time_minutes || 5} min
+                  </div>
+                </a>
+              ))}
+            </div>
+          </section>
+        </RevealSection>
 
         {/* Subscribe Footer */}
-        <section id="subscription-cta" className="bg-tuwa-gray py-24 px-6 border-t border-white/5">
-          <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-4xl font-bold mb-6 text-white">Stay Ahead of the Curve</h2>
-            <p className="text-tuwa-muted mb-10 text-lg">Join thinkers and researchers receiving our daily deep-dives into the view of the world.</p>
-            
-            <form onSubmit={handleSubscribe} className="flex flex-col md:flex-row gap-4 justify-center relative">
-              <input 
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-                className="bg-tuwa-black border border-white/10 rounded-full px-8 py-4 w-full md:w-96 text-white focus:outline-none focus:border-tuwa-accent focus:ring-1 focus:ring-tuwa-accent transition-all placeholder:text-tuwa-muted/50" 
-                placeholder="Enter your email" 
-                type="email"
-              />
-              <button disabled={subStatus.loading} className="bg-tuwa-accent hover:bg-blue-600 text-white font-bold py-4 px-10 rounded-full transition-all disabled:opacity-50 min-w-[160px]" type="submit">
-                {subStatus.loading ? 'Wait...' : 'Join the Lab'}
-              </button>
-              
-              <div className={`absolute -bottom-8 left-0 right-0 text-sm font-medium transition-opacity duration-300 ${subStatus.message ? 'opacity-100' : 'opacity-0'} ${subStatus.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>
-                {subStatus.message}
-              </div>
-            </form>
-          </div>
-        </section>
+        <RevealSection>
+          <section id="subscription-cta" className="bg-tuwa-gray py-24 px-6 border-t border-white/5">
+            <div className="max-w-3xl mx-auto text-center">
+              <h2 className="text-4xl font-bold mb-6 text-white">Stay Ahead of the Curve</h2>
+              <p className="text-tuwa-muted mb-10 text-lg">Join thinkers and researchers receiving our daily deep-dives into the view of the world.</p>
+
+              <form onSubmit={handleSubscribe} className="flex flex-col md:flex-row gap-4 justify-center relative">
+                <input
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  required
+                  className="bg-tuwa-black border border-white/10 rounded-full px-8 py-4 w-full md:w-96 text-white focus:outline-none focus:border-tuwa-accent focus:ring-1 focus:ring-tuwa-accent transition-all placeholder:text-tuwa-muted/50"
+                  placeholder="Enter your email"
+                  type="email"
+                />
+                <button disabled={subStatus.loading} className="bg-tuwa-accent hover:bg-blue-600 text-white font-bold py-4 px-10 rounded-full transition-all disabled:opacity-50 min-w-[160px]" type="submit">
+                  {subStatus.loading ? 'Wait...' : 'Join the Lab'}
+                </button>
+
+                <div className={`absolute -bottom-8 left-0 right-0 text-sm font-medium transition-opacity duration-300 ${subStatus.message ? 'opacity-100' : 'opacity-0'} ${subStatus.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>
+                  {subStatus.message}
+                </div>
+              </form>
+            </div>
+          </section>
+        </RevealSection>
       </main>
 
-      <footer className="py-12 px-6 border-t border-white/5">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
-          <div className="text-2xl font-extrabold tracking-tighter font-heading text-white">OpenTuwa</div>
-          <div className="flex space-x-8 text-xs font-bold tracking-widest uppercase text-tuwa-muted">
-            <a className="hover:text-white transition-colors" href="/legal?">Terms & Privacy</a>
-            <a className="hover:text-white transition-colors" href="/about">About OpenTuwa</a>
-            <a className="hover:text-white transition-colors" href="https://x.com/OpenTuwa" target="_blank" rel="noreferrer">X (formerly Twitter)</a>
-          </div>
-          <div className="text-xs text-tuwa-muted">
-            © 2026 OpenTuwa Media. All rights reserved.
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
