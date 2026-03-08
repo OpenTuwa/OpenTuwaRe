@@ -144,7 +144,7 @@ export default function About() {
                       loading="lazy" 
                     />
                     <div className="flex-1">
-                      <h4 className="text-white font-medium text-sm flex items-center gap-1">{author.name}{(author.role === 'Editorial Team' || author.role === 'Developer') && <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="12" fill="#1D9BF0"/><path d="M9.5 12.5L11 14L15 10" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}</h4>
+                      <h4 className="text-white font-medium text-sm flex items-center gap-1">{author.name}{(author.role === 'Editorial Team' || author.role === 'Developer' || author.role === 'Founder & Editor-in-Chief' || author.role === 'Journalist') && <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="12" fill="#1D9BF0"/><path d="M9.5 12.5L11 14L15 10" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}</h4>
                       <p className="text-[10px] text-tuwa-muted uppercase tracking-wider mt-1 mb-2">{author.role || 'Contributor'}</p>
                       {author.bio && <p className="text-xs text-tuwa-muted leading-relaxed mb-2">{author.bio}</p>}
                       <a href={`https://opentuware.pages.dev/?author=${encodeURIComponent(author.name)}`} target="_blank" rel="noopener noreferrer" className="text-[11px] editorial-link text-tuwa-muted">View profile ↗</a>

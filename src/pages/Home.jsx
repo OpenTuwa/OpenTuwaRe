@@ -82,7 +82,7 @@ export default function Home() {
                 className="relative w-32 h-32 rounded-full object-cover border-2 border-white/10 shadow-2xl"
               />
             </div>
-            <h1 className="text-4xl md:text-5xl font-extrabold font-heading text-white mb-3 flex items-center justify-center gap-2">{authorData.name}{(authorData.role === 'Editorial Team' || authorData.role === 'Developer') && <svg className="w-6 h-6 flex-shrink-0" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="12" fill="#1D9BF0"/><path d="M9.5 12.5L11 14L15 10" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}</h1>
+            <h1 className="text-4xl md:text-5xl font-extrabold font-heading text-white mb-3 flex items-center justify-center gap-2">{authorData.name}{(author.role === 'Editorial Team' || author.role === 'Developer' || author.role === 'Founder & Editor-in-Chief' || author.role === 'Journalist') && <svg className="w-6 h-6 flex-shrink-0" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="12" fill="#1D9BF0"/><path d="M9.5 12.5L11 14L15 10" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}</h1>
             <div className="text-tuwa-accent font-bold tracking-widest uppercase text-xs mb-4">{authorData.role || 'Contributor'}</div>
             <p className="text-lg text-tuwa-muted mb-6 leading-relaxed">{authorData.bio}</p>
 {/* NEW: Social Links Section */}
