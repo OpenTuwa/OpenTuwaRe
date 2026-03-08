@@ -1,1 +1,3 @@
-/articles/* /articles/article 200
+# Remove the old /articles/ line entirely
+# Add this line to handle EVERYTHING via React
+/* /index.html   200
