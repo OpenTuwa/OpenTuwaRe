@@ -354,7 +354,7 @@ if (needsYouTubeAPI) {
                   </div>
                 )}
                 <div className="text-left">
-                  <p className="text-sm font-semibold text-white hover:text-tuwa-accent transition-colors flex items-center gap-1">{authorName}{(authorRole === 'Editorial Team' || authorRole === 'Developer') && <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="12" fill="#1D9BF0"/><path d="M9.5 12.5L11 14L15 10" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}</p>
+                  <p className="text-sm font-semibold text-white hover:text-tuwa-accent transition-colors flex items-center gap-1">{authorName}{(authorRole === 'Founder and Editor-in-Chief' || authorRole === 'Developer') && <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="12" fill="#1D9BF0"/><path d="M9.5 12.5L11 14L15 10" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}</p>
                   <p className="text-xs text-tuwa-muted">Author</p>
                 </div>
               </div>
