@@ -300,11 +300,9 @@ export default function ArticleLayout() {
               ))}
             </div>
             
-<div className="prose prose-invert lg:prose-xl"> 
-  <h1 className="text-slate-50">
-    {article.title}
-  </h1>
-</div>
+<h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-6 tracking-tight">
+  {article.title}
+</h1>
             {article.subtitle && <p className="text-xl md:text-2xl text-tuwa-muted font-light max-w-2xl mx-auto leading-relaxed">{article.subtitle}</p>}
             
             <div className="mt-12 flex items-center justify-center space-x-4 border-y border-white/5 py-8 flex-wrap gap-y-4">
