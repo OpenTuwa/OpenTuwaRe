@@ -16,6 +16,15 @@ module.exports = {
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
         heading: ['Plus Jakarta Sans', 'sans-serif']
+      },
+      keyframes: {
+        shimmer: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(100%)' }
+        }
+      },
+      animation: {
+        shimmer: 'shimmer 2s infinite'
       }
     }
   },

@@ -8,11 +8,33 @@
     font-family: 'Inter', sans-serif;
   }
 
+  /* Universal shimmer loading effect for all media elements */
+  img, video, iframe {
+    background-color: #161618;
+    background-image: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.05) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    background-size: 200% 100%;
+    animation: global-media-shimmer 2s infinite linear;
+  }
+
+  @keyframes global-media-shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
   /* Target the specific "tuwa-upgrade" class you use in JSX */
   .tuwa-upgrade {
     @apply font-sans antialiased;
   }
-  
+
   /* Ensure headings always use Plus Jakarta Sans */
   h1, h2, h3, .font-heading {
     font-family: 'Plus Jakarta Sans', sans-serif !important;
@@ -22,12 +44,13 @@
   /* This forces the Inter font specifically for the 2xl size */
   .text-2xl {
     font-family: 'Inter', sans-serif !important;
-/* Force headers to remain white even if extensions inject spans/fonts */
-.tuwa-upgrade h1, 
-.tuwa-upgrade h1 *, 
-.tuwa-upgrade .prose h1 {
-  color: #ffffff !important;
-  fill: #ffffff !important;
-}
+  }
+
+  /* Force headers to remain white even if extensions inject spans/fonts */
+  .tuwa-upgrade h1,
+  .tuwa-upgrade h1 *,
+  .tuwa-upgrade .prose h1 {
+    color: #ffffff !important;
+    fill: #ffffff !important;
   }
 }

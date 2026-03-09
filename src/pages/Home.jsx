@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ArticleCard from '../components/ArticleCard';
 import SkeletonCard from '../components/SkeletonCard';
+import SkeletonImage from '../components/SkeletonImage';
 
 export default function Home() {
   const [articles, setArticles] = useState([]);
@@ -59,7 +60,7 @@ export default function Home() {
         <div className="mb-20 text-center max-w-2xl mx-auto animate-fade-in">
           <div className="relative inline-block mb-6">
             <div className="absolute inset-0 bg-tuwa-accent blur-xl opacity-20 rounded-full"></div>
-            <img
+            <SkeletonImage
               src={authorData.avatar_url || '/img/default-avatar.png'}
               alt={authorData.name}
               className="relative w-32 h-32 rounded-full object-cover border-2 border-white/10 shadow-2xl"

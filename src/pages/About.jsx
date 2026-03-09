@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import useScrollReveal from '../hooks/useScrollReveal';
+import SkeletonImage from '../components/SkeletonImage';
 
 function RevealSection({ children, className = '' }) {
   const ref = useScrollReveal();
@@ -107,7 +108,7 @@ export default function About() {
                 )}
                 {!loadingAuthors && !authorError && authors.map((author, index) => (
                   <div key={index} className="flex items-start space-x-4">
-                    <img
+                    <SkeletonImage
                       src={author.avatar_url || author.avatar || author.image_url || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" fill="%23161618"><rect width="100" height="100"/></svg>'}
                       alt={author.name}
                       className="w-10 h-10 object-cover grayscale border border-white/10"

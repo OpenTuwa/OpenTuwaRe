@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Footer from '../components/Footer';
 import useScrollReveal from '../hooks/useScrollReveal';
+import SkeletonImage from '../components/SkeletonImage';
 
 function RevealSection({ children, className = '' }) {
   const ref = useScrollReveal();
@@ -329,7 +330,7 @@ if (needsYouTubeAPI) {
         {/* Hero Section */}
         {article.image_url && (
           <section className="relative w-full h-[80vh] overflow-hidden">
-            <img alt={article.title} className="w-full h-full object-cover transform scale-105" src={article.image_url}/>
+            <SkeletonImage alt={article.title} className="w-full h-full object-cover transform scale-105" src={article.image_url}/>
             <div className="absolute inset-0 bg-gradient-to-t from-[rgba(10,10,11,1)] via-[rgba(10,10,11,0.6)] to-transparent"></div>
           </section>
         )}
@@ -354,7 +355,7 @@ if (needsYouTubeAPI) {
             <div className="mt-12 flex items-center justify-center space-x-4 border-y border-white/5 py-8 flex-wrap gap-y-4">
               <div className="flex items-center space-x-3 cursor-pointer" onClick={() => navigate(`/?author=${encodeURIComponent(authorName)}`)}>
                 {authorAvatar ? (
-                  <img src={authorAvatar} alt={authorName} className="w-10 h-10 rounded-full object-cover border border-white/10" />
+                  <SkeletonImage src={authorAvatar} alt={authorName} className="w-10 h-10 rounded-full object-cover border border-white/10" />
                 ) : (
                   <div className="w-10 h-10 rounded-full bg-tuwa-accent flex items-center justify-center font-bold text-xs text-white uppercase">
                     {authorInitials}
@@ -389,7 +390,7 @@ if (needsYouTubeAPI) {
             <div className="space-y-3 text-sm">
               {recommended.map(a => (
                 <a key={a.slug} href={`/articles/${a.slug}?`} className="flex items-start gap-3 hover:underline">
-                  <img src={a.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=400&auto=format&fit=crop'} className="w-12 h-8 object-cover rounded-md" alt={a.title} />
+                  <SkeletonImage src={a.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=400&auto=format&fit=crop'} className="w-12 h-8 object-cover rounded-md flex-shrink-0" alt={a.title} />
                   <div>
                     <div className="text-sm text-white font-semibold line-clamp-2">{a.title}</div>
                     <div className="text-xs text-tuwa-muted">{a.read_time_minutes || 5} min</div>
@@ -409,7 +410,7 @@ if (needsYouTubeAPI) {
               {recommended.map(a => (
                 <a key={a.slug} href={`/articles/${a.slug}?`} className="block rounded-xl overflow-hidden bg-tuwa-gray border border-white/5 p-4 hover:bg-white/5 transition-colors">
                   <div className="w-full h-40 mb-3 overflow-hidden rounded-md">
-                    <img src={a.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop'} alt={a.title} className="w-full h-full object-cover" />
+                    <SkeletonImage src={a.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop'} alt={a.title} className="w-full h-full object-cover" />
                   </div>
                   <h4 className="text-lg font-bold text-white mb-1 line-clamp-2">{a.title}</h4>
                   <div className="text-xs text-tuwa-muted">

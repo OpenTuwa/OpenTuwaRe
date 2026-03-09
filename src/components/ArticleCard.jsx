@@ -1,5 +1,6 @@
 import React from 'react';
 import useScrollReveal from '../hooks/useScrollReveal';
+import SkeletonImage from './SkeletonImage';
 
 export default function ArticleCard({ article, index = 0 }) {
   const ref = useScrollReveal();
@@ -16,7 +17,7 @@ export default function ArticleCard({ article, index = 0 }) {
       style={{ transitionDelay: `${index * 80}ms` }}
     >
       <div className="w-full h-64 rounded-xl overflow-hidden mb-5 relative bg-tuwa-gray border border-white/5">
-        <img
+        <SkeletonImage
           src={article.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop'}
           alt={article.title}
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
