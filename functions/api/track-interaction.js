@@ -10,7 +10,8 @@ export async function onRequestPost(context) {
       user_agent, platform, language, referrer,
       screen_width, screen_height, window_width, window_height,
       timezone, connection_type, device_memory, hardware_concurrency,
-      scroll_depth
+      scroll_depth,
+      lexical_matrix // <--- EXTRACTING THE NEW DATA SENT FROM FRONTEND
     } = data;
 
     if (!slug || !action) {
@@ -53,19 +54,18 @@ export async function onRequestPost(context) {
     interactionMap[slug].last_touched = Date.now();
 
     // 4. Update Lexical History (The "Taste" Profile)
-    if (action === 'view') {
-       const articleData = await env.DB.prepare('SELECT lexical_matrix FROM articles WHERE slug = ?').bind(slug).first();
-       if (articleData && articleData.lexical_matrix) {
-          try {
-             const incoming = JSON.parse(articleData.lexical_matrix);
-             for (const [word, count] of Object.entries(incoming)) {
-                lexicalMap[word] = (lexicalMap[word] || 0) + count;
-             }
-             // Cap lexical profile at 100 words to prevent explosion
-             const sortedWords = Object.entries(lexicalMap).sort((a, b) => b[1] - a[1]).slice(0, 100);
-             lexicalMap = {};
-             sortedWords.forEach(([w, c]) => { lexicalMap[w] = c; });
-          } catch(e) {}
+    // NEW LOGIC: Use the frontend-generated matrix to skip the database query!
+    if (action === 'view' && lexical_matrix) {
+       try {
+          for (const [word, count] of Object.entries(lexical_matrix)) {
+             lexicalMap[word] = (lexicalMap[word] || 0) + count;
+          }
+          // Cap lexical profile at 100 words to prevent explosion
+          const sortedWords = Object.entries(lexicalMap).sort((a, b) => b[1] - a[1]).slice(0, 100);
+          lexicalMap = {};
+          sortedWords.forEach(([w, c]) => { lexicalMap[w] = c; });
+       } catch(e) {
+          // Ignore parsing/merging errors
        }
     }
 

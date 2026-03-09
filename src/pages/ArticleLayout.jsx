@@ -4,6 +4,9 @@ import { Helmet } from 'react-helmet-async';
 import Footer from '../components/Footer';
 import useScrollReveal from '../hooks/useScrollReveal';
 import SkeletonImage from '../components/SkeletonImage';
+import { NGramTokenizer } from '../utils/algorithm.js'; // Adjust path if needed
+
+const STOP_WORDS = new Set(['the', 'and', 'is', 'in', 'to', 'of', 'a', 'for', 'on', 'with', 'as', 'by', 'at', 'an', 'be', 'this', 'that', 'which', 'from', 'or', 'it', 'are', 'was', 'were', 'not', 'but', 'have', 'has', 'had']);
 
 function RevealSection({ children, className = '' }) {
   const ref = useScrollReveal();
@@ -45,6 +48,30 @@ export default function ArticleLayout() {
         const articleData = await res.json();
         setArticle(articleData);
 
+        // =========================================================
+        // NEW: EXTRACT LEXICAL MATRIX FROM LOADED ARTICLE
+        // =========================================================
+        const tempDiv = document.createElement("div");
+        tempDiv.innerHTML = articleData.content_html || "";
+        const plainText = tempDiv.textContent || tempDiv.innerText || "";
+        
+        let articleLexicalMatrix = {};
+        try {
+          const tokenizer = new NGramTokenizer(STOP_WORDS);
+          const tokens = tokenizer.tokenize(plainText);
+          
+          const counts = {};
+          for (const token of tokens) {
+            counts[token] = (counts[token] || 0) + 1;
+          }
+          
+          const sortedEntries = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 50);
+          articleLexicalMatrix = Object.fromEntries(sortedEntries);
+        } catch (err) {
+          console.error("Tokenizer failed, skipping matrix generation:", err);
+        }
+        // =========================================================
+
         // Manage Session ID for "Ghost Profile" tracking
         let sessionId = sessionStorage.getItem('tuwa_session_id');
         if (!sessionId) {
@@ -78,6 +105,7 @@ export default function ArticleLayout() {
             body: JSON.stringify({ 
               action: 'view', 
               slug, 
+              lexical_matrix: articleLexicalMatrix, // <--- ADDED THE MATRIX HERE
               ...harvestData
             })
           });
@@ -248,7 +276,7 @@ export default function ArticleLayout() {
         }
       }
 
-if (needsYouTubeAPI) {
+      if (needsYouTubeAPI) {
         const initializeYTPlayers = () => {
           ytPlayersQueue.forEach(p => {
             new window.YT.Player(p.id, {
