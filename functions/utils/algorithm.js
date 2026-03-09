@@ -289,8 +289,7 @@ export class NGramTokenizer {
  * The gold standard in information retrieval functions.
  * Calculates the relevance of a document to a search query/profile based on Term Frequency (TF) 
  * and Inverse Document Frequency (IDF), normalized by document length.
- * 
- * Score(D,Q) = sum( IDF(qi) * (f(qi,D) * (k1 + 1)) / (f(qi,D) + k1 * (1 - b + b * (|D| / avgdl))) )
+ * * Score(D,Q) = sum( IDF(qi) * (f(qi,D) * (k1 + 1)) / (f(qi,D) + k1 * (1 - b + b * (|D| / avgdl))) )
  */
 export class BM25 {
   constructor(k1 = 1.5, b = 0.75) {
@@ -464,8 +463,7 @@ export class TemporalGravity {
    * Newton's Law of Cooling
    * Models how "hot" content cools down over time.
    * T(t) = T_env + (T_initial - T_env) * e^(-kt)
-   * 
-   * @param {number} initialTemperature - Starting score (e.g., 100 or current engagement)
+   * * @param {number} initialTemperature - Starting score (e.g., 100 or current engagement)
    * @param {number} ageInHours - Time elapsed since publication or last action
    * @param {number} k - Cooling constant (higher = faster cooling)
    * @returns {number} Current Temperature
@@ -480,8 +478,7 @@ export class TemporalGravity {
    * Hacker News Gravity Formula
    * A simpler, aggressive decay model optimized for fast-moving news feeds.
    * Score = (P - 1) / (T + 2)^G
-   * 
-   * @param {number} points - Engagement score
+   * * @param {number} points - Engagement score
    * @param {number} hoursSinceSubmit - Age in hours
    * @param {number} gravity - Gravity factor (default 1.8)
    * @returns {number} Rank Score
@@ -495,8 +492,7 @@ export class TemporalGravity {
    * Reddit "Hot" Algorithm (Logarithmic scale)
    * Balances massive scores with recent time.
    * Score = log10(z) + (y * tS) / 45000
-   * 
-   * @param {number} ups - Upvotes/Likes
+   * * @param {number} ups - Upvotes/Likes
    * @param {number} downs - Downvotes/Dislikes
    * @param {Date} date - Publication date
    * @returns {number} Hot Score
@@ -539,8 +535,7 @@ export class TemporalGravity {
    * Wilson Score Interval (Bernoulli Parameter Confidence)
    * Used for sorting items by "Quality" with low data (e.g. 5 stars from 1 user vs 4.8 from 100).
    * Calculates the lower bound of the confidence interval.
-   * 
-   * @param {number} positive - Number of positive ratings (likes/reads)
+   * * @param {number} positive - Number of positive ratings (likes/reads)
    * @param {number} total - Total number of ratings (views)
    * @param {number} confidence - Z-score (1.96 for 95%)
    */
@@ -569,8 +564,7 @@ export class CollaborativeBrain {
   /**
    * Calculate similarity between two user profiles.
    * Uses a hybrid of Jaccard Index (for shared articles) and Cosine Similarity (for shared topics).
-   * 
-   * @param {Object} userA - { interaction_history: Object, lexical_history: Object } (PARSED objects)
+   * * @param {Object} userA - { interaction_history: Object, lexical_history: Object } (PARSED objects)
    * @param {Object} userB - { interaction_history: Object, lexical_history: Object } (PARSED objects)
    * @returns {number} Similarity score (0 to 1)
    */
@@ -596,8 +590,7 @@ export class CollaborativeBrain {
    * K-Nearest Neighbors (KNN)
    * Finds the 'k' users most similar to the target user.
    * O(n) complexity - effectively scans the "Village" to find the user's "Tribe".
-   * 
-   * @param {Object} targetUser - The user we are recommending for
+   * * @param {Object} targetUser - The user we are recommending for
    * @param {Array} communityUsers - Array of other user session objects
    * @param {number} k - Number of neighbors to find (default 20)
    * @returns {Array} List of { user, score, parsedProfile } sorted by similarity
@@ -637,8 +630,7 @@ export class CollaborativeBrain {
    * Predictive Rating (User-Based Collaborative Filtering)
    * Predicts how much 'targetUser' will like 'articleSlug' based on their neighbors.
    * Formula: Predicted Rating = Sum(NeighborSimilarity * NeighborRating) / Sum(NeighborSimilarity)
-   * 
-   * @param {string} articleSlug - The article to predict for
+   * * @param {string} articleSlug - The article to predict for
    * @param {Array} neighbors - Result from findNearestNeighbors (MUST include parsedProfile)
    * @returns {number} Predicted Interest Score (0 to 1)
    */
@@ -674,8 +666,7 @@ export class CollaborativeBrain {
    * Look-alike Audience Generator
    * Identifies users who haven't seen a specific article but share traits with those who liked it.
    * Useful for "You might also like" or targeted content injection.
-   * 
-   * @param {string} articleSlug - The content we want to find an audience for
+   * * @param {string} articleSlug - The content we want to find an audience for
    * @param {Array} allUsers - The entire user base
    * @returns {Array} List of users who are high-probability candidates
    */
@@ -914,8 +905,6 @@ export class RecommendationEngine {
   //  NOTE: This should be run via a Cron Trigger (Scheduled Event) periodically.
   // =================================================================================================
   static async aggregateGlobalMetrics(env) {
-    // 1. Fetch ALL user sessions (In production, use pagination/cursor)
-    // Fix: Added is_aggregated = 0 to prevent the Cron Job from processing the same rows indefinitely
     const { results: sessions } = await env.DB.prepare(`
       SELECT session_id, interaction_history FROM algo_user_sessions 
       WHERE last_seen_at > datetime('now', '-7 days') AND is_aggregated = 0
@@ -924,7 +913,7 @@ export class RecommendationEngine {
 
     const globalStats = {};
 
-    // 2. SMASH (Map Phase)
+    // 1. SMASH (Map Phase)
     for (const session of sessions) {
       if (!session.interaction_history) continue;
       
@@ -943,50 +932,53 @@ export class RecommendationEngine {
       } catch (e) { /* skip corrupt data */ }
     }
 
-    // 3. REDUCE & UPDATE (Reduce Phase)
-    // We update the articles table one by one (or batch if possible)
+    // 2. REDUCE & UPDATE (Reduce Phase)
     const stmt = env.DB.prepare(`
       UPDATE articles SET 
-        total_views = total_views + ?,
-        total_reads = total_reads + ?,
-        total_shares = total_shares + ?,
-        avg_time_spent = ?,
-        engagement_score = ?
+        total_views = COALESCE(total_views, 0) + ?,
+        total_reads = COALESCE(total_reads, 0) + ?,
+        total_shares = COALESCE(total_shares, 0) + ?,
+        
+        -- Calculate true running average: (OldTotalTime + NewTotalTime) / (OldTotalViews + NewTotalViews)
+        avg_time_spent = CASE 
+            WHEN COALESCE(total_views, 0) + ? = 0 THEN 0 
+            ELSE ((COALESCE(avg_time_spent, 0) * COALESCE(total_views, 0)) + ?) / (COALESCE(total_views, 0) + ?) 
+        END,
+        
+        -- Accumulate the score rather than overwriting it
+        engagement_score = COALESCE(engagement_score, 0) + ?
       WHERE slug = ?
     `);
 
     const batch = [];
 
     for (const [slug, stats] of Object.entries(globalStats)) {
-       // Calculate derived metrics
-       const avgTime = stats.views > 0 ? (stats.time_spent / stats.views) : 0;
-       
-       // Calculate Score using the Centralized Weights
-       const score = (stats.views * SCORING_WEIGHTS.VIEW) + 
-                     (stats.reads * SCORING_WEIGHTS.READ) + 
-                     (stats.shares * SCORING_WEIGHTS.SHARE) +
-                     (avgTime * SCORING_WEIGHTS.TIME_SPENT_FACTOR);
+       // Calculate the score specifically for THIS batch's activity
+       const batchScore = (stats.views * SCORING_WEIGHTS.VIEW) + 
+                          (stats.reads * SCORING_WEIGHTS.READ) + 
+                          (stats.shares * SCORING_WEIGHTS.SHARE) +
+                          (stats.time_spent * SCORING_WEIGHTS.TIME_SPENT_FACTOR); 
 
        batch.push(stmt.bind(
-         stats.views, 
-         stats.reads, 
-         stats.shares, 
-         avgTime, 
-         score, 
-         slug
+         stats.views,         // 1. For total_views
+         stats.reads,         // 2. For total_reads
+         stats.shares,        // 3. For total_shares
+         stats.views,         // 4. For avg_time_spent (denominator check)
+         stats.time_spent,    // 5. For avg_time_spent (numerator addition)
+         stats.views,         // 6. For avg_time_spent (denominator addition)
+         batchScore,          // 7. For engagement_score accumulation
+         slug                 // 8. WHERE clause
        ));
     }
 
-    // Fix: Mark the processed sessions as aggregated so they aren't computed again
+    // Mark sessions as processed
     const sessionStmt = env.DB.prepare(`UPDATE algo_user_sessions SET is_aggregated = 1 WHERE session_id = ?`);
     for (const session of sessions) {
       batch.push(sessionStmt.bind(session.session_id));
     }
 
-    // Execute bulk update
-    // D1 supports batch execution which is much faster
+    // Execute bulk update in chunks of 100 for D1 stability
     if (batch.length > 0) {
-      // Split into chunks of 100 to avoid limits
       for (let i = 0; i < batch.length; i += 100) {
         await env.DB.batch(batch.slice(i, i + 100));
       }
@@ -1188,8 +1180,7 @@ export class RecommendationEngine {
   /**
    * COLLABORATIVE DISCOVERY FEED (The "Tribe" Feed)
    * Uses CollaborativeBrain to find articles liked by users similar to the current user.
-   * 
-   * @param {Object} currentUser - Full user session object {session_id, lexical_history, ...}
+   * * @param {Object} currentUser - Full user session object {session_id, lexical_history, ...}
    * @param {Array} communityUsers - List of other user session objects (from DB)
    * @param {number} limit - Number of articles to return
    */
