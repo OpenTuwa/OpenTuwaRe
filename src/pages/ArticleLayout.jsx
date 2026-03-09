@@ -4,7 +4,7 @@ import { Helmet } from 'react-helmet-async';
 import Footer from '../components/Footer';
 import useScrollReveal from '../hooks/useScrollReveal';
 import SkeletonImage from '../components/SkeletonImage';
-import { NGramTokenizer } from '../utils/algorithm.js'; // Adjust path if needed
+import { NGramTokenizer } from '../../functions/utils/algorithm.js'; // Adjust path if needed
 
 const STOP_WORDS = new Set(['the', 'and', 'is', 'in', 'to', 'of', 'a', 'for', 'on', 'with', 'as', 'by', 'at', 'an', 'be', 'this', 'that', 'which', 'from', 'or', 'it', 'are', 'was', 'were', 'not', 'but', 'have', 'has', 'had']);
 
