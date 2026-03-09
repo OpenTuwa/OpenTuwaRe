@@ -10,8 +10,102 @@ export const SCORING_WEIGHTS = {
   VIEW: 1,
   READ: 5,
   SHARE: 10,
-  TIME_SPENT_FACTOR: 0.1 // Points per second of attention
+  TIME_SPENT_FACTOR: 0.1, // Points per second of attention
+  
+  // The 3-Tier Priority System Weights
+  TIER_1_CONTENT_MATCH: 40,   // Lexical Matrix overlap (Word math)
+  TIER_2_SESSION_HABIT: 35,   // What the user is doing RIGHT NOW (Browser Session)
+  TIER_3_WORLDWIDE_VOTE: 25   // What the world thinks is good (Total Engagement)
 };
+
+// =================================================================================================
+//  THE HIPPOCAMPUS (Long-term Memory / Training Data Schema)
+//  This defines the "Training Table" that harvested data is stored in.
+//  We capture EVERYTHING for future AI training.
+// =================================================================================================
+export const TRAINING_DATA_SCHEMA = [
+  'session_id', 'article_slug', 'action_type', 'created_at',
+  'user_agent', 'platform', 'language', 'referrer', 
+  'screen_width', 'screen_height', 'window_width', 'window_height',
+  'timezone', 'connection_type', 'device_memory', 'hardware_concurrency',
+  'scroll_depth', 'time_on_page', 'mouse_movements', 'click_coordinates'
+];
+
+// =================================================================================================
+//  THE LEXICAL PARSER (Poor Man's NLP)
+//  Brute-force text into a mathematical vector (JSON map of word frequencies)
+// =================================================================================================
+const STOP_WORDS = new Set([
+  'a','about','above','after','again','against','all','am','an','and','any','are','aren','as','at','be','because','been','before','being','below','between','both','but','by','can','cannot','could','did','didn','do','does','doesn','doing','don','down','during','each','few','for','from','further','had','hadn','has','hasn','have','haven','having','he','her','here','hers','herself','him','himself','his','how','i','if','in','into','is','isn','it','its','itself','me','more','most','must','my','myself','no','nor','not','of','off','on','once','only','or','other','ought','our','ours','ourselves','out','over','own','same','shan','she','should','shouldn','so','some','such','than','that','the','their','theirs','them','themselves','then','there','these','they','this','those','through','to','too','under','until','up','very','was','wasn','we','were','weren','what','when','where','which','while','who','whom','why','will','with','won','would','wouldn','you','your','yours','yourself','yourselves', 'div', 'class', 'span', 'p', 'br', 'strong', 'em', 'img', 'src', 'href'
+]);
+
+export function generateLexicalMatrix(text) {
+  if (!text) return '{}';
+  
+  // 1. Strip HTML tags roughly and convert to lowercase, a.lexical_matrix
+  let cleanText = text.replace(/<[^>]*>?/gm, ' ').toLowerCase();
+  
+  // 2. Remove punctuation, keep only words
+  cleanText = cleanText.replace(/[^\w\s]|_/g, " ").replace(/\s+/g, " ");
+  
+  // 3. Split into words
+  const words = cleanText.split(' ');
+  
+  const matrix = {};
+  
+  for (let w of words) {
+    w = w.trim();
+    // 4. Stop word filter & minimum length filter
+    if (w.length < 3 || STOP_WORDS.has(w)) continue;
+    
+    // 5. Basic Stemming (Brute force: remove 'ing', 's', 'ed')
+    // This is not perfect AI stemming, but it groups similar words mathematically
+    if (w.endsWith('ing')) w = w.slice(0, -3);
+    else if (w.endsWith('es')) w = w.slice(0, -2);
+    else if (w.endsWith('ed')) w = w.slice(0, -2);
+    else if (w.endsWith('s') && w.length > 3 && !w.endsWith('ss')) w = w.slice(0, -1);
+    
+    if (w.length < 3) continue; // After stemming, skip if too short
+    
+    matrix[w] = (matrix[w] || 0) + 1;
+  }
+  
+  // 6. Only keep the top 50 "Heaviest" words to save database space
+  const sortedWords = Object.entries(matrix)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 50);
+    
+  const finalMatrix = {};
+  sortedWords.forEach(([word, count]) => { finalMatrix[word] = count; });
+  
+  return JSON.stringify(finalMatrix);
+}
+
+// Helper to compare two lexical matrices and return a similarity score (0 to 1)
+export function compareMatrices(matrixStr1, matrixStr2) {
+  if (!matrixStr1 || !matrixStr2) return 0;
+  try {
+    const m1 = typeof matrixStr1 === 'string' ? JSON.parse(matrixStr1) : matrixStr1;
+    const m2 = typeof matrixStr2 === 'string' ? JSON.parse(matrixStr2) : matrixStr2;
+    
+    let matchScore = 0;
+    let totalWeight1 = 0;
+    
+    // Calculate overlap weight
+    for (const [word, count1] of Object.entries(m1)) {
+      totalWeight1 += count1;
+      if (m2[word]) {
+        // Boost score if both articles use the word heavily
+        matchScore += Math.min(count1, m2[word]);
+      }
+    }
+    
+    if (totalWeight1 === 0) return 0;
+    return matchScore / totalWeight1; // Return percentage overlap
+  } catch (e) {
+    return 0;
+  }
+}
 
 export class RecommendationEngine {
   constructor(articles) {
@@ -149,38 +243,80 @@ export class RecommendationEngine {
   }
 
   // Get recommended articles for a specific user context or article context
-  getRecommended(contextArticle = null, limit = 3) {
+  getRecommended(contextArticle = null, limit = 3, userSessionMatrix = null) {
     let candidates = this.articles;
 
     if (contextArticle) {
       // Exclude the current article
       candidates = candidates.filter(a => a.slug !== contextArticle.slug);
       
-      // Calculate relevance score based on shared tags or author
+      // Calculate relevance score using the 3-Tier Priority System
       return candidates.map(article => {
         let relevance = 0;
         
-        // Same author bonus
+        // =====================================================================
+        // TIER 1: CONTENT MATCH (Lexical Matrix & Hard Tags) - 40% Weight
+        // =====================================================================
+        let contentScore = 0;
+        
+        // Exact Author Match is a strong signal
         if (contextArticle.author && article.author === contextArticle.author) {
-          relevance += 30;
+          contentScore += 15;
         }
 
-        // Shared tags bonus
+        // Exact Tag Overlap
         const contextTags = contextArticle.tags ? contextArticle.tags.toLowerCase().split(',').map(t=>t.trim()) : [];
         const articleTags = article.tags ? article.tags.toLowerCase().split(',').map(t=>t.trim()) : [];
-        
         const sharedTags = contextTags.filter(t => articleTags.includes(t));
-        relevance += (sharedTags.length * 20);
+        contentScore += (sharedTags.length * 5);
 
-        // Fallback to recency if no strong matches
-        const pubDate = new Date(article.published_at || Date.now());
-        relevance += (1 / (1 + (Date.now() - pubDate.getTime()) / (1000 * 60 * 60 * 24 * 7))); // Slight boost for newer
+        // Lexical Overlap (The '1000 Parameter' Brute Force AI)
+        if (contextArticle.lexical_matrix && article.lexical_matrix) {
+           const lexicalOverlap = compareMatrices(contextArticle.lexical_matrix, article.lexical_matrix);
+           // lexicalOverlap is a percentage (0 to 1). We scale it to max 20 points.
+           contentScore += (lexicalOverlap * 20); 
+        }
+        
+        // Cap Content Score at its defined weight
+        relevance += Math.min(SCORING_WEIGHTS.TIER_1_CONTENT_MATCH, contentScore);
 
-        // Add engagement score as a tie-breaker or booster
-        if (article.engagement_score) {
-          relevance += (article.engagement_score * 0.5); 
+        // =====================================================================
+        // TIER 2: SESSION HABIT (User's Harvested Ghost Profile) - 35% Weight
+        // =====================================================================
+        let sessionScore = 0;
+        
+        if (userSessionMatrix && article.lexical_matrix) {
+           const userOverlap = compareMatrices(userSessionMatrix, article.lexical_matrix);
+           sessionScore += (userOverlap * SCORING_WEIGHTS.TIER_2_SESSION_HABIT);
+        } else {
+           // Fallback if no user session data: use Recency (Newer is a safer bet for unknown users)
+           const pubDate = new Date(article.published_at || Date.now());
+           const daysOld = Math.max(0, (Date.now() - pubDate.getTime()) / (1000 * 60 * 60 * 24));
+           sessionScore += Math.max(0, 20 - daysOld); // Up to 20 points for freshness
         }
 
+        relevance += Math.min(SCORING_WEIGHTS.TIER_2_SESSION_HABIT, sessionScore);
+
+        // =====================================================================
+        // TIER 3: WORLDWIDE VOTE (Total Engagement) - 25% Weight
+        // =====================================================================
+        let worldScore = 0;
+        
+        if (article.engagement_score) {
+          // We don't just add raw points here, we normalize it against the "trending" scale
+          // An engagement score of 100 might be worth max points.
+          const normalizedEngagement = Math.min(1.0, article.engagement_score / 200); 
+          worldScore += (normalizedEngagement * SCORING_WEIGHTS.TIER_3_WORLDWIDE_VOTE);
+          
+          // Also check for velocity (viral right now)
+          if (article.trending_velocity) {
+             worldScore += (article.trending_velocity * 5); 
+          }
+        }
+
+        relevance += Math.min(SCORING_WEIGHTS.TIER_3_WORLDWIDE_VOTE, worldScore);
+
+        // Final Assignment
         return { ...article, _relevance: relevance };
       })
       .sort((a, b) => b._relevance - a._relevance)

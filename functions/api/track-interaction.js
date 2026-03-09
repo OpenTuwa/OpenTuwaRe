@@ -5,7 +5,13 @@ export async function onRequestPost(context) {
 
   try {
     const data = await request.json();
-    const { action, slug, sessionId, duration } = data;
+    const { 
+      action, slug, session_id, duration,
+      user_agent, platform, language, referrer,
+      screen_width, screen_height, window_width, window_height,
+      timezone, connection_type, device_memory, hardware_concurrency,
+      scroll_depth
+    } = data;
 
     if (!slug || !action) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
@@ -23,12 +29,28 @@ export async function onRequestPost(context) {
     };
 
     // 1. Log the individual interaction for training data history
-    // We don't log every 'ping' to the raw table to save space, unless it's a significant milestone
+    // We now capture comprehensive "Training Data" for future AI usage
+    // This table acts as the raw memory of the system
     if (action !== 'ping') {
+      // For main events (view, read, share), log EVERYTHING
       await env.DB.prepare(`
-        INSERT INTO algo_interactions (session_id, article_slug, action_type, created_at)
-        VALUES (?, ?, ?, datetime('now'))
-      `).bind(sessionId || 'anonymous', slug, action).run();
+        INSERT INTO algo_interactions (
+          session_id, article_slug, action_type, created_at,
+          user_agent, platform, language, referrer,
+          screen_width, screen_height, window_width, window_height,
+          timezone, connection_type, device_memory, hardware_concurrency
+        )
+        VALUES (?, ?, ?, datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        session_id || 'anonymous', slug, action,
+        user_agent || null, platform || null, language || null, referrer || null,
+        screen_width || null, screen_height || null, window_width || null, window_height || null,
+        timezone || null, connection_type || null, device_memory || null, hardware_concurrency || null
+      ).run();
+    } else {
+      // For pings, we might want to log scroll depth periodically or just update the metrics
+      // To save space, we only log pings if they carry significant new data (like scroll depth update)
+      // For now, we stick to updating the aggregate metrics to keep it fast
     }
 
     // 2. Upsert the aggregated metrics table for fast retrieval by the algorithm

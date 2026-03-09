@@ -45,13 +45,41 @@ export default function ArticleLayout() {
         const articleData = await res.json();
         setArticle(articleData);
 
-        // Track article view
+        // Manage Session ID for "Ghost Profile" tracking
+        let sessionId = sessionStorage.getItem('tuwa_session_id');
+        if (!sessionId) {
+          sessionId = 'session_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+          sessionStorage.setItem('tuwa_session_id', sessionId);
+        }
+
+        // Harvest Client Data for AI Training
+        const harvestData = {
+          session_id: sessionId,
+          user_agent: navigator.userAgent,
+          platform: navigator.platform,
+          language: navigator.language,
+          referrer: document.referrer,
+          screen_width: window.screen.width,
+          screen_height: window.screen.height,
+          window_width: window.innerWidth,
+          window_height: window.innerHeight,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          connection_type: navigator.connection ? navigator.connection.effectiveType : 'unknown',
+          device_memory: navigator.deviceMemory || 0,
+          hardware_concurrency: navigator.hardwareConcurrency || 0
+        };
+
+        // Track article view with full harvest data
         try {
-          // Fire and forget, no need to await
+          // Fire and forget
           fetch('/api/track-interaction', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'view', slug })
+            body: JSON.stringify({ 
+              action: 'view', 
+              slug, 
+              ...harvestData
+            })
           });
         } catch(e) { /* ignore tracking error */ }
 
@@ -61,10 +89,25 @@ export default function ArticleLayout() {
             fetch('/api/track-interaction', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ action: 'ping', slug, duration: 10 }) // 10s increment
+              body: JSON.stringify({ 
+                action: 'ping', 
+                slug, 
+                session_id: sessionId,
+                duration: 10,
+                // We can also update dynamic metrics like scroll depth here if needed in future
+                scroll_depth: window.scrollY
+              }) 
             }).catch(() => {});
           }
         }, 10000); // Ping every 10 seconds
+
+        // Fetch Recommendations (Server-side Brain)
+        // We now pass the sessionId so the Brain can build a "Session Habit" matrix
+        const recRes = await fetch(`/api/recommendations?slug=${slug}&session_id=${sessionId}`);
+        if (recRes.ok) {
+          const recommendations = await recRes.json();
+          setRecommended(recommendations);
+        }
 
         return () => clearInterval(heartbeat);
       } catch (err) {
