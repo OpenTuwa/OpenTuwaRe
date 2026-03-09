@@ -2,10 +2,80 @@
 // This module acts as the centralized algorithm for determining 
 // "Trending", "Recommended", and "Latest" article feeds across the platform.
 
+// =================================================================================================
+//  THE BRAIN STEM (Configuration & Constants)
+//  Adjust these weights to change how the platform "learns" from users.
+// =================================================================================================
+export const SCORING_WEIGHTS = {
+  VIEW: 1,
+  READ: 5,
+  SHARE: 10,
+  TIME_SPENT_FACTOR: 0.1 // Points per second of attention
+};
+
 export class RecommendationEngine {
   constructor(articles) {
     this.articles = articles || [];
   }
+
+  // =================================================================================================
+  //  THE SENSORY CORTEX (Data Retrieval)
+  //  This is the ONLY place where we write SQL to fetch data for the algorithm.
+  //  If you add a new table or metric, update this method.
+  // =================================================================================================
+  static async fetchCandidates(env, limit = 100, searchQuery = null) {
+    let results = [];
+    
+    // 1. Base Query parts
+    // We select standard fields + The 2 Key Algorithm Metrics (Engagement & Time Spent)
+    const selectClause = `
+      SELECT a.slug, a.title, a.subtitle, a.author, a.published_at, a.read_time_minutes, a.image_url, a.tags, a.seo_description,
+             COALESCE(m.engagement_score, 0) as engagement_score,
+             COALESCE(m.avg_time_spent, 0) as avg_time_spent,
+             COALESCE(m.total_views, 0) as _raw_views
+      FROM articles a
+      LEFT JOIN algo_metrics m ON a.slug = m.article_slug
+    `;
+
+    // 2. Handle Search / Filtering
+    if (searchQuery) {
+      // search across multiple fields
+      const q = searchQuery.trim();
+      const wildcard = `%${q.replace(/%/g, '\\%').replace(/_/g, '\\_')}%`;
+      
+      const whereClause = `
+        WHERE (
+          a.title LIKE ? ESCAPE '\\' OR
+          a.subtitle LIKE ? ESCAPE '\\' OR
+          a.seo_description LIKE ? ESCAPE '\\' OR
+          a.content_html LIKE ? ESCAPE '\\' OR
+          a.tags LIKE ? ESCAPE '\\' OR
+          a.image_url LIKE ? ESCAPE '\\' OR
+          a.image_alt LIKE ? ESCAPE '\\' OR
+          a.content_html LIKE ? ESCAPE '\\'
+        )
+      `;
+      
+      const sql = `${selectClause} ${whereClause} ORDER BY a.published_at DESC LIMIT ?`;
+      
+      const { results: raw } = await env.DB.prepare(sql)
+        .bind(wildcard, wildcard, wildcard, wildcard, wildcard, wildcard, wildcard, wildcard, limit)
+        .all();
+      results = raw;
+
+    } else {
+      // Standard Fetch
+      const sql = `${selectClause} ORDER BY a.published_at DESC LIMIT ?`;
+      const { results: raw } = await env.DB.prepare(sql).bind(limit).all();
+      results = raw;
+    }
+
+    return results;
+  }
+
+  // =================================================================================================
+  //  THE FRONTAL CORTEX (Decision Making)
+  // =================================================================================================
 
   // Helper to calculate a basic "score" for trending
   // Now upgraded with "Silicon Valley" logic: Velocity & Retention
