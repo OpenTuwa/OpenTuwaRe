@@ -58,6 +58,9 @@ export default function Archive() {
           return;
         }
 
+        // FIX: Force sort from newest to oldest before grouping by year
+        articles.sort((a, b) => new Date(b.published_at || Date.now()) - new Date(a.published_at || Date.now()));
+
         const grouped = articles.reduce((acc, article) => {
           const date = new Date(article.published_at || Date.now());
           const year = date.getFullYear();
