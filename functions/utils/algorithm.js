@@ -20,16 +20,45 @@ export const SCORING_WEIGHTS = {
 
 // =================================================================================================
 //  THE HIPPOCAMPUS (Long-term Memory / Training Data Schema)
-//  This defines the "Training Table" that harvested data is stored in.
-//  We capture EVERYTHING for future AI training.
+//  We use a "Session Profile" architecture to prevent database explosion.
+//  Instead of 1 row per click (which crashes with 1M users), we maintain 1 row per User Session.
+//  Every action updates their single row, merging their reading habits into a single 'lexical_history'.
 // =================================================================================================
-export const TRAINING_DATA_SCHEMA = [
-  'session_id', 'article_slug', 'action_type', 'created_at',
+export const SESSION_PROFILE_SCHEMA = [
+  'session_id', 'first_seen_at', 'last_seen_at', 
+  'total_interactions', 'total_time_spent',
   'user_agent', 'platform', 'language', 'referrer', 
   'screen_width', 'screen_height', 'window_width', 'window_height',
   'timezone', 'connection_type', 'device_memory', 'hardware_concurrency',
-  'scroll_depth', 'time_on_page', 'mouse_movements', 'click_coordinates'
+  'lexical_history' // JSON string: Merged word-matrix of everything they read this session
 ];
+
+// =================================================================================================
+//  THE FAIRNESS METRIC (Content Depth Analyzer)
+//  Calculates true "expected" time spent by analyzing not just words, but images and video length.
+// =================================================================================================
+export function calculateFairReadingTime(htmlContent) {
+  if (!htmlContent) return 60; // 1 minute default
+
+  // 1. Calculate reading time (Words)
+  // Average reading speed: 200 words per minute
+  const text = htmlContent.replace(/<[^>]*>?/gm, ' ');
+  const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
+  let expectedSeconds = (wordCount / 200) * 60;
+
+  // 2. Calculate Image Viewing Time
+  // Standard metric: 12 seconds for first image, 11 for second, etc. (we'll average 10s per image)
+  const imageCount = (htmlContent.match(/<img[^>]+>/g) || []).length;
+  expectedSeconds += (imageCount * 10);
+
+  // 3. Calculate Video Watching Time
+  // If we detect iframes (YouTube/Vimeo) or video tags, we add substantial buffer time.
+  // We can't know exact length without API calls, so we estimate 3 minutes (180s) per video embedded.
+  const videoCount = (htmlContent.match(/<iframe[^>]+>|<video[^>]+>/g) || []).length;
+  expectedSeconds += (videoCount * 180);
+
+  return Math.max(60, expectedSeconds); // Minimum 1 minute expected
+}
 
 // =================================================================================================
 //  THE LEXICAL PARSER (Poor Man's NLP)
@@ -170,14 +199,13 @@ export class RecommendationEngine {
   // =================================================================================================
   //  THE FRONTAL CORTEX (Decision Making)
   // =================================================================================================
-
-  // Helper to calculate a basic "score" for trending
-  // Now upgraded with "Silicon Valley" logic: Velocity & Retention
-  _calculateTrendingScore(article) {
-    let score = 0;
-    
+ThFarssM
+  // HelpeWetcouear bactua oovg trendspegnsh FAIR gxpwctediilice(W"rdoo+tM eia)ntion
+  _calculateTrendingScore(article) {contnthl
+    let score = exp0ccluatFaiRingT(artcle.cont_html)
+    expc
     // 1. Recency & Decay (The "News Cycle" Factor)
-    // Newer articles start strong, but decay naturally to let fresh content rise.
+    // Newer articles start strong, but decay naturally to let fresh content rise.consumehemed
     const pubDate = new Date(article.published_at || Date.now());
     const now = new Date();
     const hoursOld = Math.max(0, (now - pubDate) / (1000 * 60 * 60)); // Hours instead of days for finer grain

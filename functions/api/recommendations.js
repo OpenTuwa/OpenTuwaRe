@@ -21,27 +21,20 @@ export async function onRequestGet(context) {
     }
 
     // 2. Fetch User Session Data (The Ghost Profile)
+    // We now fetch the pre-aggregated 'lexical_history' from the consolidated session table.
+    // This prevents massive database JOINS and memory leaks. 1 Session = 1 Fast Lookup.
     let userSessionMatrix = {};
     if (sessionId) {
-      // Find all articles this user has read in this session
-      const { results: sessionHistory } = await env.DB.prepare(`
-        SELECT a.lexical_matrix
-        FROM algo_interactions i
-        JOIN articles a ON i.article_slug = a.slug
-        WHERE i.session_id = ? AND i.action_type = 'view'
-        LIMIT 20
-      `).bind(sessionId).all();
-      
-      // Merge all matrices to form the user's current habit profile
-      for (const historyItem of sessionHistory) {
-        if (historyItem.lexical_matrix) {
-          try {
-            const matrix = JSON.parse(historyItem.lexical_matrix);
-            for (const [word, count] of Object.entries(matrix)) {
-              userSessionMatrix[word] = (userSessionMatrix[word] || 0) + count;
-            }
-          } catch(e) {} // ignore parsing errors
-        }
+      const sessionData = await env.DB.prepare(`
+        SELECT lexical_history 
+        FROM algo_user_sessions 
+        WHERE session_id = ?
+      `).bind(sessionId).first();
+
+      if (sessionData && sessionData.lexical_history) {
+        try {
+          userSessionMatrix = JSON.parse(sessionData.lexical_history);
+        } catch(e) {} // ignore parsing errors
       }
     }
 
