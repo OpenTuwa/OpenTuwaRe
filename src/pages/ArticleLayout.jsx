@@ -4,7 +4,6 @@ import { Helmet } from 'react-helmet-async';
 import Footer from '../components/Footer';
 import useScrollReveal from '../hooks/useScrollReveal';
 import SkeletonImage from '../components/SkeletonImage';
-import { RecommendationEngine } from '../utils/algorithm';
 
 function RevealSection({ children, className = '' }) {
   const ref = useScrollReveal();
@@ -56,15 +55,12 @@ export default function ArticleLayout() {
           });
         } catch(e) { /* ignore tracking error */ }
         
-        // Fetch Recommendations (All articles, minus this one)
-        const recRes = await fetch('/api/article');
+        // Fetch Recommendations (Server-side Brain)
+        // This hits the /api/recommendations endpoint which uses the centralized RecommendationEngine
+        const recRes = await fetch(`/api/recommendations?slug=${slug}`);
         if (recRes.ok) {
-          const allArticles = await recRes.json();
-          // Apply The Brain (Recommendation Algorithm)
-          const engine = new RecommendationEngine(allArticles);
-          const recommendations = engine.getRecommended(articleData, 3);
-          const filtered = recommendations.sort((a, b) => new Date(b.published_at) - new Date(a.published_at)).slice(0, 3);
-          setRecommended(filtered);
+          const recommendations = await recRes.json();
+          setRecommended(recommendations);
         }
       } catch (err) {
         setError(err.message);

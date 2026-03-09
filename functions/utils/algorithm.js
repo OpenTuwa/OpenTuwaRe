@@ -85,6 +85,11 @@ export class RecommendationEngine {
         const pubDate = new Date(article.published_at || Date.now());
         relevance += (1 / (1 + (Date.now() - pubDate.getTime()) / (1000 * 60 * 60 * 24 * 7))); // Slight boost for newer
 
+        // Add engagement score as a tie-breaker or booster
+        if (article.engagement_score) {
+          relevance += (article.engagement_score * 0.5); 
+        }
+
         return { ...article, _relevance: relevance };
       })
       .sort((a, b) => b._relevance - a._relevance)

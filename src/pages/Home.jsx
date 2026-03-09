@@ -3,7 +3,6 @@ import { useSearchParams } from 'react-router-dom';
 import ArticleCard from '../components/ArticleCard';
 import SkeletonCard from '../components/SkeletonCard';
 import SkeletonImage from '../components/SkeletonImage';
-import { RecommendationEngine } from '../utils/algorithm';
 
 export default function Home() {
   const [articles, setArticles] = useState([]);
@@ -41,11 +40,8 @@ export default function Home() {
           const q = queryParam.toLowerCase();
           data = data.filter(a => a.title.toLowerCase().includes(q) || (a.subtitle && a.subtitle.toLowerCase().includes(q)));
         }
-        // Apply The Brain (Recommendation Algorithm)
-        const engine = new RecommendationEngine(data);
-        const sortedData = engine.getLatest(); // Default to latest for home
 
-        setArticles(sortedData);
+        setArticles(data);
         setLoading(false);
       } catch (err) {
         setError(err.message);
