@@ -626,6 +626,58 @@ export class RecommendationEngine {
   }
 
   // =================================================================================================
+  //  THE LIVE PULSE (Real-Time Session Aggregator)
+  //  Computes on-the-fly engagement scores from raw, un-aggregated sessions.
+  //  This is the fallback brain when the Smasher (aggregateGlobalMetrics) hasn't run yet,
+  //  which is why the algorithm was falling back to pure chronological order.
+  // =================================================================================================
+  static async computeLiveScoresFromSessions(env) {
+    try {
+      const { results: sessions } = await env.DB.prepare(`
+        SELECT interaction_history FROM algo_user_sessions
+        WHERE is_aggregated = 0
+          AND interaction_history IS NOT NULL
+          AND last_seen_at > datetime('now', '-7 days')
+        LIMIT 2000
+      `).all();
+
+      const liveScores = {};
+
+      for (const session of sessions) {
+        try {
+          const history = JSON.parse(session.interaction_history);
+          for (const [slug, metrics] of Object.entries(history)) {
+            if (!liveScores[slug]) {
+              liveScores[slug] = { views: 0, reads: 0, shares: 0, time_spent: 0 };
+            }
+            liveScores[slug].views      += (metrics.views      || 0);
+            liveScores[slug].reads      += (metrics.reads      || 0);
+            liveScores[slug].shares     += (metrics.shares     || 0);
+            liveScores[slug].time_spent += (metrics.time_spent || 0);
+          }
+        } catch (e) { /* skip malformed session rows */ }
+      }
+
+      // Compute derived scores the same way the Smasher does
+      for (const slug of Object.keys(liveScores)) {
+        const s = liveScores[slug];
+        s.engagement_score =
+          (s.views      * SCORING_WEIGHTS.VIEW)             +
+          (s.reads      * SCORING_WEIGHTS.READ)             +
+          (s.shares     * SCORING_WEIGHTS.SHARE)            +
+          (s.time_spent * SCORING_WEIGHTS.TIME_SPENT_FACTOR);
+        // Velocity mirrors what the Smasher writes: batchScore * 0.5
+        s.trending_velocity = s.engagement_score * 0.5;
+      }
+
+      return liveScores;
+    } catch (e) {
+      console.error('[LivePulse] Failed to compute live scores:', e.message);
+      return {};
+    }
+  }
+
+  // =================================================================================================
   //  THE SENSORY CORTEX (Data Retrieval)
   // =================================================================================================
   static async fetchCandidates(env, limit = 100, searchQuery = null) {
@@ -667,6 +719,37 @@ export class RecommendationEngine {
       const sql = `${selectClause} ORDER BY a.engagement_score DESC, a.published_at DESC LIMIT 500`;
       const { results: raw } = await env.DB.prepare(sql).bind().all();
       results = raw;
+    }
+
+    // ----- LIVE PULSE HYDRATION -----
+    // If the Smasher hasn't run yet (all engagement_scores are 0), the algorithm
+    // would fall back to pure chronological order. This merges real-time session
+    // data directly into the article objects so scoring always reflects true engagement.
+    const allZero = results.every(a => !a.engagement_score || a.engagement_score === 0);
+    if (allZero) {
+      const liveScores = await RecommendationEngine.computeLiveScoresFromSessions(env);
+
+      if (Object.keys(liveScores).length > 0) {
+        results = results.map(article => {
+          const live = liveScores[article.slug];
+          if (!live) return article;
+
+          const prevViews  = article._raw_views || 0;
+          const newViews   = prevViews + live.views;
+          const newAvgTime = newViews > 0
+            ? ((article.avg_time_spent || 0) * prevViews + live.time_spent) / newViews
+            : 0;
+
+          return {
+            ...article,
+            engagement_score:  (article.engagement_score  || 0) + live.engagement_score,
+            trending_velocity: (article.trending_velocity || 0) + live.trending_velocity,
+            avg_time_spent:    newAvgTime,
+            _raw_views:        newViews,
+            _live_hydrated:    true
+          };
+        });
+      }
     }
 
     return results;
