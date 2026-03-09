@@ -324,63 +324,57 @@ export class BM25 {
 //  Implements: Cosine Similarity, Euclidean Distance, Pearson Correlation, and Jaccard Index.
 // =================================================================================================
 export class VectorMath {
-  /**
-   * Converts two sparse map objects into aligned dense vectors for computation.
-   * @param {Object} mapA - First vector (e.g., {"ai": 5, "code": 2})
-   * @param {Object} mapB - Second vector (e.g., {"ai": 1, "data": 3})
-   * @returns {Array} [vecA, vecB] - Aligned arrays of values
-   */
-  static align(mapA, mapB) {
-    const keys = new Set([...Object.keys(mapA), ...Object.keys(mapB)]);
-    const vecA = [];
-    const vecB = [];
-    
-    for (const key of keys) {
-      vecA.push(mapA[key] || 0);
-      vecB.push(mapB[key] || 0);
-    }
-    return [vecA, vecB];
-  }
+  // align() removed to eliminate GC pauses (O(N+M) allocations)
 
   /**
    * Cosine Similarity
    * Measures the cosine of the angle between two non-zero vectors.
-   * Useful for text analysis as it is magnitude-invariant (length of document doesn't bias score).
-   * Formula: (A . B) / (||A|| * ||B||)
+   * Optimized for Sparse Vectors using for...in loops.
    */
   static cosineSimilarity(mapA, mapB) {
-    const [vecA, vecB] = this.align(mapA, mapB);
-    
     let dotProduct = 0;
     let magA = 0;
     let magB = 0;
     
-    for (let i = 0; i < vecA.length; i++) {
-      dotProduct += vecA[i] * vecB[i];
-      magA += vecA[i] * vecA[i];
-      magB += vecB[i] * vecB[i];
+    for (const key in mapA) {
+      const valA = mapA[key];
+      magA += valA * valA;
+      if (mapB[key]) {
+        dotProduct += valA * mapB[key];
+      }
     }
     
-    magA = Math.sqrt(magA);
-    magB = Math.sqrt(magB);
+    for (const key in mapB) {
+      const valB = mapB[key];
+      magB += valB * valB;
+    }
     
     if (magA === 0 || magB === 0) return 0;
-    return dotProduct / (magA * magB);
+    return dotProduct / (Math.sqrt(magA) * Math.sqrt(magB));
   }
 
   /**
    * Euclidean Distance
    * Measures the straight-line distance between two points in vector space.
-   * Useful for detecting absolute differences in intensity/frequency.
-   * Formula: sqrt(sum((Ai - Bi)^2))
+   * Optimized for Sparse Vectors.
    */
   static euclideanDistance(mapA, mapB) {
-    const [vecA, vecB] = this.align(mapA, mapB);
-    
     let sumSq = 0;
-    for (let i = 0; i < vecA.length; i++) {
-      const diff = vecA[i] - vecB[i];
+    
+    // Iterate over A: (A - B)^2. If B missing, (A - 0)^2 = A^2
+    for (const key in mapA) {
+      const valA = mapA[key];
+      const valB = mapB[key] || 0;
+      const diff = valA - valB;
       sumSq += diff * diff;
+    }
+    
+    // Iterate over B: If A missing, (0 - B)^2 = B^2
+    for (const key in mapB) {
+      if (mapA[key] === undefined) { // Only handle keys unique to B
+        const valB = mapB[key];
+        sumSq += valB * valB;
+      }
     }
     
     return Math.sqrt(sumSq);
@@ -389,25 +383,41 @@ export class VectorMath {
   /**
    * Pearson Correlation Coefficient
    * Measures linear correlation between two sets of data.
-   * Range: [-1, 1]. 1 is perfect positive correlation, -1 is perfect negative.
-   * Useful for detecting if User A's tastes move in the same direction as User B's.
+   * Optimized for Sparse Vectors.
    */
   static pearsonCorrelation(mapA, mapB) {
-    const [vecA, vecB] = this.align(mapA, mapB);
-    const n = vecA.length;
-    if (n === 0) return 0;
-
     let sumA = 0, sumB = 0;
     let sumAsq = 0, sumBsq = 0;
     let pSum = 0;
-
-    for (let i = 0; i < n; i++) {
-      sumA += vecA[i];
-      sumB += vecB[i];
-      sumAsq += vecA[i] ** 2;
-      sumBsq += vecB[i] ** 2;
-      pSum += vecA[i] * vecB[i];
+    let n = 0;
+    
+    // Process mapA keys
+    for (const key in mapA) {
+      n++;
+      const valA = mapA[key];
+      const valB = mapB[key] || 0;
+      
+      sumA += valA;
+      sumAsq += valA * valA;
+      if (mapB[key] !== undefined) {
+        // Shared key, process intersection for pSum and sumB part
+        sumB += valB;
+        sumBsq += valB * valB;
+        pSum += valA * valB;
+      }
     }
+    
+    // Process mapB unique keys
+    for (const key in mapB) {
+      if (mapA[key] === undefined) {
+        n++;
+        const valB = mapB[key];
+        sumB += valB;
+        sumBsq += valB * valB;
+      }
+    }
+
+    if (n === 0) return 0;
 
     const num = pSum - (sumA * sumB / n);
     const den = Math.sqrt((sumAsq - sumA ** 2 / n) * (sumBsq - sumB ** 2 / n));
@@ -560,29 +570,21 @@ export class CollaborativeBrain {
    * Calculate similarity between two user profiles.
    * Uses a hybrid of Jaccard Index (for shared articles) and Cosine Similarity (for shared topics).
    * 
-   * @param {Object} userA - { interaction_history, lexical_history }
-   * @param {Object} userB - { interaction_history, lexical_history }
+   * @param {Object} userA - { interaction_history: Object, lexical_history: Object } (PARSED objects)
+   * @param {Object} userB - { interaction_history: Object, lexical_history: Object } (PARSED objects)
    * @returns {number} Similarity score (0 to 1)
    */
   static calculateUserSimilarity(userA, userB) {
     if (!userA || !userB) return 0;
 
     // 1. Interaction Similarity (Did they read the same things?)
-    // We look at the set of article slugs they both interacted with.
-    const historyA = userA.interaction_history ? JSON.parse(userA.interaction_history) : {};
-    const historyB = userB.interaction_history ? JSON.parse(userB.interaction_history) : {};
-    
-    const slugsA = Object.keys(historyA);
-    const slugsB = Object.keys(historyB);
+    const slugsA = Object.keys(userA.interaction_history || {});
+    const slugsB = Object.keys(userB.interaction_history || {});
     
     const interactionScore = VectorMath.jaccardIndex(slugsA, slugsB);
 
     // 2. Lexical Similarity (Do they like the same topics?)
-    // We compare their "Ghost Profiles" (keyword matrices).
-    const lexicalA = userA.lexical_history ? JSON.parse(userA.lexical_history) : {};
-    const lexicalB = userB.lexical_history ? JSON.parse(userB.lexical_history) : {};
-    
-    const topicScore = VectorMath.cosineSimilarity(lexicalA, lexicalB);
+    const topicScore = VectorMath.cosineSimilarity(userA.lexical_history || {}, userB.lexical_history || {});
 
     // Weighted Hybrid Score
     // Interaction is explicit (stronger signal), Topic is implicit (broader signal).
@@ -598,19 +600,32 @@ export class CollaborativeBrain {
    * @param {Object} targetUser - The user we are recommending for
    * @param {Array} communityUsers - Array of other user session objects
    * @param {number} k - Number of neighbors to find (default 20)
-   * @returns {Array} List of { user, score } sorted by similarity
+   * @returns {Array} List of { user, score, parsedProfile } sorted by similarity
    */
   static findNearestNeighbors(targetUser, communityUsers, k = 20) {
     const neighbors = [];
 
+    // Pre-parse target user once
+    const targetProfile = {
+      interaction_history: targetUser.interaction_history ? JSON.parse(targetUser.interaction_history) : {},
+      lexical_history: targetUser.lexical_history ? JSON.parse(targetUser.lexical_history) : {}
+    };
+
     for (const peer of communityUsers) {
       if (peer.session_id === targetUser.session_id) continue; // Don't compare to self
 
-      const similarity = CollaborativeBrain.calculateUserSimilarity(targetUser, peer);
+      // Parse peer inside loop (unavoidable unless cached)
+      // We store the parsed profile to avoid re-parsing in predictInterest
+      const peerProfile = {
+        interaction_history: peer.interaction_history ? JSON.parse(peer.interaction_history) : {},
+        lexical_history: peer.lexical_history ? JSON.parse(peer.lexical_history) : {}
+      };
+
+      const similarity = CollaborativeBrain.calculateUserSimilarity(targetProfile, peerProfile);
       
       // Threshold: Only consider meaningful connections (> 10% similarity)
       if (similarity > 0.1) {
-        neighbors.push({ user: peer, score: similarity });
+        neighbors.push({ user: peer, score: similarity, parsedProfile: peerProfile });
       }
     }
 
@@ -624,16 +639,16 @@ export class CollaborativeBrain {
    * Formula: Predicted Rating = Sum(NeighborSimilarity * NeighborRating) / Sum(NeighborSimilarity)
    * 
    * @param {string} articleSlug - The article to predict for
-   * @param {Array} neighbors - Result from findNearestNeighbors
+   * @param {Array} neighbors - Result from findNearestNeighbors (MUST include parsedProfile)
    * @returns {number} Predicted Interest Score (0 to 1)
    */
   static predictInterest(articleSlug, neighbors) {
     let weightedSum = 0;
     let similaritySum = 0;
 
-    for (const { user, score } of neighbors) {
-      const history = user.interaction_history ? JSON.parse(user.interaction_history) : {};
-      const interaction = history[articleSlug];
+    for (const { score, parsedProfile } of neighbors) {
+      // Use pre-parsed profile from findNearestNeighbors
+      const interaction = parsedProfile.interaction_history ? parsedProfile.interaction_history[articleSlug] : null;
 
       if (interaction) {
         // Calculate "Implicit Rating" from interaction metrics
@@ -882,8 +897,9 @@ export class RecommendationEngine {
 
     } else {
       // Standard Fetch (Latest)
-      const sql = `${selectClause} ORDER BY a.published_at DESC LIMIT ?`;
-      const { results: raw } = await env.DB.prepare(sql).bind(limit).all();
+      // Fix: Local Maxima - sorting by engagement + recency with larger limit
+      const sql = `${selectClause} ORDER BY a.engagement_score DESC, a.published_at DESC LIMIT 500`;
+      const { results: raw } = await env.DB.prepare(sql).bind().all();
       results = raw;
     }
 
@@ -931,9 +947,9 @@ export class RecommendationEngine {
     // We update the articles table one by one (or batch if possible)
     const stmt = env.DB.prepare(`
       UPDATE articles SET 
-        total_views = ?,
-        total_reads = ?,
-        total_shares = ?,
+        total_views = total_views + ?,
+        total_reads = total_reads + ?,
+        total_shares = total_shares + ?,
         avg_time_spent = ?,
         engagement_score = ?
       WHERE slug = ?
@@ -986,11 +1002,10 @@ export class RecommendationEngine {
   // Calculates trending score based on time, depth, and engagement metrics
   _calculateTrendingScore(article) {
     // 1. Content Depth (The "IQ" Score)
-    // We use Flesch-Kincaid and Entropy to reward intellectually dense content.
-    const text = article.content_html ? article.content_html.replace(/<[^>]*>?/gm, ' ') : (article.description || '');
-    const gradeLevel = ContentIQ.calculateGradeLevel(text);
-    const entropy = ContentIQ.calculateEntropy(text);
-    const fairTime = calculateFairReadingTime(article.content_html); // Basic physical length
+    // Removed CPU-bound runtime calculations. Using pre-computed DB columns with fallbacks.
+    const gradeLevel = article.iq_score || 10;
+    const entropy = article.entropy_score || 3;
+    const fairTime = article.fair_time_seconds || 120;
     
     // Base IQ Score (0-50 points)
     let iqScore = (gradeLevel * 1.5) + (entropy * 5); 
