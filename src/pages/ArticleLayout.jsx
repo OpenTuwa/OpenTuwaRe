@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet-async';
 import Footer from '../components/Footer';
 import useScrollReveal from '../hooks/useScrollReveal';
 import SkeletonImage from '../components/SkeletonImage';
+import { RecommendationEngine } from '../utils/algorithm';
 
 function RevealSection({ children, className = '' }) {
   const ref = useScrollReveal();
@@ -49,10 +50,10 @@ export default function ArticleLayout() {
         const recRes = await fetch('/api/article');
         if (recRes.ok) {
           const allArticles = await recRes.json();
-          const filtered = allArticles
-            .filter(a => a.slug && a.slug !== slug)
-            .sort((a, b) => new Date(b.published_at) - new Date(a.published_at))
-            .slice(0, 3);
+          // Apply The Brain (Recommendation Algorithm)
+          const engine = new RecommendationEngine(allArticles);
+          const recommendations = engine.getRecommended(articleData, 3);
+          const filtered = recommendations.sort((a, b) => new Date(b.published_at) - new Date(a.published_at)).slice(0, 3);
           setRecommended(filtered);
         }
       } catch (err) {
