@@ -57,6 +57,7 @@ export async function onRequestPost(context) {
     // NEW LOGIC: Use the frontend-generated matrix to skip the database query!
     if (action === 'view' && lexical_matrix) {
        try {
+          // A. Update the User's Profile (Session)
           for (const [word, count] of Object.entries(lexical_matrix)) {
              lexicalMap[word] = (lexicalMap[word] || 0) + count;
           }
@@ -64,6 +65,17 @@ export async function onRequestPost(context) {
           const sortedWords = Object.entries(lexicalMap).sort((a, b) => b[1] - a[1]).slice(0, 100);
           lexicalMap = {};
           sortedWords.forEach(([w, c]) => { lexicalMap[w] = c; });
+
+          // B. DISTRIBUTED INDEXING: Update the Article's Matrix in the DB if missing
+          // This ensures the "Content Match" algorithm has data to work with for everyone.
+          if (Object.keys(lexical_matrix).length > 0) {
+             env.DB.prepare(`
+               UPDATE articles 
+               SET lexical_matrix = ? 
+               WHERE slug = ? AND (lexical_matrix IS NULL OR length(lexical_matrix) < 5)
+             `).bind(JSON.stringify(lexical_matrix), slug).run().catch(() => {});
+          }
+
        } catch(e) {
           // Ignore parsing/merging errors
        }

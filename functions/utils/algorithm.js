@@ -944,55 +944,80 @@ export class RecommendationEngine {
         const parsedArticleMatrix = article.lexical_matrix ? 
           (typeof article.lexical_matrix === 'string' ? JSON.parse(article.lexical_matrix) : article.lexical_matrix) : null;
 
+        // ---------------------------------------------------------
+        // TIER 1: CONTENT MATCH (Lexical Overlap)
+        // ---------------------------------------------------------
         let contentScore = 0;
         
+        // Bonus for same author
         if (contextArticle.author && article.author === contextArticle.author) {
-          contentScore += 15;
+          contentScore += 5; // Small bonus, don't overwhelm lexical match
         }
 
+        // Lexical Cosine Similarity
         if (parsedContextMatrix && parsedArticleMatrix) {
            const cosineSim = VectorMath.cosineSimilarity(parsedContextMatrix, parsedArticleMatrix);
-           contentScore += (cosineSim * 100); 
+           // STRICT BALANCING: Pure proportional weight
+           // If similarity is 1.0 (identical), it gets full TIER_1 points.
+           // If similarity is 0.5, it gets half.
+           contentScore += (cosineSim * SCORING_WEIGHTS.TIER_1_CONTENT_MATCH); 
         }
         
-        relevance += Math.min(SCORING_WEIGHTS.TIER_1_CONTENT_MATCH, contentScore);
+        relevance += contentScore;
 
+        // ---------------------------------------------------------
+        // TIER 2: SESSION HABIT (User "Ghost Profile")
+        // ---------------------------------------------------------
         let sessionScore = 0;
         
         if (parsedUserMatrix && parsedArticleMatrix) {
-           const correlation = VectorMath.pearsonCorrelation(parsedUserMatrix, parsedArticleMatrix);
-           const normalizedCorr = (correlation + 1) / 2;
-           sessionScore += (normalizedCorr * 100);
+           // We use Cosine Similarity here too for User History vs Article
+           // This checks if the article uses the same words the user has been "collecting"
+           const userSim = VectorMath.cosineSimilarity(parsedUserMatrix, parsedArticleMatrix);
+           
+           // STRICT BALANCING: Proportional weight
+           sessionScore += (userSim * SCORING_WEIGHTS.TIER_2_SESSION_HABIT);
         } else {
+           // Cold Start / Fallback for no session data
            const pubDate = new Date(article.published_at || Date.now());
            const hoursOld = Math.max(0, (Date.now() - pubDate) / (1000 * 60 * 60));
            
-           const recency = TemporalGravity.newtonianCooling(40, hoursOld, 0.05);
+           const recency = TemporalGravity.newtonianCooling(1, hoursOld, 0.05); // Normalized 0-1
            
            const sampleText = (article.title || '') + '. ' + (article.subtitle || '') + '. ' + (article.seo_description || '');
            const iq = article.iq_score || ContentIQ.calculateGradeLevel(sampleText) || 10;
            const entropy = article.entropy_score || ContentIQ.calculateEntropy(sampleText) || 3;
            
-           const quality = (iq * 1.5) + (entropy * 5);
-           const chaos = (article.slug.length % 20); 
-
-           sessionScore += recency + quality + chaos;
+           // Normalize Quality roughly to 0-1 range for the weight multiplication
+           const quality = Math.min(1, ((iq * 1.5) + (entropy * 5)) / 50);
+           
+           // Fallback score uses a portion of the Tier 2 weight
+           sessionScore += ((recency * 0.6) + (quality * 0.4)) * (SCORING_WEIGHTS.TIER_2_SESSION_HABIT * 0.5);
         }
 
-        relevance += Math.min(SCORING_WEIGHTS.TIER_2_SESSION_HABIT, sessionScore);
+        relevance += sessionScore;
 
+        // ---------------------------------------------------------
+        // TIER 3: WORLDWIDE VOTE (Engagement)
+        // ---------------------------------------------------------
         let worldScore = 0;
         
         if (article.engagement_score) {
           const pubDate = new Date(article.published_at || Date.now());
           const hoursOld = Math.max(0, (Date.now() - pubDate) / (1000 * 60 * 60));
           
+          // HackerNews Gravity returns a score that can be high, we need to normalize/clamp it
+          // typically gravity score drops fast. 
           const gravityScore = TemporalGravity.hackerNewsGravity(article.engagement_score, hoursOld, 1.8);
           
-          worldScore += Math.min(100, gravityScore * 10); 
+          // Logarithmic dampening to prevent viral posts from completely breaking the scale
+          // coupled with the Tier 3 weight.
+          const normalizedGravity = Math.min(1, Math.log10(gravityScore + 1) / 2); // Assumes gravity ~100 is "hot"
+          
+          worldScore += (normalizedGravity * SCORING_WEIGHTS.TIER_3_WORLDWIDE_VOTE); 
         }
 
-        relevance += Math.min(SCORING_WEIGHTS.TIER_3_WORLDWIDE_VOTE, worldScore);
+        relevance += worldScore;
 
         return { ...article, _relevance: relevance };
       })
