@@ -46,6 +46,16 @@ export default function ArticleLayout() {
         const articleData = await res.json();
         setArticle(articleData);
 
+        // Track article view
+        try {
+          // Fire and forget, no need to await
+          fetch('/api/track-interaction', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'view', slug })
+          });
+        } catch(e) { /* ignore tracking error */ }
+        
         // Fetch Recommendations (All articles, minus this one)
         const recRes = await fetch('/api/article');
         if (recRes.ok) {

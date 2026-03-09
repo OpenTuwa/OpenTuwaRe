@@ -25,12 +25,16 @@ export class RecommendationEngine {
     const readTime = article.read_time_minutes || 5;
     score += Math.min(20, readTime * 2);
 
-    // 3. Simulated engagement factor based on title length or specific keywords (just for demonstration)
-    // In reality, this data would come from analytics.
-    if (article.title) {
-        score += (article.title.length % 15);
-        if (article.title.toLowerCase().includes('tuwa')) score += 10;
-        if (article.title.toLowerCase().includes('exclusive')) score += 15;
+    // 1. Database-driven Engagement Score (if available)
+    if (article.engagement_score !== undefined) {
+       score += (article.engagement_score || 0);
+    } else {
+       // Fallback simulated engagement factor
+       if (article.title) {
+           score += (article.title.length % 15);
+           if (article.title.toLowerCase().includes('tuwa')) score += 10;
+           if (article.title.toLowerCase().includes('exclusive')) score += 15;
+       }
     }
 
     return score;
