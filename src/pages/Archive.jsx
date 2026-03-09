@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import useScrollReveal from '../hooks/useScrollReveal';
 
 function ArchiveYearSection({ yearGroup }) {
@@ -46,6 +47,18 @@ export default function Archive() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // SEO
+  const siteUrl = 'https://opentuwa.com';
+  const title = 'Archive | OpenTuwa';
+  const description = 'A complete timeline of all articles, documentaries, and stories published on OpenTuwa.';
+  const schema = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    'name': 'OpenTuwa Archive',
+    'description': description,
+    'url': `${siteUrl}/archive`
+  };
+
   useEffect(() => {
     const fetchArchive = async () => {
       try {
@@ -83,6 +96,21 @@ export default function Archive() {
 
   return (
     <main id="main" className="pt-32 pb-20 px-6 max-w-3xl mx-auto flex-grow w-full">
+      <Helmet>
+        <title>{title}</title>
+        <meta name="description" content={description} />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        <meta property="og:url" content={`${siteUrl}/archive`} />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={title} />
+        <meta name="twitter:description" content={description} />
+        <link rel="canonical" href={`${siteUrl}/archive`} />
+        <script type="application/ld+json">
+          {JSON.stringify(schema)}
+        </script>
+      </Helmet>
       <div className="mb-16 border-b border-white/10 pb-10">
         <h1 className="text-5xl md:text-6xl font-extrabold font-heading text-white mb-4">The Archive</h1>
         <p className="text-xl text-tuwa-muted">A complete timeline of everything we've published.</p>

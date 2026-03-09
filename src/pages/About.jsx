@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import useScrollReveal from '../hooks/useScrollReveal';
 import SkeletonImage from '../components/SkeletonImage';
 
@@ -13,6 +14,28 @@ export default function About() {
   const [authorError, setAuthorError] = useState(null);
   const [email, setEmail] = useState('');
   const [subStatus, setSubStatus] = useState({ loading: false, message: '', type: '' });
+
+  // SEO Data
+  const siteUrl = 'https://opentuwa.com';
+  const title = 'About OpenTuwa | Independent Journalism';
+  const description = 'OpenTuwa is an independent platform for long-form articles, research, and media exploring foundational ideas. Built for deep thought, not fast cycles.';
+  const schema = {
+    '@context': 'https://schema.org',
+    '@type': 'AboutPage',
+    'name': 'About OpenTuwa',
+    'description': description,
+    'url': `${siteUrl}/about`,
+    'mainEntity': {
+      '@type': 'Organization',
+      'name': 'OpenTuwa',
+      'foundingDate': '2023', 
+      'url': siteUrl,
+      'logo': {
+        '@type': 'ImageObject',
+        'url': `${siteUrl}/img/logo.png`
+      }
+    }
+  };
 
   useEffect(() => {
     const fetchAuthors = async () => {
@@ -55,6 +78,21 @@ export default function About() {
 
   return (
     <>
+      <Helmet>
+        <title>{title}</title>
+        <meta name="description" content={description} />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        <meta property="og:url" content={`${siteUrl}/about`} />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={title} />
+        <meta name="twitter:description" content={description} />
+        <link rel="canonical" href={`${siteUrl}/about`} />
+        <script type="application/ld+json">
+          {JSON.stringify(schema)}
+        </script>
+      </Helmet>
       <main className="flex-grow pt-32 pb-24 max-w-7xl mx-auto w-full px-6">
         <div className="py-16 border-b border-white/10">
           <h1 className="text-4xl md:text-5xl font-heading font-extrabold text-white tracking-tight mb-6">

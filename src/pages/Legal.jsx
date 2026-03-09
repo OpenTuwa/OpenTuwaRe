@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Helmet } from 'react-helmet-async';
 
 export default function Legal() {
   // 1. React State for UI Elements
@@ -7,6 +8,11 @@ export default function Legal() {
   const [currentLang, setCurrentLang] = useState('en');
   const [showScrollIndicator, setShowScrollIndicator] = useState(true);
   
+  // SEO
+  const siteUrl = 'https://opentuwa.com';
+  const title = 'Legal | OpenTuwa';
+  const description = 'Terms of Service, Privacy Policy, and Cookie Policy for OpenTuwa.';
+
   // Refs for checking clicks outside the dropdown and scrolling tabs
   const dropdownRef = useRef(null);
   const navTabsRef = useRef(null);

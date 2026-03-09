@@ -21,12 +21,33 @@ export async function onRequestGet(context) {
       const name = a?.name || author;
       const bio = a?.bio || `Articles by ${name}`;
       const avatar = a?.avatar_url || a?.avatar || a?.image_url || '';
+      const social = a?.social_link || '';
 
-      const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-        <title>${escapeHtml(name)} | OpenTuwa</title>
+      const orgSchema = {
+        '@context': 'https://schema.org',
+        '@type': 'Organization',
+        'name': 'OpenTuwa',
+        'url': new URL(request.url).origin,
+        'logo': { '@type': 'ImageObject', 'url': `${new URL(request.url).origin}/img/logo.png` }
+      };
+
+      const profileSchema = {
+        '@context': 'https://schema.org',
+        '@type': 'ProfilePage',
+        'mainEntity': {
+            '@type': 'Person',
+            'name': name,
+            'description': bio,
+            'image': avatar,
+            'sameAs': social ? [social] : []
+        }
+      };
+
+      const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+        <title>${escapeHtml(name)} - Author Profile | OpenTuwa</title>
         <meta name="description" content="${escapeHtml(bio)}">
         <meta property="og:type" content="profile">
-        <meta property="og:title" content="${escapeHtml(name)} | OpenTuwa">
+        <meta property="og:title" content="${escapeHtml(name)} - Author Profile | OpenTuwa">
         <meta property="og:description" content="${escapeHtml(bio)}">
         ${avatar ? `<meta property="og:image" content="${escapeHtml(avatar)}">` : ''}
         <meta property="og:url" content="${escapeHtml(url.toString())}">
@@ -35,8 +56,10 @@ export async function onRequestGet(context) {
         <meta name="twitter:description" content="${escapeHtml(bio)}">
         ${avatar ? `<meta name="twitter:image" content="${escapeHtml(avatar)}">` : ''}
         <link rel="canonical" href="${escapeHtml(url.toString())}">
+        <script type="application/ld+json">${JSON.stringify(orgSchema)}</script>
+        <script type="application/ld+json">${JSON.stringify(profileSchema)}</script>
       </head><body>
-        <main style="font-family:Arial,Helvetica,sans-serif;max-width:800px;margin:4rem auto;padding:1rem;">
+        <main style="font-family:Georgia,serif;max-width:800px;margin:4rem auto;padding:1rem;">
           <h1>${escapeHtml(name)}</h1>
           <p>${escapeHtml(bio)}</p>
           <p><a href="${escapeHtml(url.toString())}">View stories by ${escapeHtml(name)}</a></p>
@@ -52,10 +75,19 @@ export async function onRequestGet(context) {
         if (context && typeof context.next === 'function') return await context.next();
         return new Response(null, { status: 204 });
       }
-      const title = `Tagged: ${tag} | OpenTuwa`;
-      const desc = `Stories and articles related to ${tag}`;
+      const title = `${tag} - Topic | OpenTuwa`;
+      const desc = `Latest stories, documentaries and articles about ${tag}`;
       const urlStr = url.toString();
-      const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      const collectionSchema = {
+        '@context': 'https://schema.org',
+        '@type': 'CollectionPage',
+        'name': `Stories about ${tag}`,
+        'description': desc,
+        'url': urlStr
+      };
+
+      const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
         <title>${escapeHtml(title)}</title>
         <meta name="description" content="${escapeHtml(desc)}">
         <meta property="og:type" content="website">
@@ -67,9 +99,10 @@ export async function onRequestGet(context) {
         <meta name="twitter:title" content="${escapeHtml(title)}">
         <meta name="twitter:description" content="${escapeHtml(desc)}">
         <link rel="canonical" href="${escapeHtml(urlStr)}">
+        <script type="application/ld+json">${JSON.stringify(collectionSchema)}</script>
       </head><body>
-        <main style="font-family:Arial,Helvetica,sans-serif;max-width:800px;margin:4rem auto;padding:1rem;">
-          <h1>Tagged: ${escapeHtml(tag)}</h1>
+        <main style="font-family:Georgia,serif;max-width:800px;margin:4rem auto;padding:1rem;">
+          <h1>Topic: ${escapeHtml(tag)}</h1>
           <p>${escapeHtml(desc)}</p>
           <p><a href="${escapeHtml(urlStr)}">View stories tagged ${escapeHtml(tag)}</a></p>
         </main>

@@ -5,7 +5,7 @@ export async function onRequestGet(context) {
   let articles = [];
   try {
     const { results } = await env.DB.prepare(
-      "SELECT slug, updated_at, modified_at, date_updated, published_at, created_at, date_published FROM articles ORDER BY COALESCE(published_at, created_at, date_published) DESC"
+      "SELECT slug, updated_at, modified_at, date_updated, published_at, created_at, date_published, image_url, title FROM articles ORDER BY COALESCE(published_at, created_at, date_published) DESC"
     ).bind().all();
     articles = results || [];
   } catch (e) { articles = []; }
@@ -13,7 +13,8 @@ export async function onRequestGet(context) {
   const staticPages = ['/', '/about', '/archive', '/legal'];
 
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">`;
 
   for (const page of staticPages) {
     xml += `
@@ -32,6 +33,11 @@ export async function onRequestGet(context) {
     <lastmod>${esc(lastmod)}</lastmod>` : ''}
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
+    ${a.image_url ? `
+    <image:image>
+      <image:loc>${esc(a.image_url)}</image:loc>
+      <image:title>${esc(a.title || '')}</image:title>
+    </image:image>` : ''}
   </url>`;
   }
 

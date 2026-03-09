@@ -357,12 +357,33 @@ if (needsYouTubeAPI) {
   const seoDesc = article.seo_description || article.subtitle || article.excerpt || '';
   const ldHeadline = article.title.length > 110 ? article.title.substring(0, 107) + '...' : article.title;
   const isoPublished = article.published_at ? new Date(article.published_at).toISOString() : '';
+  const isoModified = article.updated_at ? new Date(article.updated_at).toISOString() : isoPublished;
+  const section = article.section || article.category || 'News';
+  
+  // Extract video info if present for Schema
+  let videoSchema = undefined;
+  // Simple heuristic for video content in body or fields
+  const hasVideo = article.content_html && (article.content_html.includes('<video') || article.content_html.includes('iframe'));
+  if (hasVideo) {
+     // We construct a basic VideoObject. In a real scenario, we'd parse the content to get exact URL/Thumbnail.
+     // Here we use the article image as thumbnail and current URL as embedUrl for simplicity, or specific fields if available.
+     videoSchema = {
+       '@type': 'VideoObject',
+       'name': article.title,
+       'description': seoDesc,
+       'thumbnailUrl': article.image_url ? [article.image_url] : [`${siteUrl}/img/logo.png`],
+       'uploadDate': isoPublished,
+       'contentUrl': articleUrl,
+       'embedUrl': articleUrl
+     };
+  }
 
-  const jsonLd = {
+  const newsArticleLd = {
     '@context': 'https://schema.org',
     '@type': 'NewsArticle',
     'mainEntityOfPage': { '@type': 'WebPage', '@id': articleUrl },
     'headline': ldHeadline,
+    'alternativeHeadline': article.subtitle || undefined,
     'description': seoDesc,
     'image': article.image_url ? [article.image_url] : undefined,
     'author': { '@type': 'Person', 'name': authorName },
@@ -370,11 +391,35 @@ if (needsYouTubeAPI) {
       '@type': 'Organization',
       'name': 'OpenTuwa',
       'url': siteUrl,
-      'logo': { '@type': 'ImageObject', 'url': `${siteUrl}/img/logo.png` }
+      'logo': { '@type': 'ImageObject', 'url': `${siteUrl}/img/logo.png`, 'width': 600, 'height': 60 },
+      'sameAs': [
+          'https://twitter.com/OpenTuwa',
+          'https://www.facebook.com/OpenTuwa',
+          'https://www.instagram.com/OpenTuwa'
+      ]
     },
     'datePublished': isoPublished || undefined,
+    'dateModified': isoModified || undefined,
+    'articleSection': section,
     'isAccessibleForFree': true,
-    'inLanguage': 'en'
+    'inLanguage': 'en',
+    'genre': section,
+    'copyrightHolder': { '@type': 'Organization', 'name': 'OpenTuwa' },
+    'copyrightYear': new Date(article.published_at || Date.now()).getFullYear()
+  };
+
+  if (videoSchema) {
+      newsArticleLd.video = videoSchema;
+  }
+
+  const breadcrumbLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    'itemListElement': [
+      { '@type': 'ListItem', 'position': 1, 'name': 'Home', 'item': siteUrl },
+      { '@type': 'ListItem', 'position': 2, 'name': 'Articles', 'item': `${siteUrl}/archive` },
+      { '@type': 'ListItem', 'position': 3, 'name': article.title, 'item': articleUrl }
+    ]
   };
 
   return (
@@ -383,19 +428,26 @@ if (needsYouTubeAPI) {
         <title>{seoTitle}</title>
         <meta name="description" content={seoDesc} />
         {tagsArray.length > 0 && <meta name="keywords" content={tagsArray.join(', ')} />}
+        {tagsArray.length > 0 && <meta name="news_keywords" content={tagsArray.join(', ')} />}
+        <meta name="author" content={authorName} />
         
         {/* Open Graph / Facebook */}
+        <meta property="og:site_name" content="OpenTuwa" />
+        <meta property="og:locale" content="en_US" />
         <meta property="og:type" content="article" />
         <meta property="og:url" content={articleUrl} />
         <meta property="og:title" content={article.title} />
         <meta property="og:description" content={seoDesc} />
         {article.image_url && <meta property="og:image" content={article.image_url} />}
-        <meta property="og:site_name" content="OpenTuwa" />
         {isoPublished && <meta property="article:published_time" content={isoPublished} />}
+        {isoModified && <meta property="article:modified_time" content={isoModified} />}
+        <meta property="article:section" content={section} />
         {tagsArray.map((tag, i) => <meta key={i} property="article:tag" content={tag} />)}
 
         {/* Twitter */}
         <meta name="twitter:card" content={article.image_url ? 'summary_large_image' : 'summary'} />
+        <meta name="twitter:site" content="@OpenTuwa" />
+        <meta name="twitter:creator" content="@OpenTuwa" />
         <meta name="twitter:title" content={article.title} />
         <meta name="twitter:description" content={seoDesc} />
         {article.image_url && <meta name="twitter:image" content={article.image_url} />}
@@ -404,7 +456,10 @@ if (needsYouTubeAPI) {
         
         {/* Schema.org JSON-LD */}
         <script type="application/ld+json">
-          {JSON.stringify(jsonLd)}
+          {JSON.stringify(newsArticleLd)}
+        </script>
+        <script type="application/ld+json">
+          {JSON.stringify(breadcrumbLd)}
         </script>
       </Helmet>
 

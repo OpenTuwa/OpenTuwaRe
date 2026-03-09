@@ -139,7 +139,7 @@ export async function onRequestGet(context) {
         videoMeta += `<meta property="og:video:type" content="video/mp4">`;
         videoMeta += `<meta property="og:video:width" content="${width}">`;
         videoMeta += `<meta property="og:video:height" content="${height}">`;
-        // Twitter player tags for MP4 (may not be supported everywhere)
+        // Twitter player tags for MP4
         videoMeta += `<meta name="twitter:player" content="${escapeHtml(secure)}">`;
         videoMeta += `<meta name="twitter:player:width" content="${width}">`;
         videoMeta += `<meta name="twitter:player:height" content="${height}">`;
@@ -163,24 +163,34 @@ export async function onRequestGet(context) {
         videoMeta += `<meta property="og:video:width" content="${width}">`;
         videoMeta += `<meta property="og:video:height" content="${height}">`;
         // Twitter player (iframe)
+        videoMeta += `<meta name="twitter:card" content="player">`;
+        videoMeta += `<meta name="twitter:site" content="@OpenTuwa">`;
         videoMeta += `<meta name="twitter:player" content="${escapeHtml(playerUrl)}">`;
         videoMeta += `<meta name="twitter:player:width" content="${width}">`;
         videoMeta += `<meta name="twitter:player:height" content="${height}">`;
       } else {
-        // Unknown type — still expose as og:video with type left out
         videoMeta += `<meta property="og:video" content="${escapeHtml(secure)}">`;
       }
+    } else {
+        // Fallback for non-video articles to summary_large_image
+        videoMeta += `<meta name="twitter:card" content="${images && images.length ? 'summary_large_image' : 'summary'}">`;
+        videoMeta += `<meta name="twitter:site" content="@OpenTuwa">`;
     }
 
     // Truncate headline for JSON-LD (Google requires <= 110 chars)
     const ldHeadline = title.length > 110 ? title.substring(0, 107) + '...' : title;
+    // Alternative headline (subtitle)
+    const altHeadline = article.subtitle ? article.subtitle : undefined;
 
     // Formatted dates for visible content
     const pubIso = isoDate(publishedAt) || '';
     const modIso = isoDate(updatedAt) || '';
     const pubReadable = pubIso ? new Date(pubIso).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
 
-    const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    // Article genre/section
+    const genre = section || 'News';
+
+    const html = `<!doctype html><html lang="en" prefix="og: http://ogp.me/ns#"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
       <title>${escapeHtml(title)} | OpenTuwa</title>
       <meta name="description" content="${escapeHtml(description)}">
       <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
@@ -188,37 +198,57 @@ export async function onRequestGet(context) {
       ${keywords ? `<meta name="news_keywords" content="${escapeHtml(keywords)}">` : ''}
       <meta name="original-source" content="${escapeHtml(url)}">
       <meta name="syndication-source" content="${escapeHtml(url)}">
+      <meta name="author" content="${escapeHtml(authorName)}">
+      
+      <!-- Open Graph / Facebook -->
       <meta property="og:site_name" content="OpenTuwa">
       <meta property="og:locale" content="en_US">
       <meta property="og:type" content="article">
       <meta property="og:title" content="${escapeHtml(title)}">
       <meta property="og:description" content="${escapeHtml(description)}">
+      <meta property="og:url" content="${escapeHtml(url)}">
       ${images && images.length ? images.map(img=>`<meta property="og:image" content="${escapeHtml(img)}">`).join('') : ''}
       ${images && images.length && imageAlt ? `<meta property="og:image:alt" content="${escapeHtml(imageAlt)}">` : ''}
       ${videoMeta}
-      <meta property="og:url" content="${escapeHtml(url)}">
       ${pubIso ? `<meta property="article:published_time" content="${escapeHtml(pubIso)}">` : ''}
       ${modIso ? `<meta property="article:modified_time" content="${escapeHtml(modIso)}">` : ''}
       ${section ? `<meta property="article:section" content="${escapeHtml(section)}">` : ''}
       ${tagsArray.length ? tagsArray.map(t=>`<meta property="article:tag" content="${escapeHtml(t)}">`).join('') : (keywords ? `<meta property="article:tag" content="${escapeHtml(keywords)}">` : '')}
-      <meta name="twitter:card" content="${images && images.length ? 'summary_large_image' : 'summary'}">
+
+      <!-- Twitter -->
       <meta name="twitter:title" content="${escapeHtml(title)}">
       <meta name="twitter:description" content="${escapeHtml(description)}">
       ${images && images.length ? `<meta name="twitter:image" content="${escapeHtml(images[0])}">` : ''}
       ${images && images.length && imageAlt ? `<meta name="twitter:image:alt" content="${escapeHtml(imageAlt)}">` : ''}
+      
       <link rel="canonical" href="${escapeHtml(url)}">
       <link rel="alternate" type="application/rss+xml" title="OpenTuwa RSS Feed" href="${escapeHtml(origin + '/feed.xml')}">
+      
+      <!-- Schema.org JSON-LD -->
       <script type="application/ld+json">${safeJsonLd(buildJsonLd({
-        url, title: ldHeadline, description, images, authorName, publishedAt, updatedAt, keywords, videoSrc, articleBody: articleBodyText, wordCount, section, origin
+        url, title: ldHeadline, altHeadline, description, images, authorName, publishedAt, updatedAt, keywords, videoSrc, articleBody: articleBodyText, wordCount, section: genre, origin
+      }))}</script>
+      <script type="application/ld+json">${safeJsonLd(buildBreadcrumbLd({
+        url, title, origin
       }))}</script>
     </head><body>
-      <main style="font-family:Arial,Helvetica,sans-serif;max-width:800px;margin:4rem auto;padding:1rem;" itemscope itemtype="https://schema.org/NewsArticle">
+      <main style="font-family:Georgia,serif;max-width:800px;margin:4rem auto;padding:1rem;line-height:1.6;font-size:18px;" itemscope itemtype="https://schema.org/NewsArticle">
         <meta itemprop="mainEntityOfPage" content="${escapeHtml(url)}">
-        <h1 itemprop="headline">${escapeHtml(title)}</h1>
-        <p>By <span itemprop="author" itemscope itemtype="https://schema.org/Person"><span itemprop="name">${escapeHtml(authorName)}</span></span>${pubReadable ? ` &mdash; <time itemprop="datePublished" datetime="${escapeHtml(pubIso)}">${escapeHtml(pubReadable)}</time>` : ''}</p>
-        <p itemprop="description">${escapeHtml(description)}</p>
+        <header style="margin-bottom:2rem;">
+            ${section ? `<div style="text-transform:uppercase;font-size:0.85em;color:#d93025;font-weight:bold;margin-bottom:0.5rem;">${escapeHtml(section)}</div>` : ''}
+            <h1 itemprop="headline" style="font-size:2.5em;line-height:1.2;margin:0 0 0.5rem 0;">${escapeHtml(title)}</h1>
+            ${article.subtitle ? `<h2 style="font-size:1.4em;color:#555;font-weight:300;margin:0 0 1rem 0;">${escapeHtml(article.subtitle)}</h2>` : ''}
+            <div style="font-size:0.9em;color:#666;">
+                By <span itemprop="author" itemscope itemtype="https://schema.org/Person"><span itemprop="name" style="font-weight:bold;color:#333;">${escapeHtml(authorName)}</span></span>
+                ${pubReadable ? ` <span style="margin:0 0.5rem;">&bull;</span> <time itemprop="datePublished" datetime="${escapeHtml(pubIso)}">${escapeHtml(pubReadable)}</time>` : ''}
+            </div>
+        </header>
+        ${images && images.length ? `<figure style="margin:0 -1rem 2rem -1rem;"><img src="${escapeHtml(images[0])}" alt="${escapeHtml(imageAlt)}" style="width:100%;height:auto;display:block;" /><figcaption style="font-size:0.8em;color:#777;padding:0.5rem 1rem;">${escapeHtml(imageAlt)}</figcaption></figure>` : ''}
+        <p itemprop="description" style="font-weight:bold;margin-bottom:1.5rem;">${escapeHtml(description)}</p>
         <article class="article-content" itemprop="articleBody">${htmlContent}</article>
-        <p><a href="${escapeHtml(url)}">Read on OpenTuwa</a></p>
+        <footer style="margin-top:3rem;border-top:1px solid #eee;padding-top:1rem;font-size:0.9em;">
+            <p><a href="${escapeHtml(url)}" style="color:#d93025;text-decoration:none;font-weight:bold;">Read the full visual story on OpenTuwa &rarr;</a></p>
+        </footer>
       </main>
     </body></html>`;
 
@@ -258,14 +288,16 @@ function stripHtml(html) {
 }
 
 function buildJsonLd(opts) {
-  const { url, title, description, images, authorName, publishedAt, updatedAt, keywords, videoSrc, articleBody, wordCount, section, origin } = opts || {};
+  const { url, title, altHeadline, description, images, authorName, publishedAt, updatedAt, keywords, videoSrc, articleBody, wordCount, section, origin } = opts || {};
   const computedOrigin = origin || (() => { try { return new URL(url).origin; } catch (e) { return ''; } })();
   const pubYear = (() => { try { const y = new Date(publishedAt).getFullYear(); return isNaN(y) ? new Date().getFullYear() : y; } catch (e) { return new Date().getFullYear(); } })();
+  
   const ld = {
     '@context': 'https://schema.org',
     '@type': 'NewsArticle',
     'mainEntityOfPage': { '@type': 'WebPage', '@id': url },
     'headline': title,
+    'alternativeHeadline': altHeadline || undefined,
     'description': description,
     'image': images && images.length ? images : undefined,
     'author': { '@type': 'Person', 'name': authorName },
@@ -273,7 +305,12 @@ function buildJsonLd(opts) {
       '@type': 'Organization',
       'name': 'OpenTuwa',
       'url': computedOrigin || undefined,
-      'logo': computedOrigin ? { '@type': 'ImageObject', 'url': computedOrigin + '/img/logo.png' } : undefined
+      'logo': computedOrigin ? { '@type': 'ImageObject', 'url': computedOrigin + '/img/logo.png', 'width': 600, 'height': 60 } : undefined,
+      'sameAs': [
+          'https://twitter.com/OpenTuwa',
+          'https://www.facebook.com/OpenTuwa',
+          'https://www.instagram.com/OpenTuwa'
+      ]
     },
     'datePublished': isoDate(publishedAt),
     'dateModified': isoDate(updatedAt),
@@ -284,7 +321,8 @@ function buildJsonLd(opts) {
     'isAccessibleForFree': true,
     'inLanguage': 'en',
     'copyrightHolder': { '@type': 'Organization', 'name': 'OpenTuwa' },
-    'copyrightYear': pubYear
+    'copyrightYear': pubYear,
+    'genre': section || 'News'
   };
   // add video object when available
   if (videoSrc) {
@@ -303,4 +341,33 @@ function buildJsonLd(opts) {
   }
   // remove undefined values by stringify-reparse trick
   return JSON.parse(JSON.stringify(ld));
+}
+
+function buildBreadcrumbLd(opts) {
+    const { url, title, origin } = opts || {};
+    const computedOrigin = origin || 'https://opentuwa.com';
+    return {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        'itemListElement': [
+            {
+                '@type': 'ListItem',
+                'position': 1,
+                'name': 'Home',
+                'item': computedOrigin
+            },
+            {
+                '@type': 'ListItem',
+                'position': 2,
+                'name': 'Articles',
+                'item': computedOrigin + '/archive'
+            },
+            {
+                '@type': 'ListItem',
+                'position': 3,
+                'name': title,
+                'item': url
+            }
+        ]
+    };
 }

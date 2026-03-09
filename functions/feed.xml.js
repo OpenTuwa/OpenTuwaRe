@@ -5,7 +5,7 @@ export async function onRequestGet(context) {
   let articles = [];
   try {
     const { results } = await env.DB.prepare(
-      "SELECT slug, title, seo_description, subtitle, excerpt, author_name, author, published_at, created_at, date_published, image_url, content_html FROM articles ORDER BY COALESCE(published_at, created_at, date_published) DESC LIMIT 50"
+      "SELECT slug, title, seo_description, subtitle, excerpt, author_name, author, published_at, created_at, date_published, image_url, content_html, tags, section, category FROM articles ORDER BY COALESCE(published_at, created_at, date_published) DESC LIMIT 50"
     ).bind().all();
     articles = results || [];
   } catch (e) { articles = []; }
@@ -34,6 +34,30 @@ export async function onRequestGet(context) {
     const author = a.author_name || a.author || 'OpenTuwa';
     const imageUrl = a.image_url || '';
     const content = a.content_html || desc;
+    
+    // Process tags for categories
+    let categories = [];
+    if (a.section) categories.push(a.section);
+    if (a.category && a.category !== a.section) categories.push(a.category);
+    
+    try {
+      if (a.tags) {
+        if (typeof a.tags === 'string') {
+           // Try JSON first then comma-split
+           try {
+             const parsed = JSON.parse(a.tags);
+             if (Array.isArray(parsed)) categories.push(...parsed);
+           } catch(e) {
+             categories.push(...a.tags.split(','));
+           }
+        } else if (Array.isArray(a.tags)) {
+           categories.push(...a.tags);
+        }
+      }
+    } catch(e) {}
+    
+    // Dedup and clean
+    categories = [...new Set(categories.map(c => String(c).trim()).filter(Boolean))];
 
     xml += `
     <item>
@@ -43,6 +67,7 @@ export async function onRequestGet(context) {
       <pubDate>${esc(pubDate)}</pubDate>
       <description>${esc(desc)}</description>
       <dc:creator>${esc(author)}</dc:creator>
+      ${categories.map(c => `<category>${esc(c)}</category>`).join('')}
       <content:encoded><![CDATA[${content}]]></content:encoded>
       ${imageUrl ? `<media:content url="${esc(imageUrl)}" medium="image"/>` : ''}
     </item>`;

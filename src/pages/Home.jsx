@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import ArticleCard from '../components/ArticleCard';
 import SkeletonCard from '../components/SkeletonCard';
 import SkeletonImage from '../components/SkeletonImage';
@@ -14,6 +15,83 @@ export default function Home() {
   const authorParam = searchParams.get('author');
   const tagParam = searchParams.get('tag');
   const queryParam = searchParams.get('q');
+
+  // Prepare SEO Data
+  const siteUrl = 'https://opentuwa.com'; // In prod, use window.location.origin or env var
+  const currentUrl = typeof window !== 'undefined' ? window.location.href : siteUrl;
+
+  let title = 'OpenTuwa | Independent Journalism & Documentaries';
+  let description = 'Independent news and journalism covering stories that matter. Deep dives, documentaries, and analysis.';
+  let schema = [];
+
+  // 1. Global Organization Schema (Always present on home/root)
+  const orgSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    'name': 'OpenTuwa',
+    'url': siteUrl,
+    'logo': {
+      '@type': 'ImageObject',
+      'url': `${siteUrl}/img/logo.png`,
+      'width': 600,
+      'height': 60
+    },
+    'sameAs': [
+      'https://twitter.com/OpenTuwa',
+      'https://www.facebook.com/OpenTuwa',
+      'https://www.instagram.com/OpenTuwa',
+      'https://www.youtube.com/@OpenTuwa'
+    ]
+  };
+
+  if (authorParam && authorData) {
+    title = `${authorData.name} - Author Profile | OpenTuwa`;
+    description = authorData.bio || `Read articles and stories by ${authorData.name} on OpenTuwa.`;
+    schema.push({
+      '@context': 'https://schema.org',
+      '@type': 'ProfilePage',
+      'mainEntity': {
+        '@type': 'Person',
+        'name': authorData.name,
+        'description': authorData.bio,
+        'image': authorData.avatar_url || authorData.avatar,
+        'url': currentUrl,
+        'sameAs': authorData.social_link ? [authorData.social_link] : []
+      }
+    });
+  } else if (tagParam) {
+    title = `${tagParam} - Topic | OpenTuwa`;
+    description = `Latest stories, documentaries and articles about ${tagParam}.`;
+    schema.push({
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      'name': `Stories about ${tagParam}`,
+      'description': description,
+      'url': currentUrl
+    });
+  } else if (queryParam) {
+    title = `Search results for "${queryParam}" | OpenTuwa`;
+    schema.push({
+      '@context': 'https://schema.org',
+      '@type': 'SearchResultsPage',
+      'name': title,
+      'url': currentUrl
+    });
+  } else {
+    // Default Home
+    schema.push({
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      'name': 'OpenTuwa',
+      'url': siteUrl,
+      'potentialAction': {
+        '@type': 'SearchAction',
+        'target': `${siteUrl}/?q={search_term_string}`,
+        'query-input': 'required name=search_term_string'
+      }
+    });
+    schema.push(orgSchema);
+  }
 
   useEffect(() => {
     const fetchData = async () => {
@@ -54,6 +132,20 @@ export default function Home() {
 
   return (
     <main id="main" className="pt-32 pb-20 px-6 max-w-7xl mx-auto">
+      <Helmet>
+        <title>{title}</title>
+        <meta name="description" content={description} />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        <meta name="twitter:title" content={title} />
+        <meta name="twitter:description" content={description} />
+        <link rel="canonical" href={currentUrl} />
+        {schema.map((s, i) => (
+          <script key={i} type="application/ld+json">
+            {JSON.stringify(s)}
+          </script>
+        ))}
+      </Helmet>
 
       {/* Author Profile Header */}
       {authorParam && authorData && (
