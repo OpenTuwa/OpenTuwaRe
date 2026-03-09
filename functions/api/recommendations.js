@@ -23,7 +23,8 @@ export async function onRequestGet(context) {
     // We also fetch the engagement metrics to pass to the brain
     const { results } = await env.DB.prepare(`
       SELECT a.slug, a.title, a.subtitle, a.author, a.published_at, a.read_time_minutes, a.image_url, a.tags, a.seo_description,
-             COALESCE(m.engagement_score, 0) as engagement_score
+             COALESCE(m.engagement_score, 0) as engagement_score,
+             COALESCE(m.avg_time_spent, 0) as avg_time_spent
       FROM articles a
       LEFT JOIN algo_metrics m ON a.slug = m.article_slug
       ORDER BY a.published_at DESC

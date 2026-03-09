@@ -8,32 +8,53 @@ export class RecommendationEngine {
   }
 
   // Helper to calculate a basic "score" for trending
-  // In a real app, this would use pageviews, likes, shares, etc.
-  // Here we simulate it based on read_time, publish date, and a pseudo-random engagement factor
+  // Now upgraded with "Silicon Valley" logic: Velocity & Retention
   _calculateTrendingScore(article) {
     let score = 0;
     
-    // 1. Recency factor (newer articles score higher)
+    // 1. Recency & Decay (The "News Cycle" Factor)
+    // Newer articles start strong, but decay naturally to let fresh content rise.
     const pubDate = new Date(article.published_at || Date.now());
     const now = new Date();
-    const daysOld = Math.max(0, (now - pubDate) / (1000 * 60 * 60 * 24));
+    const hoursOld = Math.max(0, (now - pubDate) / (1000 * 60 * 60)); // Hours instead of days for finer grain
     
-    // Base score is 100, drops off by 2 points per day old
-    score += Math.max(10, 100 - (daysOld * 2));
+    // Base score: 100. Decay: -0.5 points per hour.
+    // Articles stay "fresh" for about 48 hours unless they go viral.
+    score += Math.max(0, 100 - (hoursOld * 0.5));
     
-    // 2. Read time factor (longer, in-depth articles get a slight bump)
+    // 2. The "Deep Work" Bonus (Content-Centric)
+    // We reward "Intellectual Density". Longer articles require more effort, so they get a handicap.
     const readTime = article.read_time_minutes || 5;
-    score += Math.min(20, readTime * 2);
+    if (readTime > 7) score += 15; // Long-form bonus
+    else if (readTime > 3) score += 5; // Standard article
 
-    // 1. Database-driven Engagement Score (if available)
+    // 3. Database-driven Signals (User-Centric)
     if (article.engagement_score !== undefined) {
+       // A. Raw Popularity (The Crowd Vote)
        score += (article.engagement_score || 0);
+
+       // B. "Sticky" Factor (Retention Rate) - Modeled from Silicon Valley "Time Spent" metrics
+       // If avg_time_spent is close to read_time_minutes, it's a high-quality "Sticky" article.
+       // We assume `avg_time_spent` comes from DB in seconds.
+       if (article.avg_time_spent && article.read_time_minutes) {
+          const estimatedSeconds = article.read_time_minutes * 60;
+          const completionRate = Math.min(1.5, article.avg_time_spent / estimatedSeconds); // Cap at 150%
+          
+          if (completionRate > 0.8) score *= 1.5; // Huge multiplier if people actually READ it (High Quality)
+          else if (completionRate < 0.2) score *= 0.5; // Penalty for clickbait (High bounce rate)
+       }
+
+       // C. Velocity (Virality) - implied by 'trending_velocity' from DB (if available)
+       // This represents "Acceleration" of views in the last hour.
+       if (article.trending_velocity) {
+          score += (article.trending_velocity * 20); // Massive boost for currently viral items
+       }
     } else {
-       // Fallback simulated engagement factor
+       // Cold Start Problem: Simulation for new content without data
        if (article.title) {
-           score += (article.title.length % 15);
-           if (article.title.toLowerCase().includes('tuwa')) score += 10;
-           if (article.title.toLowerCase().includes('exclusive')) score += 15;
+           score += (article.title.length % 15); // Pseudo-random noise
+           if (article.title.toLowerCase().includes('tuwa')) score += 10; // Brand boost
+           if (article.title.toLowerCase().includes('exclusive')) score += 15; // "Curiosity Gap" boost
        }
     }
 

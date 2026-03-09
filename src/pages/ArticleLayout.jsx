@@ -54,14 +54,19 @@ export default function ArticleLayout() {
             body: JSON.stringify({ action: 'view', slug })
           });
         } catch(e) { /* ignore tracking error */ }
-        
-        // Fetch Recommendations (Server-side Brain)
-        // This hits the /api/recommendations endpoint which uses the centralized RecommendationEngine
-        const recRes = await fetch(`/api/recommendations?slug=${slug}`);
-        if (recRes.ok) {
-          const recommendations = await recRes.json();
-          setRecommended(recommendations);
-        }
+
+        // Start Heartbeat for Time Tracking (Attention Span)
+        const heartbeat = setInterval(() => {
+          if (document.visibilityState === 'visible') {
+            fetch('/api/track-interaction', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'ping', slug, duration: 10 }) // 10s increment
+            }).catch(() => {});
+          }
+        }, 10000); // Ping every 10 seconds
+
+        return () => clearInterval(heartbeat);
       } catch (err) {
         setError(err.message);
       } finally {
