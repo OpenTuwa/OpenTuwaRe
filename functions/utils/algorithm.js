@@ -30,7 +30,8 @@ export const SESSION_PROFILE_SCHEMA = [
   'user_agent', 'platform', 'language', 'referrer', 
   'screen_width', 'screen_height', 'window_width', 'window_height',
   'timezone', 'connection_type', 'device_memory', 'hardware_concurrency',
-  'lexical_history' // JSON string: Merged word-matrix of everything they read this session
+  'lexical_history', // JSON string: Merged word-matrix of everything they read this session
+  'interaction_history' // JSON string: Specific views/reads/time for every article they touched
 ];
 
 // =================================================================================================
@@ -150,14 +151,14 @@ export class RecommendationEngine {
     let results = [];
     
     // 1. Base Query parts
-    // We select standard fields + The 2 Key Algorithm Metrics (Engagement & Time Spent)
+    // We select standard fields + The Lexical Matrix + Global Metrics (Smashed from User Sessions)
+    // The 'articles' table now holds the source of truth for global stats after the Background Smash Job runs.
     const selectClause = `
-      SELECT a.slug, a.title, a.subtitle, a.author, a.published_at, a.read_time_minutes, a.image_url, a.tags, a.seo_description,
-             COALESCE(m.engagement_score, 0) as engagement_score,
-             COALESCE(m.avg_time_spent, 0) as avg_time_spent,
-             COALESCE(m.total_views, 0) as _raw_views
+      SELECT a.slug, a.title, a.subtitle, a.author, a.published_at, a.read_time_minutes, a.image_url, a.tags, a.seo_description, a.lexical_matrix,
+             COALESCE(a.engagement_score, 0) as engagement_score,
+             COALESCE(a.avg_time_spent, 0) as avg_time_spent,
+             COALESCE(a.total_views, 0) as _raw_views
       FROM articles a
-      LEFT JOIN algo_metrics m ON a.slug = m.article_slug
     `;
 
     // 2. Handle Search / Filtering
@@ -187,13 +188,98 @@ export class RecommendationEngine {
       results = raw;
 
     } else {
-      // Standard Fetch
+      // Standard Fetch (Latest)
       const sql = `${selectClause} ORDER BY a.published_at DESC LIMIT ?`;
       const { results: raw } = await env.DB.prepare(sql).bind(limit).all();
       results = raw;
     }
 
     return results;
+  }
+
+  // =================================================================================================
+  //  THE SMASHER (Global Data Aggregation)
+  //  This function simulates a "MapReduce" job. It reads ALL user sessions, smashes their
+  //  interaction histories together, and calculates the new global truth for every article.
+  //  It then updates the 'articles' table directly.
+  //  NOTE: This should be run via a Cron Trigger (Scheduled Event) periodically.
+  // =================================================================================================
+  static async aggregateGlobalMetrics(env) {
+    // 1. Fetch ALL user sessions (In production, use pagination/cursor)
+    // We only care about sessions active in the last 24 hours for "Trending", 
+    // but for "Total" stats we might need everything.
+    // For now, we grab the latest 1000 sessions to keep it fast.
+    const { results: sessions } = await env.DB.prepare(`
+      SELECT interaction_history FROM algo_user_sessions 
+      WHERE last_seen_at > datetime('now', '-7 days')
+      LIMIT 1000
+    `).all();
+
+    const globalStats = {};
+
+    // 2. SMASH (Map Phase)
+    for (const session of sessions) {
+      if (!session.interaction_history) continue;
+      
+      try {
+        const history = JSON.parse(session.interaction_history);
+        for (const [slug, metrics] of Object.entries(history)) {
+          if (!globalStats[slug]) {
+            globalStats[slug] = { views: 0, reads: 0, shares: 0, time_spent: 0 };
+          }
+          
+          globalStats[slug].views += (metrics.views || 0);
+          globalStats[slug].reads += (metrics.reads || 0);
+          globalStats[slug].shares += (metrics.shares || 0);
+          globalStats[slug].time_spent += (metrics.time_spent || 0);
+        }
+      } catch (e) { /* skip corrupt data */ }
+    }
+
+    // 3. REDUCE & UPDATE (Reduce Phase)
+    // We update the articles table one by one (or batch if possible)
+    const stmt = env.DB.prepare(`
+      UPDATE articles SET 
+        total_views = ?,
+        total_reads = ?,
+        total_shares = ?,
+        avg_time_spent = ?,
+        engagement_score = ?
+      WHERE slug = ?
+    `);
+
+    const batch = [];
+
+    for (const [slug, stats] of Object.entries(globalStats)) {
+       // Calculate derived metrics
+       const avgTime = stats.views > 0 ? (stats.time_spent / stats.views) : 0;
+       
+       // Calculate Score using the Centralized Weights
+       const score = (stats.views * SCORING_WEIGHTS.VIEW) + 
+                     (stats.reads * SCORING_WEIGHTS.READ) + 
+                     (stats.shares * SCORING_WEIGHTS.SHARE) +
+                     (avgTime * SCORING_WEIGHTS.TIME_SPENT_FACTOR);
+
+       batch.push(stmt.bind(
+         stats.views, 
+         stats.reads, 
+         stats.shares, 
+         avgTime, 
+         score, 
+         slug
+       ));
+    }
+
+    // Execute bulk update
+    // D1 supports batch execution which is much faster
+    if (batch.length > 0) {
+      // Split into chunks of 100 to avoid limits
+      for (let i = 0; i < batch.length; i += 100) {
+        await env.DB.batch(batch.slice(i, i + 100));
+      }
+    }
+
+    return { updated_articles: batch.length };
   }
 
   // =================================================================================================
