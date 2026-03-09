@@ -1002,9 +1002,12 @@ export class RecommendationEngine {
   // Calculates trending score based on time, depth, and engagement metrics
   _calculateTrendingScore(article) {
     // 1. Content Depth (The "IQ" Score)
-    // Removed CPU-bound runtime calculations. Using pre-computed DB columns with fallbacks.
-    const gradeLevel = article.iq_score || 10;
-    const entropy = article.entropy_score || 3;
+    // We try to calculate this on the fly using available metadata to avoid heavy DB hits for full content
+    const sampleText = (article.title || '') + '. ' + (article.subtitle || '') + '. ' + (article.seo_description || '');
+    
+    // Use fallback or calculated values
+    const gradeLevel = article.iq_score || ContentIQ.calculateGradeLevel(sampleText) || 10;
+    const entropy = article.entropy_score || ContentIQ.calculateEntropy(sampleText) || 3;
     const fairTime = article.fair_time_seconds || 120;
     
     // Base IQ Score (0-50 points)
@@ -1035,12 +1038,27 @@ export class RecommendationEngine {
        else if (completionRate < 0.2) retentionScore = -20; // Penalty for clickbait
     }
 
+    // 4. Freshness Boost (Bootstrapping)
+    // Give brand new articles a chance to be seen even if they have 0 engagement.
+    // Decays to 0 over 72 hours.
+    const pubDate = new Date(article.published_at || Date.now());
+    const hoursOld = Math.max(0, (Date.now() - pubDate) / (1000 * 60 * 60));
+    let freshnessScore = 0;
+    if (hoursOld < 72) {
+       freshnessScore = (72 - hoursOld) * 0.5; // Max 36 points
+    }
+
+    // 5. Serendipity (Chaos Factor)
+    // Deterministic pseudo-random based on slug chars to look organic but remain stable
+    // Sum of char codes modulo 13
+    const chaos = article.slug.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 13;
+
     // Final Composite Score
-    return heatScore + iqScore + retentionScore;
+    return heatScore + iqScore + retentionScore + freshnessScore + chaos;
   }
 
   // Get trending articles
-  getTrending(limit = 5, excludeSlug = null) {
+  getTrending(limit = 20, excludeSlug = null) {
     let candidates = this.articles;
     
     if (excludeSlug) {
@@ -1057,7 +1075,7 @@ export class RecommendationEngine {
   }
 
   // Get recommended articles for a specific user context or article context
-  getRecommended(contextArticle = null, limit = 3, userSessionMatrix = null) {
+  getRecommended(contextArticle = null, limit = 6, userSessionMatrix = null) {
     let candidates = this.articles;
 
     // Parse the user's lexical matrix once
@@ -1113,11 +1131,27 @@ export class RecommendationEngine {
            const normalizedCorr = (correlation + 1) / 2;
            sessionScore += (normalizedCorr * 100);
         } else {
-           // Fallback: Use Newtonian Cooling Recency if we don't know the user
+           // Fallback: Hybrid of Recency, Quality (IQ), and Serendipity
+           // This prevents the "Newest Sorter Solitaire" issue by weighing content quality and randomness
            const pubDate = new Date(article.published_at || Date.now());
            const hoursOld = Math.max(0, (Date.now() - pubDate) / (1000 * 60 * 60));
-           const temp = TemporalGravity.newtonianCooling(100, hoursOld, 0.02); // Slower cooling for general recency
-           sessionScore += Math.max(0, temp);
+           
+           // Reduced Recency Weight (Max 40 points instead of 100)
+           const recency = TemporalGravity.newtonianCooling(40, hoursOld, 0.05);
+           
+           // Quality Weight (IQ + Entropy) (Max ~40 points)
+           // Reward deep content over clickbait
+           const sampleText = (article.title || '') + '. ' + (article.subtitle || '') + '. ' + (article.seo_description || '');
+           const iq = article.iq_score || ContentIQ.calculateGradeLevel(sampleText) || 10;
+           const entropy = article.entropy_score || ContentIQ.calculateEntropy(sampleText) || 3;
+           
+           const quality = (iq * 1.5) + (entropy * 5);
+           
+           // Serendipity (Chaos Factor) - Adds 0-20 points of pseudo-random noise
+           // Uses slug length to keep sort stable during render (Pseudo-random)
+           const chaos = (article.slug.length % 20); 
+
+           sessionScore += recency + quality + chaos;
         }
 
         relevance += Math.min(SCORING_WEIGHTS.TIER_2_SESSION_HABIT, sessionScore);

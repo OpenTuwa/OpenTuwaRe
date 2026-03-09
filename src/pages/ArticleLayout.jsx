@@ -499,7 +499,7 @@ if (needsYouTubeAPI) {
           <div className="bg-tuwa-gray/60 border border-white/5 rounded-xl p-4 sticky top-32 backdrop-blur-md">
             <h4 className="text-white font-bold mb-3">Trending</h4>
             <div className="space-y-3 text-sm">
-              {recommended.map(a => (
+              {recommended.slice(0, 5).map(a => (
                 <a key={a.slug} href={`/articles/${a.slug}?`} className="flex items-start gap-3 hover:underline">
                   <SkeletonImage src={a.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=400&auto=format&fit=crop'} className="w-12 h-8 object-cover rounded-md flex-shrink-0" alt={a.title} />
                   <div>

@@ -49,7 +49,7 @@ export async function onRequestGet(context) {
     const engine = new RecommendationEngine(results);
     
     // 5. Get Recommendations (Now passing the 3 Tiers of context)
-    const recommendations = engine.getRecommended(currentArticle, 3, userMatrixStr);
+    const recommendations = engine.getRecommended(currentArticle, 12, userMatrixStr);
 
     return new Response(JSON.stringify(recommendations), {
       headers: { "Content-Type": "application/json" }

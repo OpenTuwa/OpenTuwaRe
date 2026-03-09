@@ -12,7 +12,8 @@ export async function onRequestGet(context) {
 
     // 2. Ask The Brain to process/rank the data
     const engine = new RecommendationEngine(rawResults);
-    const finalResults = engine.getLatest(); 
+    // Use getTrending to show the "Smart Feed" instead of just chronological latest
+    const finalResults = engine.getTrending(100); 
 
     return Response.json(finalResults);
   } catch (err) {
