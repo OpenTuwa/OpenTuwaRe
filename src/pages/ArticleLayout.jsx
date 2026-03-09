@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import Footer from '../components/Footer';
 import useScrollReveal from '../hooks/useScrollReveal';
 import SkeletonImage from '../components/SkeletonImage';
@@ -294,9 +295,64 @@ if (needsYouTubeAPI) {
   const authorInitials = authorName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
   const tagsArray = article.tags ? article.tags.split(',').map(t => t.trim()) : [];
 
+  // Prepare SEO values
+  const siteUrl = typeof window !== 'undefined' ? window.location.origin : 'https://opentuwa.com';
+  const articleUrl = `${siteUrl}/articles/${slug}`;
+  const seoTitle = `${article.title} | OpenTuwa`;
+  const seoDesc = article.seo_description || article.subtitle || article.excerpt || '';
+  const ldHeadline = article.title.length > 110 ? article.title.substring(0, 107) + '...' : article.title;
+  const isoPublished = article.published_at ? new Date(article.published_at).toISOString() : '';
+
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'NewsArticle',
+    'mainEntityOfPage': { '@type': 'WebPage', '@id': articleUrl },
+    'headline': ldHeadline,
+    'description': seoDesc,
+    'image': article.image_url ? [article.image_url] : undefined,
+    'author': { '@type': 'Person', 'name': authorName },
+    'publisher': {
+      '@type': 'Organization',
+      'name': 'OpenTuwa',
+      'url': siteUrl,
+      'logo': { '@type': 'ImageObject', 'url': `${siteUrl}/img/logo.png` }
+    },
+    'datePublished': isoPublished || undefined,
+    'isAccessibleForFree': true,
+    'inLanguage': 'en'
+  };
+
   return (
     <div className="tuwa-upgrade selection-highlight bg-[rgba(10,10,11,1)] min-h-screen text-white">
-      
+      <Helmet>
+        <title>{seoTitle}</title>
+        <meta name="description" content={seoDesc} />
+        {tagsArray.length > 0 && <meta name="keywords" content={tagsArray.join(', ')} />}
+        
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="article" />
+        <meta property="og:url" content={articleUrl} />
+        <meta property="og:title" content={article.title} />
+        <meta property="og:description" content={seoDesc} />
+        {article.image_url && <meta property="og:image" content={article.image_url} />}
+        <meta property="og:site_name" content="OpenTuwa" />
+        {isoPublished && <meta property="article:published_time" content={isoPublished} />}
+        {tagsArray.map((tag, i) => <meta key={i} property="article:tag" content={tag} />)}
+
+        {/* Twitter */}
+        <meta name="twitter:card" content={article.image_url ? 'summary_large_image' : 'summary'} />
+        <meta name="twitter:title" content={article.title} />
+        <meta name="twitter:description" content={seoDesc} />
+        {article.image_url && <meta name="twitter:image" content={article.image_url} />}
+
+        <link rel="canonical" href={articleUrl} />
+        
+        {/* Schema.org JSON-LD */}
+        <script type="application/ld+json">
+          {JSON.stringify(jsonLd)}
+        </script>
+      </Helmet>
+
       {/* Header */}
       <header className={`fixed top-0 w-full z-50 transition-all duration-500 border-b ${headerScrolled ? 'backdrop-blur-md bg-[rgba(10,10,11,0.8)] border-white/5' : 'border-transparent'}`} data-purpose="sticky-navigation">
         <nav className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">

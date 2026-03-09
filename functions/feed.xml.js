@@ -13,35 +13,38 @@ export async function onRequestGet(context) {
   const now = new Date().toUTCString();
 
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:media="http://search.yahoo.com/mrss/">
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:media="http://search.yahoo.com/mrss/" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
     <title>OpenTuwa</title>
     <link>${esc(origin)}</link>
-    <description>Independent news and journalism from OpenTuwa</description>
+    <description>Independent news and journalism covering stories that matter.</description>
     <language>en</language>
     <lastBuildDate>${esc(now)}</lastBuildDate>
     <atom:link href="${esc(origin + '/feed.xml')}" rel="self" type="application/rss+xml"/>
     <image>
-      <url>${esc(origin + '/img/logo.png')}</url>
+      <url>https://raw.githubusercontent.com/Quran-lite-pages-dev/Quran-lite.pages.dev/refs/heads/master/assets/ui/web.png</url>
       <title>OpenTuwa</title>
       <link>${esc(origin)}</link>
     </image>`;
 
   for (const a of articles) {
     const link = origin + '/articles/' + a.slug;
-    const pubDate = toRFC822(a.published_at || a.created_at || a.date_published);
-    const desc = a.seo_description || a.subtitle || a.excerpt || '';
+    const pubDate = toRFC822(a.published_at || a.created_at || a.date_published) || now;
+    const desc = a.seo_description || a.subtitle || a.excerpt || 'Read the full article on OpenTuwa.';
     const author = a.author_name || a.author || 'OpenTuwa';
     const imageUrl = a.image_url || '';
+    const content = a.content_html || desc;
+
     xml += `
     <item>
-      <title>${esc(a.title || '')}</title>
+      <title>${esc(a.title || 'Untitled')}</title>
       <link>${esc(link)}</link>
-      <guid isPermaLink="true">${esc(link)}</guid>${pubDate ? `
-      <pubDate>${esc(pubDate)}</pubDate>` : ''}
+      <guid isPermaLink="true">${esc(link)}</guid>
+      <pubDate>${esc(pubDate)}</pubDate>
       <description>${esc(desc)}</description>
-      <dc:creator>${esc(author)}</dc:creator>${imageUrl ? `
-      <media:content url="${esc(imageUrl)}" medium="image"/>` : ''}
+      <dc:creator>${esc(author)}</dc:creator>
+      <content:encoded><![CDATA[${content}]]></content:encoded>
+      ${imageUrl ? `<media:content url="${esc(imageUrl)}" medium="image"/>` : ''}
     </item>`;
   }
 
