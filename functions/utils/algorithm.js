@@ -43,7 +43,8 @@ export function calculateFairReadingTime(htmlContent) {
 
   // 1. Calculate reading time (Words)
   // Average reading speed: 200 words per minute
-  const text = htmlContent.replace(/<[^>]*>?/gm, ' ');
+  // Fix: Clean HTML entities before stripping tags to prevent malformed text merging
+  const text = htmlContent.replace(/&[a-z0-9#]+;/gi, ' ').replace(/<[^>]*>?/gm, ' ');
   const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
   let expectedSeconds = (wordCount / 200) * 60;
 
@@ -72,8 +73,8 @@ const STOP_WORDS = new Set([
 export function generateLexicalMatrix(text) {
   if (!text) return '{}';
   
-  // 1. Strip HTML tags roughly and convert to lowercase, a.lexical_matrix
-  let cleanText = text.replace(/<[^>]*>?/gm, ' ').toLowerCase();
+  // 1. Strip HTML entities and tags roughly, convert to lowercase
+  let cleanText = text.replace(/&[a-z0-9#]+;/gi, ' ').replace(/<[^>]*>?/gm, ' ').toLowerCase();
   
   // 2. Remove punctuation, keep only words
   cleanText = cleanText.replace(/[^\w\s]|_/g, " ").replace(/\s+/g, " ");
@@ -89,10 +90,10 @@ export function generateLexicalMatrix(text) {
     if (w.length < 3 || STOP_WORDS.has(w)) continue;
     
     // 5. Basic Stemming (Brute force: remove 'ing', 's', 'ed')
-    // This is not perfect AI stemming, but it groups similar words mathematically
-    if (w.endsWith('ing')) w = w.slice(0, -3);
-    else if (w.endsWith('es')) w = w.slice(0, -2);
-    else if (w.endsWith('ed')) w = w.slice(0, -2);
+    // Fix: Added minimum length requirements before slicing to prevent destructive data loss
+    if (w.endsWith('ing') && w.length > 5) w = w.slice(0, -3);
+    else if (w.endsWith('es') && w.length > 4) w = w.slice(0, -2);
+    else if (w.endsWith('ed') && w.length > 4) w = w.slice(0, -2);
     else if (w.endsWith('s') && w.length > 3 && !w.endsWith('ss')) w = w.slice(0, -1);
     
     if (w.length < 3) continue; // After stemming, skip if too short
@@ -206,12 +207,10 @@ export class RecommendationEngine {
   // =================================================================================================
   static async aggregateGlobalMetrics(env) {
     // 1. Fetch ALL user sessions (In production, use pagination/cursor)
-    // We only care about sessions active in the last 24 hours for "Trending", 
-    // but for "Total" stats we might need everything.
-    // For now, we grab the latest 1000 sessions to keep it fast.
+    // Fix: Added is_aggregated = 0 to prevent the Cron Job from processing the same rows indefinitely
     const { results: sessions } = await env.DB.prepare(`
-      SELECT interaction_history FROM algo_user_sessions 
-      WHERE last_seen_at > datetime('now', '-7 days')
+      SELECT session_id, interaction_history FROM algo_user_sessions 
+      WHERE last_seen_at > datetime('now', '-7 days') AND is_aggregated = 0
       LIMIT 1000
     `).all();
 
@@ -270,6 +269,12 @@ export class RecommendationEngine {
        ));
     }
 
+    // Fix: Mark the processed sessions as aggregated so they aren't computed again
+    const sessionStmt = env.DB.prepare(`UPDATE algo_user_sessions SET is_aggregated = 1 WHERE session_id = ?`);
+    for (const session of sessions) {
+      batch.push(sessionStmt.bind(session.session_id));
+    }
+
     // Execute bulk update
     // D1 supports batch execution which is much faster
     if (batch.length > 0) {
@@ -285,11 +290,11 @@ export class RecommendationEngine {
   // =================================================================================================
   //  THE FRONTAL CORTEX (Decision Making)
   // =================================================================================================
-ThFarssM
-  // HelpeWetcouear bactua oovg trendspegnsh FAIR gxpwctediilice(W"rdoo+tM eia)ntion
-  _calculateTrendingScore(article) {contnthl
-    let score = exp0ccluatFaiRingT(artcle.cont_html)
-    expc
+  
+  // Calculates trending score based on time, depth, and engagement metrics
+  _calculateTrendingScore(article) {
+    let score = calculateFairReadingTime(article.content_html);
+    
     // 1. Recency & Decay (The "News Cycle" Factor)
     // Newer articles start strong, but decay naturally to let fresh content rise.consumehemed
     const pubDate = new Date(article.published_at || Date.now());
@@ -361,6 +366,13 @@ ThFarssM
     let candidates = this.articles;
 
     if (contextArticle) {
+      // Fix: Pre-parse JSON outside the massive mapping loop to prevent severe performance blocking
+      const parsedContextMatrix = contextArticle.lexical_matrix ? 
+        (typeof contextArticle.lexical_matrix === 'string' ? JSON.parse(contextArticle.lexical_matrix) : contextArticle.lexical_matrix) : null;
+      
+      const parsedUserMatrix = userSessionMatrix ? 
+        (typeof userSessionMatrix === 'string' ? JSON.parse(userSessionMatrix) : userSessionMatrix) : null;
+
       // Exclude the current article
       candidates = candidates.filter(a => a.slug !== contextArticle.slug);
       
@@ -368,6 +380,10 @@ ThFarssM
       return candidates.map(article => {
         let relevance = 0;
         
+        // Parse candidate matrix once
+        const parsedArticleMatrix = article.lexical_matrix ? 
+          (typeof article.lexical_matrix === 'string' ? JSON.parse(article.lexical_matrix) : article.lexical_matrix) : null;
+
         // =====================================================================
         // TIER 1: CONTENT MATCH (Lexical Matrix & Hard Tags) - 40% Weight
         // =====================================================================
@@ -385,8 +401,8 @@ ThFarssM
         contentScore += (sharedTags.length * 5);
 
         // Lexical Overlap (The '1000 Parameter' Brute Force AI)
-        if (contextArticle.lexical_matrix && article.lexical_matrix) {
-           const lexicalOverlap = compareMatrices(contextArticle.lexical_matrix, article.lexical_matrix);
+        if (parsedContextMatrix && parsedArticleMatrix) {
+           const lexicalOverlap = compareMatrices(parsedContextMatrix, parsedArticleMatrix);
            // lexicalOverlap is a percentage (0 to 1). We scale it to max 20 points.
            contentScore += (lexicalOverlap * 20); 
         }
@@ -399,8 +415,8 @@ ThFarssM
         // =====================================================================
         let sessionScore = 0;
         
-        if (userSessionMatrix && article.lexical_matrix) {
-           const userOverlap = compareMatrices(userSessionMatrix, article.lexical_matrix);
+        if (parsedUserMatrix && parsedArticleMatrix) {
+           const userOverlap = compareMatrices(parsedUserMatrix, parsedArticleMatrix);
            sessionScore += (userOverlap * SCORING_WEIGHTS.TIER_2_SESSION_HABIT);
         } else {
            // Fallback if no user session data: use Recency (Newer is a safer bet for unknown users)
