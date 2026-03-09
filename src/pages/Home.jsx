@@ -21,9 +21,6 @@ export default function Home() {
         const resArticles = await fetch('/api/article');
         let data = await resArticles.json();
 
-        // FIX: Force sort from newest to oldest immediately
-        data.sort((a, b) => new Date(b.published_at || Date.now()) - new Date(a.published_at || Date.now()));
-
         if (authorParam) {
           try {
             const resAuthor = await fetch(`/api/authors_1?name=${encodeURIComponent(authorParam)}`);
