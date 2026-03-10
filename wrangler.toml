@@ -1,0 +1,8 @@
+# Add this to your existing wrangler.toml
+
+[ai]
+binding = "AI"
+
+[[vectorize]]
+binding = "VECTORIZE"
+index_name = "tuwa-brain"

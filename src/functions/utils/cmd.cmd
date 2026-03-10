@@ -1,0 +1,1 @@
+python lexicon.py lex.txt
