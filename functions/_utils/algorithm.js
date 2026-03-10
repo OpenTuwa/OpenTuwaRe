@@ -112,6 +112,16 @@ export class RecommendationEngine {
     this.articles = articles || [];
   }
 
+  // Simple hash function for asymmetric adjustment
+  _hash(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) - hash) + str.charCodeAt(i);
+      hash |= 0; // Convert to 32-bit integer
+    }
+    return Math.abs(hash);
+  }
+
   _calculateTrendingScore(article) {
     const sampleText = (article.title || '') + '. ' + (article.subtitle || '') + '. ' + (article.seo_description || '');
     const gradeLevel = article.iq_score || ContentIQ.calculateGradeLevel(sampleText) || 10;
@@ -142,29 +152,47 @@ export class RecommendationEngine {
       .slice(0, limit);
   }
 
-  getHybridRecommendations(vectorizeMatches, limit = 6) {
-    return this.articles.map(article => {
-      let relevance = 0;
-      
-      // TIER 1 & 2: Neural Semantic Match (From Cloudflare Vectorize)
-      // Vectorize returns scores between 0 and 1. We multiply by our weights.
-      const aiMatch = vectorizeMatches.find(v => v.id === article.slug);
-      if (aiMatch) {
-         relevance += (aiMatch.score * (SCORING_WEIGHTS.TIER_1_CONTENT_MATCH + SCORING_WEIGHTS.TIER_2_SESSION_HABIT));
-      }
+  // Updated to accept currentSlug and break recommendation loops
+  getHybridRecommendations(vectorizeMatches, limit = 6, currentSlug = null) {
+    // Maximum possible relevance for scaling the asymmetric adjustment
+    const maxWeight = SCORING_WEIGHTS.TIER_1_CONTENT_MATCH +
+                      SCORING_WEIGHTS.TIER_2_SESSION_HABIT +
+                      SCORING_WEIGHTS.TIER_3_WORLDWIDE_VOTE; // = 100
 
-      // TIER 3: Worldwide Vote & Gravity (From D1)
-      if (article.engagement_score) {
-        const hoursOld = Math.max(0, (Date.now() - new Date(article.published_at || Date.now())) / 3600000);
-        const gravityScore = TemporalGravity.hackerNewsGravity(article.engagement_score, hoursOld, 1.8);
-        const normalizedGravity = Math.min(1, Math.log10(gravityScore + 1) / 2);
-        relevance += (normalizedGravity * SCORING_WEIGHTS.TIER_3_WORLDWIDE_VOTE); 
-      }
+    return this.articles
+      .map(article => {
+        // Skip the article the user is currently reading
+        if (currentSlug && article.slug === currentSlug) return null;
 
-      return { ...article, _relevance: relevance };
-    })
-    .sort((a, b) => b._relevance - a._relevance)
-    .slice(0, limit);
+        let relevance = 0;
+        
+        // TIER 1 & 2: Neural Semantic Match (From Cloudflare Vectorize)
+        // Vectorize returns scores between 0 and 1. We multiply by our weights.
+        const aiMatch = vectorizeMatches.find(v => v.id === article.slug);
+        if (aiMatch) {
+           relevance += (aiMatch.score * (SCORING_WEIGHTS.TIER_1_CONTENT_MATCH + SCORING_WEIGHTS.TIER_2_SESSION_HABIT));
+        }
+
+        // TIER 3: Worldwide Vote & Gravity (From D1)
+        if (article.engagement_score) {
+          const hoursOld = Math.max(0, (Date.now() - new Date(article.published_at || Date.now())) / 3600000);
+          const gravityScore = TemporalGravity.hackerNewsGravity(article.engagement_score, hoursOld, 1.8);
+          const normalizedGravity = Math.min(1, Math.log10(gravityScore + 1) / 2);
+          relevance += (normalizedGravity * SCORING_WEIGHTS.TIER_3_WORLDWIDE_VOTE); 
+        }
+
+        // Asymmetric adjustment (only if we have a current slug)
+        if (currentSlug) {
+          const combined = currentSlug + ':' + article.slug; // direction matters
+          const adjustment = (this._hash(combined) % 100) / 10000 * maxWeight; // ≤ 1% of total weight
+          relevance += adjustment;
+        }
+
+        return { ...article, _relevance: relevance };
+      })
+      .filter(article => article !== null) // Remove skipped current article
+      .sort((a, b) => b._relevance - a._relevance)
+      .slice(0, limit);
   }
 }
 
