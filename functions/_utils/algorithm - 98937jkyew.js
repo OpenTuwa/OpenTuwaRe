@@ -1,38 +1,34 @@
-// =================================================================================================
-//  THE NEURAL BRAIN - HYBRID AI RECOMMENDATION ENGINE (v3.0)
-//  Neurosurgical Enhancements for OpenTuwa
-//  =================================================================================================
+
+
+
+
 
 export const SCORING_WEIGHTS = {
-  // Base synaptic weights – dynamically adjusted via metaplasticity
+  
   VIEW: 1,
   READ: 5,
   SHARE: 10,
   TIME_SPENT_FACTOR: 0.1,
 
-  // Semantic tiers
-  TIER_1_CONTENT_MATCH: 40,   // Semantic vector similarity
-  TIER_2_SESSION_HABIT: 35,   // User brain overlap (temporal dynamics)
-  TIER_3_WORLDWIDE_VOTE: 25,  // Viral gravity with burst detection
+  
+  TIER_1_CONTENT_MATCH: 40,   
+  TIER_2_SESSION_HABIT: 35,   
+  TIER_3_WORLDWIDE_VOTE: 25,  
 
-  // Neuro‑inspired weights (now integrated)
-  NOVELTY_BONUS: 5,            // Encourages exploration (Hebbian plasticity)
-  DIVERSITY_PENALTY: 3,        // Prevents cortical overload (lateral inhibition)
-  CIRCADIAN_BOOST: 2,          // Time‑of‑day modulation (suprachiasmatic nucleus)
-  PREDICTION_ERROR: 4,         // Surprise signal (predictive coding)
-  EMOTIONAL_ALIGNMENT: 3,      // Mood congruence (amygdala)
-  HOMEOSTATIC_BASELINE: 2      // Ensures minimum activation
+  
+  NOVELTY_BONUS: 5,            
+  DIVERSITY_PENALTY: 3,        
+  CIRCADIAN_BOOST: 2,          
+  PREDICTION_ERROR: 4,         
+  EMOTIONAL_ALIGNMENT: 3,      
+  HOMEOSTATIC_BASELINE: 2      
 };
 
-// -------------------------------------------------------------------------------------------------
-//  MODULE 1: NEURAL ENCODING – Multi‑modal fusion & predictive coding
-// -------------------------------------------------------------------------------------------------
+
+
+
 export class NeuralEngine {
-  /**
-   * Generate a 768‑dim embedding from text + optional image.
-   * Uses Cloudflare AI for text, and (if available) a CLIP‑like model for images.
-   * The two embeddings are fused via a learned projection (here simple weighted sum).
-   */
+  
   static async getEmbedding(env, text, title = '', imageUrl = null) {
     if (!text && !title && !imageUrl) return new Array(768).fill(0);
 
@@ -44,28 +40,23 @@ export class NeuralEngine {
     let imageVector = null;
 
     try {
-      // Text embedding (content)
+      
       if (cleanText.length > 50) {
         const response = await env.AI.run('@cf/baai/bge-base-en-v1.5', { text: cleanText });
         textVector = response.data[0];
       }
 
-      // Title embedding (stronger attention cue)
+      
       if (cleanTitle.length > 10) {
         const response = await env.AI.run('@cf/baai/bge-base-en-v1.5', { text: cleanTitle });
         titleVector = response.data[0];
       }
 
-      // Image embedding – requires a vision model (e.g., @cf/facebook/dinov2-base)
-      // If your Cloudflare account has access, uncomment:
-      /*
-      if (imageUrl) {
-        const imgResp = await env.AI.run('@cf/facebook/dinov2-base', { image: imageUrl });
-        imageVector = imgResp.data[0];
-      }
-      */
+      
+      
+      
 
-      // Fuse available vectors (weighted average mimicking sensory integration)
+      
       const fusion = (vecs) => {
         if (vecs.length === 0) return null;
         const sum = vecs.reduce((acc, v) => acc.map((x, i) => x + v[i]), new Array(768).fill(0));
@@ -87,9 +78,7 @@ export class NeuralEngine {
     }
   }
 
-  /**
-   * Cosine similarity between two vectors.
-   */
+  
   static cosineSimilarity(vecA, vecB) {
     if (!vecA || !vecB || vecA.length !== vecB.length) return 0;
     let dot = 0, magA = 0, magB = 0;
@@ -102,46 +91,36 @@ export class NeuralEngine {
     return dot / (Math.sqrt(magA) * Math.sqrt(magB));
   }
 
-  /**
-   * Predictive coding update: Kalman filter for user interest vector.
-   * We model user interests as a hidden state; each interaction is a noisy observation.
-   * The prediction error (innovation) drives learning and serves as a novelty signal.
-   */
+  
   static predictiveUpdate(priorMean, priorCovariance, observation, observationCovariance) {
-    // Simple 1‑D Kalman for each dimension (assume diagonal covariance)
+    
     const gain = priorCovariance / (priorCovariance + observationCovariance);
     const posteriorMean = priorMean + gain * (observation - priorMean);
     const posteriorCovariance = (1 - gain) * priorCovariance;
     return { mean: posteriorMean, covariance: posteriorCovariance, innovation: observation - priorMean };
   }
 
-  /**
-   * Update user profile with a new article vector.
-   * Implements:
-   * - Forgetting (Ebbinghaus) via covariance inflation over time.
-   * - Predictive coding update with surprise (innovation).
-   * - Returns updated profile and surprise magnitude.
-   */
+  
   static updateUserProfile(profile, newVector, timeSinceLastHours, interactionCount) {
     if (!profile || !profile.mean) {
-      // Initialise with first observation
+      
       return {
         mean: newVector,
-        covariance: new Array(768).fill(0.1), // initial uncertainty
+        covariance: new Array(768).fill(0.1), 
         lastUpdate: Date.now(),
         surprise: 0
       };
     }
 
-    // Inflate covariance based on elapsed time (forgetting)
-    const decayFactor = Math.exp(-0.01 * timeSinceLastHours); // tunable
-    const inflatedCov = profile.covariance.map(c => c / decayFactor + 0.001); // add small process noise
+    
+    const decayFactor = Math.exp(-0.01 * timeSinceLastHours); 
+    const inflatedCov = profile.covariance.map(c => c / decayFactor + 0.001); 
 
-    // Perform Kalman update for each dimension independently (simplified)
+    
     const newMean = [];
     const newCov = [];
     let totalSurprise = 0;
-    const obsNoise = 0.05; // observation noise variance
+    const obsNoise = 0.05; 
 
     for (let i = 0; i < 768; i++) {
       const priorMean = profile.mean[i];
@@ -162,18 +141,16 @@ export class NeuralEngine {
       mean: newMean,
       covariance: newCov,
       lastUpdate: Date.now(),
-      surprise: totalSurprise / 768 // average absolute innovation
+      surprise: totalSurprise / 768 
     };
   }
 }
 
-// -------------------------------------------------------------------------------------------------
-//  MODULE 2: TEMPORAL GRAVITY – Physics of attention with circadian and ultradian rhythms
-// -------------------------------------------------------------------------------------------------
+
+
+
 export class TemporalGravity {
-  /**
-   * Adaptive cooling with burst detection (same as before)
-   */
+  
   static adaptiveCooling(initialTemperature, ageInHours, recentVelocity) {
     const baseK = 0.1;
     const k = baseK * Math.exp(-0.5 * Math.max(0, recentVelocity));
@@ -181,48 +158,41 @@ export class TemporalGravity {
     return ambient + (initialTemperature - ambient) * Math.exp(-k * ageInHours);
   }
 
-  /**
-   * Hacker News gravity with burst bonus
-   */
+  
   static hackerNewsGravity(points, hoursSinceSubmit, gravity = 1.8, recentSpike = 0) {
     const base = (points - 1) / Math.pow((hoursSinceSubmit + 2), gravity);
     const burstBonus = recentSpike * 0.2;
     return base + burstBonus;
   }
 
-  /**
-   * Circadian rhythm: 24‑hour cycle.
-   * Also incorporate an ultradian rhythm (90‑minute cycle) for finer attention fluctuations.
-   */
+  
   static circadianModifier(hour = new Date().getHours(), minute = new Date().getMinutes()) {
-    // Circadian (peak 20:00, trough 08:00)
+    
     const peakHour = 20;
     const amp = 0.2;
     const circPhase = (hour - peakHour) * (Math.PI / 12);
     const circ = 1 + amp * Math.cos(circPhase);
 
-    // Ultradian (90‑minute cycle) – phase based on minutes
+    
     const ultraAmp = 0.05;
-    const ultraPhase = (minute / 90) * 2 * Math.PI; // 90‑min cycle
+    const ultraPhase = (minute / 90) * 2 * Math.PI; 
     const ultra = 1 + ultraAmp * Math.sin(ultraPhase);
 
     return circ * ultra;
   }
 }
 
-// -------------------------------------------------------------------------------------------------
-//  MODULE 3: CONTENT IQ – Neuro‑linguistic metrics & emotional valence
-// -------------------------------------------------------------------------------------------------
-export class ContentIQ {
-  // Reuse existing syllable counter, grade level, entropy
-  static countSyllables(word) { /* ... unchanged ... */ }
-  static fleschKincaidGrade(text) { /* ... unchanged ... */ }
-  static smogGrade(text) { /* ... unchanged ... */ }
-  static calculateEntropy(text) { /* ... unchanged ... */ }
 
-  /**
-   * Sentiment score using a small lexicon (can be replaced with a transformer)
-   */
+
+
+export class ContentIQ {
+  
+  static countSyllables(word) {  }
+  static fleschKincaidGrade(text) {  }
+  static smogGrade(text) {  }
+  static calculateEntropy(text) {  }
+
+  
   static sentimentScore(text) {
     const positive = ['good', 'great', 'excellent', 'amazing', 'love', 'best', 'hope', 'inspire'];
     const negative = ['bad', 'terrible', 'awful', 'hate', 'worst', 'poor', 'fear', 'crisis'];
@@ -232,17 +202,13 @@ export class ContentIQ {
       if (positive.includes(w)) score += 1;
       if (negative.includes(w)) score -= 1;
     }
-    return score / (words.length || 1); // normalize [-1,1]
+    return score / (words.length || 1); 
   }
 
-  /**
-   * Keyword diversity (as before)
-   */
-  static keywordDiversity(text) { /* ... unchanged ... */ }
+  
+  static keywordDiversity(text) {  }
 
-  /**
-   * Novelty relative to recent embeddings (cosine distance)
-   */
+  
   static noveltyScore(articleEmbedding, recentEmbeddings) {
     if (!articleEmbedding || recentEmbeddings.length === 0) return 0.5;
     let totalDist = 0;
@@ -253,43 +219,35 @@ export class ContentIQ {
     return totalDist / recentEmbeddings.length;
   }
 
-  /**
-   * Fair reading time with media complexity (unchanged)
-   */
-  static calculateFairReadingTime(htmlContent) { /* ... unchanged ... */ }
+  
+  static calculateFairReadingTime(htmlContent) {  }
 }
 
-// -------------------------------------------------------------------------------------------------
-//  MODULE 4: HYBRID SCORER – Bayesian, homeostatic, and metaplastic
-// -------------------------------------------------------------------------------------------------
+
+
+
 export class RecommendationEngine {
   constructor(articles, userProfile = null) {
     this.articles = articles || [];
-    this.userProfile = userProfile; // { mean, covariance, lastUpdate, surprise }
-    // Synaptic weights: start with base, will be adjusted metaplastically
+    this.userProfile = userProfile; 
+    
     this.weights = { ...SCORING_WEIGHTS };
-    // Track average activity for homeostatic scaling
+    
     this.averageRelevance = 0;
     this.nUpdates = 0;
   }
 
-  _hash(str) { /* ... unchanged ... */ }
+  _hash(str) {  }
 
-  /**
-   * Metaplasticity: adjust learning rate based on recent surprise.
-   * Higher surprise increases learning rate (like norepinephrine).
-   */
+  
   _metaLearningRate(baseRate = 0.01) {
     if (!this.userProfile) return baseRate;
     const surprise = this.userProfile.surprise || 0;
-    // surprise is average absolute innovation (0..1 scale)
-    return baseRate * (1 + 2 * surprise); // up to 3x base
+    
+    return baseRate * (1 + 2 * surprise); 
   }
 
-  /**
-   * Homeostatic scaling: normalise weights so total synaptic strength remains constant.
-   * Prevents runaway excitation.
-   */
+  
   _homeostaticScale() {
     const total = Object.values(this.weights).reduce((s, v) => s + v, 0);
     const target = SCORING_WEIGHTS.VIEW + SCORING_WEIGHTS.READ + SCORING_WEIGHTS.SHARE +
@@ -304,44 +262,34 @@ export class RecommendationEngine {
     }
   }
 
-  /**
-   * Online learning: update weights based on interaction reward.
-   * Implements STDP: if interaction follows a prediction (high relevance), strengthen; else weaken.
-   * Reward: e.g., time spent normalized.
-   */
+  
   updateWeights(interactionFeatures, reward, predictedRelevance) {
     const lr = this._metaLearningRate();
-    const delta = reward - predictedRelevance; // error signal
+    const delta = reward - predictedRelevance; 
 
     for (const [feature, value] of Object.entries(interactionFeatures)) {
       if (this.weights.hasOwnProperty(feature)) {
-        // Hebbian: Δw ∝ pre * post, but here pre = feature value, post = delta
+        
         this.weights[feature] += lr * delta * value;
-        // Keep non‑negative
+        
         this.weights[feature] = Math.max(0, this.weights[feature]);
       }
     }
 
-    // Homeostatic scaling
+    
     this._homeostaticScale();
   }
 
-  /**
-   * Compute raw relevance using current weights and neuro‑metrics.
-   * Now includes:
-   * - Predictive surprise (if user profile exists)
-   * - Emotional alignment
-   * - Fallback baseline (so empty AI matches still yield recommendations)
-   */
+  
   _computeRelevance(article, vectorizeMatches, userContext = {}) {
     let relevance = 0;
 
-    // TIER 1 & 2: Neural semantic match
+    
     const aiMatch = vectorizeMatches.find(v => v.id === article.slug);
     if (aiMatch) {
       relevance += aiMatch.score * (this.weights.TIER_1_CONTENT_MATCH + this.weights.TIER_2_SESSION_HABIT);
     } else {
-      // Fallback: tag similarity if no embedding match
+      
       if (userContext.recentTags && article.tags) {
         const common = (article.tags || []).filter(t => userContext.recentTags.includes(t)).length;
         const max = Math.max(article.tags.length, userContext.recentTags.length, 1);
@@ -349,7 +297,7 @@ export class RecommendationEngine {
       }
     }
 
-    // TIER 3: Worldwide vote with burst and circadian
+    
     if (article.engagement_score) {
       const hoursOld = Math.max(0, (Date.now() - new Date(article.published_at || Date.now())) / 3600000);
       const recentVelocity = article.trending_velocity || 0;
@@ -359,53 +307,46 @@ export class RecommendationEngine {
       relevance += normalizedGravity * this.weights.TIER_3_WORLDWIDE_VOTE * circadian;
     }
 
-    // Novelty (exploration)
+    
     if (userContext.recentEmbeddings && article.embedding) {
       const novelty = ContentIQ.noveltyScore(article.embedding, userContext.recentEmbeddings);
       relevance += novelty * this.weights.NOVELTY_BONUS;
     }
 
-    // Predictive surprise – if article is very different from predicted, it's a surprise signal
+    
     if (this.userProfile && article.embedding) {
-      // Compute prediction error (surprise) as average absolute difference from user mean
+      
       let surprise = 0;
       for (let i = 0; i < 768; i++) {
         surprise += Math.abs((article.embedding[i] || 0) - this.userProfile.mean[i]);
       }
       surprise /= 768;
-      // Normalise surprise to 0..1 (approximate range 0..2, clip at 1)
+      
       const normSurprise = Math.min(1, surprise);
-      // Surprise can be positive (novel) or negative (familiar); we treat it as exploration bonus
+      
       relevance += normSurprise * this.weights.PREDICTION_ERROR;
     }
 
-    // Emotional alignment: compare article sentiment with user's recent average sentiment
+    
     if (userContext.recentSentiment !== undefined && article.sentiment !== undefined) {
       const alignment = 1 - Math.abs(userContext.recentSentiment - article.sentiment);
       relevance += alignment * this.weights.EMOTIONAL_ALIGNMENT;
     }
 
-    // Content IQ (grade level) – may correlate with user preference
+    
     if (article.iq_score) {
-      relevance += (article.iq_score / 20) * 2; // max 2 points
+      relevance += (article.iq_score / 20) * 2; 
     }
 
-    // Homeostatic baseline: ensures even low‑relevance items get a chance (prevents dead zones)
-    relevance += this.weights.HOMEOSTATIC_BASELINE * 0.1; // small constant
+    
+    relevance += this.weights.HOMEOSTATIC_BASELINE * 0.1; 
 
     return relevance;
   }
 
-  /**
-   * Main hybrid recommendation method with adaptive MMR diversity.
-   * @param {Array} vectorizeMatches - from Cloudflare Vectorize
-   * @param {number} limit - number of recommendations
-   * @param {string} currentSlug - article being viewed (to exclude)
-   * @param {Object} userContext - includes recentEmbeddings, recentTags, recentSentiment, hour, minute, etc.
-   * @param {number} lambdaBase - base diversity vs relevance trade‑off (0..1); will be adapted based on user's exploration tendency
-   */
+  
   getHybridRecommendations(vectorizeMatches, limit = 6, currentSlug = null, userContext = {}, lambdaBase = 0.3) {
-    // Compute relevance for all candidates
+    
     const candidates = this.articles
       .filter(article => !currentSlug || article.slug !== currentSlug)
       .map(article => {
@@ -415,20 +356,20 @@ export class RecommendationEngine {
       .filter(c => c._relevance > 0);
 
     if (candidates.length === 0) {
-      // If still empty, return a few recent articles as fallback
+      
       return this.articles.slice(0, limit).map(a => ({ ...a, _relevance: 1 }));
     }
 
-    // Sort by relevance initially
+    
     candidates.sort((a, b) => b._relevance - a._relevance);
 
-    // Adaptive lambda: if user has high surprise (exploration mode), increase diversity
+    
     let lambda = lambdaBase;
     if (this.userProfile && this.userProfile.surprise > 0.3) {
-      lambda = Math.max(0.1, lambdaBase - 0.2); // more diversity when surprised
+      lambda = Math.max(0.1, lambdaBase - 0.2); 
     }
 
-    // MMR selection
+    
     const selected = [];
     const remaining = [...candidates];
 
@@ -447,7 +388,7 @@ export class RecommendationEngine {
               const sim = NeuralEngine.cosineSimilarity(candidate.embedding, sel.embedding);
               if (sim > maxSim) maxSim = sim;
             } else {
-              // Fallback tag overlap
+              
               const commonTags = (candidate.tags || []).filter(t => (sel.tags || []).includes(t)).length;
               const totalTags = Math.max((candidate.tags || []).length, (sel.tags || []).length, 1);
               maxSim = Math.max(maxSim, commonTags / totalTags);
@@ -466,7 +407,7 @@ export class RecommendationEngine {
       remaining.splice(bestIdx, 1);
     }
 
-    // Tiny tie‑break hash (optional)
+    
     for (let i = 0; i < selected.length; i++) {
       if (currentSlug) {
         const combined = currentSlug + ':' + selected[i].slug;
@@ -478,7 +419,7 @@ export class RecommendationEngine {
     return selected.slice(0, limit);
   }
 
-  // Legacy trending (unchanged but uses new circadian)
+  
   _calculateTrendingScore(article) {
     const sampleText = (article.title || '') + '. ' + (article.subtitle || '') + '. ' + (article.seo_description || '');
     const gradeLevel = article.iq_score || ContentIQ.fleschKincaidGrade(sampleText) || 10;
@@ -510,9 +451,9 @@ export class RecommendationEngine {
   }
 }
 
-// -------------------------------------------------------------------------------------------------
-//  MODULE 5: DATA FETCHING – Enhanced with sentiment and embeddings
-// -------------------------------------------------------------------------------------------------
+
+
+
 export async function fetchCandidates(env, limit = 100, searchQuery = null) {
   let results = [];
   const selectClause = `
@@ -554,7 +495,7 @@ export async function fetchCandidates(env, limit = 100, searchQuery = null) {
         row.embedding = null;
       }
     }
-    // Compute sentiment if not stored
+    
     if (row.sentiment_score === undefined || row.sentiment_score === null) {
       const sampleText = (row.title || '') + '. ' + (row.subtitle || '') + '. ' + (row.seo_description || '');
       row.sentiment = ContentIQ.sentimentScore(sampleText);
