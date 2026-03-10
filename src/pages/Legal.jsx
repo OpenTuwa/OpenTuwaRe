@@ -205,6 +205,14 @@ export default function Legal() {
                           <p className="mb-4" data-i18n="eua_sec4_text">The Service is provided on an "as is" and "as available" basis without warranties of any kind. To the maximum extent permitted by applicable law, OpenTuwa&reg; shall not be liable for any indirect, incidental, or consequential damages arising from your use of or inability to use the Service.</p>
                           <p data-i18n="eua_sec5_text">This Agreement shall be governed by and construed in accordance with the laws of Malaysia. Any disputes shall be subject to the exclusive jurisdiction of the courts located in Johor, Malaysia.</p>
                       </section>
+                      <section id="eua-5" className="scroll-mt-32">
+                          <h2 className="text-2xl font-bold text-white mb-4" data-i18n="eua_sec5_title">5. BY ACCESSING OR USING THIS PLATFORM, YOU ACKNOWLEDGE AND AGREE TO THE FOLLOWING TERMS:</h2>
+                          <p className="mb-4" data-i18n="eua_sec4_text"><strong>i. Automated Processing.</strong> This platform utilizes an artificial intelligence-based recommendation system ("Algorithm") that analyzes available content and user interactions to generate suggestions. This process is fully automated.</p>
+                          <p data-i18n="eua_sec5_text"><strong>ii. No Liability for Output.</strong> The Algorithm may generate recommendations that are unexpected, inaccurate, or objectionable. The website operator expressly disclaims all liability for any content suggested by the Algorithm or any reliance thereon. You use this website and engage with its content at your sole discretion and risk.</p>
+                          <p data-i18n="eua_sec5_text"><strong>iii. Binding Effect.</strong> By continuing to browse, click, or interact with this website in any manner, you irrevocably agree to be bound by this Notice, our full Terms of Service, and our Privacy Policy. If you do not agree, you must immediately exit and discontinue all use of this website.</p>
+                          <p data-i18n="eua_sec5_text"><strong>iv. Implied Consent.</strong> Your access constitutes your explicit consent to the data processing described in our Privacy Policy, including the use of cookies and the collection of interaction data for the purpose of training, refining, and operating the Algorithm.</p>
+                          <p data-i18n="eua_sec5_text"><strong>v. No Withdrawal of Consent Post-Access.</strong> Once you have accessed the website, you cannot retroactively withdraw consent for the data processing that occurred during your visit. Any request to delete data will be handled as specified in our Privacy Policy but does not nullify the legality of processing that occurred prior to such request.</p>
+                      </section>
                   </div>
               </article>
 
