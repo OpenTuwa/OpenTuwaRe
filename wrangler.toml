@@ -1,4 +1,4 @@
-# Add this to your existing wrangler.toml
+pages_build_output_dir = "dist"
 
 [ai]
 binding = "AI"
@@ -6,3 +6,9 @@ binding = "AI"
 [[vectorize]]
 binding = "VECTORIZE"
 index_name = "tuwa-brain"
+
+# Add your D1 database binding here!
+[[d1_databases]]
+binding = "DB"
+database_name = "articles"
+database_id = "5494913d-dde9-48ae-82a4-5774ed2b11a6"
