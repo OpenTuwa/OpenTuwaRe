@@ -27,7 +27,6 @@ export class NeuralEngine {
     }
   }
 
-  // Processes raw image arrays (Uint8Array) or Base64 into 512d visual triggers
   static async getVisualEmbedding(env, imageArrayBuffer) {
     if (!imageArrayBuffer) return new Array(512).fill(0);
     try {
@@ -39,12 +38,10 @@ export class NeuralEngine {
     }
   }
 
-  // Enhanced: Synaptic Plasticity via Exponential Moving Average (EMA)
   static updateBrainVector(currentVector, newVector, actionWeight = 0.1, dimensions = 768) {
     if (!currentVector || currentVector.length !== dimensions) return newVector;
     if (!newVector || newVector.length !== dimensions) return currentVector;
     
-    // actionWeight acts as 'alpha' (learning rate). Higher weight = higher neuroplasticity.
     const alpha = Math.max(0.05, Math.min(actionWeight, 0.5)); 
     
     return currentVector.map((val, i) => 
@@ -125,6 +122,23 @@ export class RecommendationEngine {
     return Math.abs(hash);
   }
 
+  // Restored: Standard temporal gravity feed for Home & Archive endpoints
+  getTrending(limit = 100) {
+    return this.articles
+      .map(article => {
+        let score = 0;
+        if (article.engagement_score) {
+          const hoursOld = Math.max(0, (Date.now() - new Date(article.published_at || Date.now())) / 3600000);
+          score = TemporalGravity.hackerNewsGravity(article.engagement_score, hoursOld, 1.8);
+        }
+        // Fallback to strict chronology if no engagement exists yet
+        const chronScore = new Date(article.published_at || Date.now()).getTime() / 10000000000;
+        return { ...article, _trending_score: score + chronScore };
+      })
+      .sort((a, b) => b._trending_score - a._trending_score)
+      .slice(0, limit);
+  }
+
   getHybridRecommendations(textMatches, visualMatches, limit = 6, currentSlug = null) {
     const maxWeight = SCORING_WEIGHTS.TIER_1_CONTENT_MATCH +
                       SCORING_WEIGHTS.TIER_1_VISUAL_TRIGGER +
@@ -137,19 +151,16 @@ export class RecommendationEngine {
 
         let relevance = 0;
         
-        // Logical/Text Cortex Match
         const aiTextMatch = textMatches.find(v => v.id === article.slug);
         if (aiTextMatch) {
            relevance += (aiTextMatch.score * SCORING_WEIGHTS.TIER_1_CONTENT_MATCH);
         }
 
-        // Amygdala/Visual Hijack Match
         const aiVisualMatch = visualMatches.find(v => v.id === article.slug);
         if (aiVisualMatch) {
            relevance += (aiVisualMatch.score * SCORING_WEIGHTS.TIER_1_VISUAL_TRIGGER);
         }
 
-        // Temporal Gravity Merge
         if (article.engagement_score) {
           const hoursOld = Math.max(0, (Date.now() - new Date(article.published_at || Date.now())) / 3600000);
           const gravityScore = TemporalGravity.hackerNewsGravity(article.engagement_score, hoursOld, 1.8);
