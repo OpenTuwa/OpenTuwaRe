@@ -1,4 +1,4 @@
-import { NeuralEngine } from '../_utils/algorithm.js';
+import { NeuralEngine, SCORING_WEIGHTS } from '../_utils/algorithm.js';
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -18,42 +18,47 @@ export async function onRequestPost(context) {
     
     let interactionMap = {};
     let userBrainVector = [];
-    let totalInteractions = 0;
     
     if (sessionProfile) {
        try { interactionMap = JSON.parse(sessionProfile.interaction_history || '{}'); } catch(e) {}
        try { userBrainVector = JSON.parse(sessionProfile.lexical_history || '[]'); } catch(e) {}
-       totalInteractions = sessionProfile.total_interactions || 0;
     }
 
     if (!interactionMap[slug]) interactionMap[slug] = { views: 0, reads: 0, shares: 0, time_spent: 0 };
-    if (action === 'view') interactionMap[slug].views++;
-    if (action === 'read') interactionMap[slug].reads++;
-    if (action === 'share') interactionMap[slug].shares++;
-    if (action === 'ping') interactionMap[slug].time_spent += (duration || 5);
+    
+    // Determine the neuroplasticity weight based on the action
+    let learningRate = 0;
 
     if (action === 'view') {
-        // Fetch full article content along with metadata
+        interactionMap[slug].views++;
+        learningRate = 0.05; // Low impact memory
+    } else if (action === 'read') {
+        interactionMap[slug].reads++;
+        learningRate = 0.15; // Medium impact memory
+    } else if (action === 'share') {
+        interactionMap[slug].shares++;
+        learningRate = 0.30; // High impact memory
+    } else if (action === 'ping') {
+        interactionMap[slug].time_spent += (duration || 5);
+        // Time spent reinforces existing pathways incrementally
+        learningRate = 0.01; 
+    }
+
+    // Only update the neural vector if there is a significant learning event
+    if (learningRate > 0) {
+        // Fetch the pre-computed article vector (Do not re-embed on the fly!)
         const article = await env.DB.prepare(`
-          SELECT title, subtitle, seo_description, content_html
-          FROM articles WHERE slug = ?
+          SELECT neural_vector FROM articles WHERE slug = ?
         `).bind(slug).first();
         
-        if (article) {
-            // Build text that includes the full content (HTML will be stripped inside getEmbedding)
-            const articleText = `
-                ${article.title} 
-                ${article.subtitle || ''} 
-                ${article.seo_description || ''} 
-                ${article.content_html || ''}
-            `;
-            const articleVector = await NeuralEngine.getEmbedding(env, articleText);
-            
-            if (articleVector && articleVector.length === 768) {
-                // Upsert article vector to Vectorize index
-                await env.VECTORIZE.upsert([{ id: slug, values: articleVector }]);
-                // Update user brain vector (average)
-                userBrainVector = NeuralEngine.updateAverageVector(userBrainVector, articleVector, totalInteractions);
+        if (article && article.neural_vector) {
+            try {
+                const articleVector = JSON.parse(article.neural_vector);
+                if (articleVector.length === 768) {
+                    userBrainVector = NeuralEngine.updateBrainVector(userBrainVector, articleVector, learningRate);
+                }
+            } catch (e) {
+                console.error("Failed to parse article neural vector", e);
             }
         }
     }

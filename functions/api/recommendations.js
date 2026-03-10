@@ -34,9 +34,9 @@ export async function onRequestGet(context) {
 
     const candidates = await fetchCandidates(env, 100, null);
     const engine = new RecommendationEngine(candidates);
-    const recommendations = engine.getHybridRecommendations(aiMatches, 12);
+    const recommendations = engine.getHybridRecommendations(aiMatches, 12, currentSlug);
 
-    const finalFeed = recommendations.filter(a => a.slug !== currentSlug).slice(0, 6);
+    const finalFeed = recommendations.slice(0, 6);
 
     return new Response(JSON.stringify(finalFeed), { headers: { "Content-Type": "application/json" } });
 

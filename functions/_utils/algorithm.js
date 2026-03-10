@@ -5,19 +5,17 @@ export const SCORING_WEIGHTS = {
   READ: 5, 
   SHARE: 10, 
   TIME_SPENT_FACTOR: 0.1,
-  TIER_1_CONTENT_MATCH: 40,   // Neural Vector similarity
-  TIER_2_SESSION_HABIT: 35,   // User Brain overlap
-  TIER_3_WORLDWIDE_VOTE: 25   // Viral Gravity
+  TIER_1_CONTENT_MATCH: 40,   
+  TIER_2_SESSION_HABIT: 35,   
+  TIER_3_WORLDWIDE_VOTE: 25   
 };
 
 // =================================================================================================
 //  MODULE 1: NEURAL AI ENGINE (Cloudflare Workers AI + Vectorize)
 // =================================================================================================
 export class NeuralEngine {
-  // Generates a 768-dimension vector using Cloudflare GPUs
   static async getEmbedding(env, text) {
     if (!text) return new Array(768).fill(0);
-    // Limit text length to prevent AI token limits (increased to 3000 chars)
     const cleanText = text.replace(/<[^>]*>?/gm, ' ').substring(0, 3000);
     try {
       const response = await env.AI.run('@cf/baai/bge-base-en-v1.5', { text: cleanText });
@@ -28,11 +26,16 @@ export class NeuralEngine {
     }
   }
 
-  // Updates the user's "Ghost Profile" by averaging their brain vector with the new article
-  static updateAverageVector(currentAvg, newVector, previousInteractionCount) {
-    if (!currentAvg || currentAvg.length === 0) return newVector;
-    return currentAvg.map((val, i) => 
-      ((val * previousInteractionCount) + (newVector[i] || 0)) / (previousInteractionCount + 1)
+  // Enhanced: Synaptic Plasticity via Exponential Moving Average (EMA)
+  static updateBrainVector(currentVector, newVector, actionWeight = 0.1) {
+    if (!currentVector || currentVector.length !== 768) return newVector;
+    if (!newVector || newVector.length !== 768) return currentVector;
+    
+    // actionWeight acts as 'alpha' (learning rate). Higher weight = higher neuroplasticity.
+    const alpha = Math.max(0.05, Math.min(actionWeight, 0.5)); 
+    
+    return currentVector.map((val, i) => 
+      (alpha * (newVector[i] || 0)) + ((1 - alpha) * val)
     );
   }
 }
@@ -112,12 +115,11 @@ export class RecommendationEngine {
     this.articles = articles || [];
   }
 
-  // Simple hash function for asymmetric adjustment
   _hash(str) {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
       hash = ((hash << 5) - hash) + str.charCodeAt(i);
-      hash |= 0; // Convert to 32-bit integer
+      hash |= 0; 
     }
     return Math.abs(hash);
   }
@@ -152,28 +154,22 @@ export class RecommendationEngine {
       .slice(0, limit);
   }
 
-  // Updated to accept currentSlug and break recommendation loops
   getHybridRecommendations(vectorizeMatches, limit = 6, currentSlug = null) {
-    // Maximum possible relevance for scaling the asymmetric adjustment
     const maxWeight = SCORING_WEIGHTS.TIER_1_CONTENT_MATCH +
                       SCORING_WEIGHTS.TIER_2_SESSION_HABIT +
-                      SCORING_WEIGHTS.TIER_3_WORLDWIDE_VOTE; // = 100
+                      SCORING_WEIGHTS.TIER_3_WORLDWIDE_VOTE; 
 
     return this.articles
       .map(article => {
-        // Skip the article the user is currently reading
         if (currentSlug && article.slug === currentSlug) return null;
 
         let relevance = 0;
         
-        // TIER 1 & 2: Neural Semantic Match (From Cloudflare Vectorize)
-        // Vectorize returns scores between 0 and 1. We multiply by our weights.
         const aiMatch = vectorizeMatches.find(v => v.id === article.slug);
         if (aiMatch) {
            relevance += (aiMatch.score * (SCORING_WEIGHTS.TIER_1_CONTENT_MATCH + SCORING_WEIGHTS.TIER_2_SESSION_HABIT));
         }
 
-        // TIER 3: Worldwide Vote & Gravity (From D1)
         if (article.engagement_score) {
           const hoursOld = Math.max(0, (Date.now() - new Date(article.published_at || Date.now())) / 3600000);
           const gravityScore = TemporalGravity.hackerNewsGravity(article.engagement_score, hoursOld, 1.8);
@@ -181,16 +177,15 @@ export class RecommendationEngine {
           relevance += (normalizedGravity * SCORING_WEIGHTS.TIER_3_WORLDWIDE_VOTE); 
         }
 
-        // Asymmetric adjustment (only if we have a current slug)
         if (currentSlug) {
-          const combined = currentSlug + ':' + article.slug; // direction matters
-          const adjustment = (this._hash(combined) % 100) / 10000 * maxWeight; // ≤ 1% of total weight
+          const combined = currentSlug + ':' + article.slug; 
+          const adjustment = (this._hash(combined) % 100) / 10000 * maxWeight; 
           relevance += adjustment;
         }
 
         return { ...article, _relevance: relevance };
       })
-      .filter(article => article !== null) // Remove skipped current article
+      .filter(article => article !== null) 
       .sort((a, b) => b._relevance - a._relevance)
       .slice(0, limit);
   }
@@ -200,7 +195,7 @@ export async function fetchCandidates(env, limit = 100, searchQuery = null) {
   let results = [];
   const selectClause = `
     SELECT a.slug, a.title, a.subtitle, a.author, a.published_at, a.read_time_minutes, a.image_url, a.tags, a.seo_description,
-           a.content_html,   -- Added to include full article content
+           a.content_html, 
            COALESCE(a.engagement_score, 0) as engagement_score,
            COALESCE(a.avg_time_spent, 0) as avg_time_spent,
            COALESCE(a.total_views, 0) as _raw_views,
@@ -215,8 +210,9 @@ export async function fetchCandidates(env, limit = 100, searchQuery = null) {
     const { results: raw } = await env.DB.prepare(sql).bind(wildcard, wildcard, wildcard, limit).all();
     results = raw;
   } else {
-    const sql = `${selectClause} ORDER BY a.engagement_score DESC, a.published_at DESC LIMIT 500`;
-    const { results: raw } = await env.DB.prepare(sql).bind().all();
+    // Optimized indexing utilization
+    const sql = `${selectClause} ORDER BY a.engagement_score DESC, a.published_at DESC LIMIT ?`;
+    const { results: raw } = await env.DB.prepare(sql).bind(limit).all();
     results = raw;
   }
   return results;
