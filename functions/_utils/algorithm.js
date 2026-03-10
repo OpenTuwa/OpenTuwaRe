@@ -6,8 +6,8 @@ export const SCORING_WEIGHTS = {
   SHARE: 10, 
   TIER_1_CONTENT_MATCH: 30,    
   TIER_1_VISUAL_TRIGGER: 25,   
-  TIER_1_EMOTIONAL_AROUSAL: 15, // NEW: Weight for emotional intensity
-  TIER_2_CURIOSITY_GAP: 20,     // NEW: Wundt Curve Novelty
+  TIER_1_EMOTIONAL_AROUSAL: 15,
+  TIER_2_CURIOSITY_GAP: 20,    
   TIER_3_WORLDWIDE_VOTE: 10   
 };
 
@@ -36,13 +36,11 @@ export class NeuralEngine {
     }
   }
 
-  // NEW AI: Emotional Valence/Arousal Scoring (e.g., DistilBERT for sentiment)
   static async getEmotionalArousal(env, text) {
-    if (!text) return 0.5; // Neutral
+    if (!text) return 0.5;
     const cleanText = text.replace(/<[^>]*>?/gm, ' ').substring(0, 500);
     try {
       const response = await env.AI.run('@cf/huggingface/distilbert-sst-2-int8', { text: cleanText });
-      // We want *intensity* (arousal), so extreme negative or extreme positive both score high
       const maxScore = Math.max(...response.map(r => r.score));
       return maxScore; 
     } catch (e) {
@@ -74,12 +72,24 @@ export class RecommendationEngine {
     this.articles = articles || [];
   }
 
-  // Wundt Curve implementation: f(x) = x * e^(-x/optimal_novelty)
-  // Maps similarity to an inverted-U to maximize the "Information Gap" (Curiosity)
+  // Wundt Curve implementation
   static calculateCuriosityScore(similarityScore, optimalNovelty = 0.3) {
-    const novelty = 1.0 - similarityScore; // 0 is identical, 1 is completely different
-    // Peak curiosity happens when novelty is around 0.3 (30% different from what they know)
+    const novelty = 1.0 - similarityScore;
     return (novelty / optimalNovelty) * Math.exp(1 - (novelty / optimalNovelty));
+  }
+
+  // NEW: Trending algorithm for article listings and archives
+  getTrending(limit = 100) {
+    return this.articles
+      .map(article => {
+        const hoursOld = Math.max(0, (Date.now() - new Date(article.published_at || Date.now())) / 3600000);
+        // Use engagement_score as "points", default to 1 if missing
+        const points = article.engagement_score || 1;
+        const gravity = TemporalGravity.hackerNewsGravity(points, hoursOld, 1.8);
+        return { ...article, _gravity: gravity };
+      })
+      .sort((a, b) => b._gravity - a._gravity)
+      .slice(0, limit);
   }
 
   getHybridRecommendations(textMatches, visualMatches, limit = 6, currentSlug = null) {
@@ -89,28 +99,22 @@ export class RecommendationEngine {
 
         let relevance = 0;
         
-        // 1. Lexical Similarity (Standard) & Curiosity Gap (Inverted-U)
         const aiTextMatch = textMatches.find(v => v.id === article.slug);
         if (aiTextMatch) {
            relevance += (aiTextMatch.score * SCORING_WEIGHTS.TIER_1_CONTENT_MATCH);
-           
-           // Inject Curiosity
            const curiosityMultiplier = RecommendationEngine.calculateCuriosityScore(aiTextMatch.score);
            relevance += (curiosityMultiplier * SCORING_WEIGHTS.TIER_2_CURIOSITY_GAP);
         }
 
-        // 2. Visual Trigger
         const aiVisualMatch = visualMatches.find(v => v.id === article.slug);
         if (aiVisualMatch) {
            relevance += (aiVisualMatch.score * SCORING_WEIGHTS.TIER_1_VISUAL_TRIGGER);
         }
 
-        // 3. Emotional Arousal (The Amygdala trigger)
         if (article.emotional_arousal_score) {
             relevance += (article.emotional_arousal_score * SCORING_WEIGHTS.TIER_1_EMOTIONAL_AROUSAL);
         }
 
-        // 4. Social Proof / Gravity
         if (article.engagement_score) {
           const hoursOld = Math.max(0, (Date.now() - new Date(article.published_at || Date.now())) / 3600000);
           const gravityScore = TemporalGravity.hackerNewsGravity(article.engagement_score, hoursOld, 1.8);
@@ -124,7 +128,6 @@ export class RecommendationEngine {
       .slice(0, limit);
   }
 
-  // Retained video logic for schema compatibility
   getHybridVideoRecommendations(textMatches, visualMatches, limit = 6, currentSlug = null) {
     const deepPool = this.getHybridRecommendations(textMatches, visualMatches, limit * 4, currentSlug);
     const videoArticles = deepPool.filter(a => a.content_html && (a.content_html.includes('<video') || a.content_html.includes('iframe')));
@@ -133,7 +136,6 @@ export class RecommendationEngine {
   }
 }
 
-// Ensure you update your DB to include 'emotional_arousal_score'
 export async function fetchCandidates(env, limit = 100, searchQuery = null) {
   let results = [];
   const selectClause = `
@@ -142,7 +144,6 @@ export async function fetchCandidates(env, limit = 100, searchQuery = null) {
            COALESCE(a.emotional_arousal_score, 0.5) as emotional_arousal_score
     FROM articles a
   `;
-  // ... (Keep existing fetch logic identical to preserve schema)
   const sql = `${selectClause} ORDER BY a.engagement_score DESC, a.published_at DESC LIMIT ?`;
   const { results: raw } = await env.DB.prepare(sql).bind(limit).all();
   return raw;
