@@ -5,6 +5,7 @@ export async function onRequestGet(context) {
   const url = new URL(context.request.url);
   const currentSlug = url.searchParams.get('slug');
   const sessionId = url.searchParams.get('session_id');
+  const videoOnly = url.searchParams.get('video_only') === 'true'; // <-- NEW
 
   if (!currentSlug) return new Response(JSON.stringify({ error: "Slug is required" }), { status: 400 });
 
@@ -52,6 +53,15 @@ export async function onRequestGet(context) {
 
     const candidates = await fetchCandidates(env, 100, null);
     const engine = new RecommendationEngine(candidates);
+
+    // <-- UPDATED: Route to the new algorithm set if requested
+    const recommendations = videoOnly 
+        ? engine.getHybridVideoRecommendations(aiTextMatches, aiVisualMatches, 12, currentSlug)
+        : engine.getHybridRecommendations(aiTextMatches, aiVisualMatches, 12, currentSlug);
+
+    const finalFeed = recommendations.slice(0, 6);
+
+    return new Response(JSON.stringify(finalFeed), { headers: { "Content-Type": "application/json" } });
     
     // The feed is now a blend of logical interest and raw visual stimuli
     const recommendations = engine.getHybridRecommendations(aiTextMatches, aiVisualMatches, 12, currentSlug);

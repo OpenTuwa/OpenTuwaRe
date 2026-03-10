@@ -30,6 +30,24 @@ export default function ArticleLayout() {
   const [email, setEmail] = useState('');
   const [subStatus, setSubStatus] = useState({ loading: false, message: '', type: '' });
 
+  const canAutoplayRef = useRef(false);
+  const recommendedRef = useRef([]);
+
+  useEffect(() => {
+    recommendedRef.current = recommended;
+  }, [recommended]);
+
+  useEffect(() => {
+    // Scan browser Media Engagement Index (MEI)
+    // Attempts to play a 1-second silent audio string to verify if soundful autoplay is permitted
+    const testAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
+    testAudio.play().then(() => {
+        canAutoplayRef.current = true;
+    }).catch(() => {
+        canAutoplayRef.current = false; // MEI is too low; auto-advance with sound is blocked
+    });
+  }, []);
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -79,7 +97,9 @@ export default function ArticleLayout() {
         }, 10000);
 
         // Fetch Neural Recommendations
-        const recRes = await fetch(`/api/recommendations?slug=${slug}&session_id=${sessionId}`);
+        const isVideoArticle = articleData.content_html && (articleData.content_html.includes('<video') || articleData.content_html.includes('iframe'));
+        const recRes = await fetch(`/api/recommendations?slug=${slug}&session_id=${sessionId}${isVideoArticle ? '&video_only=true' : ''}`);
+        
         if (recRes.ok) {
           const recommendations = await recRes.json();
           setRecommended(recommendations);
@@ -151,6 +171,12 @@ export default function ArticleLayout() {
       let needsYouTubeAPI = false;
       const ytPlayersQueue = [];
 
+      const handleVideoEnd = () => {
+        if (canAutoplayRef.current && recommendedRef.current.length > 0) {
+            navigate(`/articles/${recommendedRef.current[0].slug}`);
+        }
+      };
+
       for (const box of subtitleBoxes) {
         const mediaId = box.dataset.video || box.dataset.youtube; 
         const vttUrl = box.dataset.vtt;
@@ -200,9 +226,10 @@ export default function ArticleLayout() {
             updateSubtitle(0);
             mediaEl.addEventListener('timeupdate', () => updateSubtitle(mediaEl.currentTime));
             mediaEl.addEventListener('seeked', () => updateSubtitle(mediaEl.currentTime));
+            mediaEl.addEventListener('ended', handleVideoEnd);
           } else if (mediaEl.tagName.toLowerCase() === 'iframe') {
             needsYouTubeAPI = true;
-            ytPlayersQueue.push({ id: mediaId, render: updateSubtitle });
+            ytPlayersQueue.push({ id: mediaId, render: updateSubtitle, onEnd: handleVideoEnd });
           }
 
         } catch (error) {
@@ -220,6 +247,11 @@ export default function ArticleLayout() {
                   setInterval(() => {
                     if (event.target.getPlayerState() === window.YT.PlayerState.PLAYING) p.render(event.target.getCurrentTime());
                   }, 100);
+                },
+                'onStateChange': (event) => {
+                  if (event.data === window.YT.PlayerState.ENDED && p.onEnd) {
+                      p.onEnd();
+                  }
                 }
               }
             });
