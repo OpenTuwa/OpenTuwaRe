@@ -1,3 +1,5 @@
+name = "opentuware"
+compatibility_date = "2024-01-01"
 pages_build_output_dir = "dist"
 
 [ai]
@@ -7,7 +9,6 @@ binding = "AI"
 binding = "VECTORIZE"
 index_name = "tuwa-brain"
 
-# Add your D1 database binding here!
 [[d1_databases]]
 binding = "DB"
 database_name = "articles"
