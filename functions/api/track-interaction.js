@@ -1,4 +1,4 @@
-import { NeuralEngine } from '../utils/algorithm.js';
+import { NeuralEngine } from '../_utils/algorithm.js';
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -14,7 +14,6 @@ export async function onRequestPost(context) {
     const sid = session_id || 'anonymous';
     if (sid === 'anonymous') return new Response(JSON.stringify({ success: true }), { status: 200 });
 
-    // 1. Get the User's Profile
     const sessionProfile = await env.DB.prepare(`SELECT * FROM algo_user_sessions WHERE session_id = ?`).bind(sid).first();
     
     let interactionMap = {};
@@ -33,27 +32,19 @@ export async function onRequestPost(context) {
     if (action === 'share') interactionMap[slug].shares++;
     if (action === 'ping') interactionMap[slug].time_spent += (duration || 5);
 
-    // 2. NEURAL AI UPDATE (Only triggered on the first 'view' to save AI compute)
     if (action === 'view') {
         const article = await env.DB.prepare(`SELECT title, subtitle, seo_description FROM articles WHERE slug = ?`).bind(slug).first();
         if (article) {
             const articleText = `${article.title} ${article.subtitle} ${article.seo_description}`;
-            
-            // Call Cloudflare GPU for Neural Semantic Vector
             const articleVector = await NeuralEngine.getEmbedding(env, articleText);
             
             if (articleVector && articleVector.length === 768) {
-                // Upsert Article to Cloudflare Vectorize (so it can be recommended to others)
                 await env.VECTORIZE.upsert([{ id: slug, values: articleVector }]);
-
-                // Shift User's Ghost Profile toward this new concept
                 userBrainVector = NeuralEngine.updateAverageVector(userBrainVector, articleVector, totalInteractions);
             }
         }
     }
 
-    // 3. Save Everything to D1 Database
-    // We are reusing the 'lexical_history' column to store the 768-Float Vector to avoid needing a DB Migration
     await env.DB.prepare(`
       INSERT INTO algo_user_sessions (
         session_id, first_seen_at, last_seen_at, total_interactions, total_time_spent, lexical_history, interaction_history
