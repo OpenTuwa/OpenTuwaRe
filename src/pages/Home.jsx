@@ -17,13 +17,14 @@ export default function Home() {
   const queryParam = searchParams.get('q');
 
   // Prepare SEO Data
-  const siteUrl = 'https://opentuwa.com'; 
+  const siteUrl = 'https://opentuwa.com'; // In prod, use window.location.origin or env var
   const currentUrl = typeof window !== 'undefined' ? window.location.href : siteUrl;
 
   let title = 'OpenTuwa | Independent Journalism & Documentaries';
   let description = 'Independent news and journalism covering stories that matter. Deep dives, documentaries, and analysis.';
   let schema = [];
 
+  // 1. Global Organization Schema (Always present on home/root)
   const orgSchema = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
@@ -77,6 +78,7 @@ export default function Home() {
       'url': currentUrl
     });
   } else {
+    // Default Home
     schema.push({
       '@context': 'https://schema.org',
       '@type': 'WebSite',
@@ -95,7 +97,6 @@ export default function Home() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        // This hits the algorithm backend which now perfectly blends Trending and Newest
         const resArticles = await fetch('/api/article');
         let data = await resArticles.json();
 
@@ -161,7 +162,10 @@ export default function Home() {
             {authorData.name}
             {(authorData.role === 'Founder and Editor-in-Chief' || authorData.role === 'Developer') && (
               <svg className="w-6 h-6 flex-shrink-0 text-[#1D9BF0]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  {/* The circle inherits the blue text color from the parent SVG */}
   <circle cx="12" cy="12" r="12" fill="currentColor" />
+  
+  {/* The path explicitly forces a white stroke and no fill */}
   <path d="M9.5 12.5L11 14L15 10" stroke="white" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 </svg>
             )}
@@ -179,17 +183,17 @@ export default function Home() {
         </div>
       )}
 
-      {/* Default Header - Updated to reflect the algorithmic nature */}
+      {/* Default Header */}
       {!authorData && (
         <div className="mb-16">
           <h1 className="text-5xl md:text-6xl font-extrabold font-heading text-white mb-4">
-            {tagParam ? `Topic: ${tagParam}` : queryParam ? `Search: ${queryParam}` : 'Trending & Latest'}
+            {tagParam ? `Topic: ${tagParam}` : queryParam ? `Search: ${queryParam}` : 'Latest Stories'}
           </h1>
-          <p className="text-xl text-tuwa-muted">Handpicked by the OpenTuwa algorithm.</p>
+          <p className="text-xl text-tuwa-muted">Insights and perspectives from the network.</p>
         </div>
       )}
 
-      {/* Articles Grid - Layout remains entirely untouched */}
+      {/* Articles Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
         {loading ? (
           <SkeletonCard count={6} />

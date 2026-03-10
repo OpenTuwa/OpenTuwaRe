@@ -110,10 +110,7 @@ export class ContentIQ {
 // =================================================================================================
 export class RecommendationEngine {
   constructor(articles) {
-    // Filter out duplicates in case the UNION DB query fetched the same article twice
-    const uniqueMap = new Map();
-    (articles || []).forEach(a => uniqueMap.set(a.slug, a));
-    this.articles = Array.from(uniqueMap.values());
+    this.articles = articles || [];
   }
 
   _hash(str) {
@@ -128,16 +125,12 @@ export class RecommendationEngine {
   getTrending(limit = 100) {
     return this.articles
       .map(article => {
-        const publishedAtMs = new Date(article.published_at || Date.now()).getTime();
-        const hoursOld = Math.max(0, (Date.now() - publishedAtMs) / 3600000);
-        
-        // SCAR FIX 1: Base score of 15 ensures brand-new articles aren't punished for having 0 initial engagement
-        const engagement = (article.engagement_score || 0) + 15;
-        let score = TemporalGravity.hackerNewsGravity(engagement, hoursOld, 1.8);
-        
-        // SCAR FIX 2: Increase the divisor so chronScore is just a microscopic tie-breaker, not a dominating force
-        const chronScore = publishedAtMs / 100000000000000; 
-        
+        let score = 0;
+        if (article.engagement_score) {
+          const hoursOld = Math.max(0, (Date.now() - new Date(article.published_at || Date.now())) / 3600000);
+          score = TemporalGravity.hackerNewsGravity(article.engagement_score, hoursOld, 1.8);
+        }
+        const chronScore = new Date(article.published_at || Date.now()).getTime() / 10000000000;
         return { ...article, _trending_score: score + chronScore };
       })
       .sort((a, b) => b._trending_score - a._trending_score)
@@ -199,6 +192,8 @@ export class RecommendationEngine {
     );
 
     // 3. Blend them: Prioritize videos for the auto-play feed, but pad with the best text articles.
+    // This fixes the "only 3 showing" issue AND ensures the loop breaks naturally
+    // by stopping at an article which contains no video once the video pool is exhausted.
     return [...videoArticles, ...textArticles].slice(0, limit);
   }
 }
@@ -222,19 +217,8 @@ export async function fetchCandidates(env, limit = 100, searchQuery = null) {
     const { results: raw } = await env.DB.prepare(sql).bind(wildcard, wildcard, wildcard, limit).all();
     results = raw;
   } else {
-    // SCAR FIX 3: Fetch hybrid batch. Pull the newest 50 AND the top 50 engaged articles.
-    // This feeds the RecommendationEngine a perfect blend so brand new posts are never missed.
-    const halfLimit = Math.ceil(limit / 2);
-    const sql = `
-      SELECT * FROM (
-        ${selectClause} ORDER BY a.published_at DESC LIMIT ${halfLimit}
-      )
-      UNION
-      SELECT * FROM (
-        ${selectClause} ORDER BY a.engagement_score DESC LIMIT ${halfLimit}
-      )
-    `;
-    const { results: raw } = await env.DB.prepare(sql).all();
+    const sql = `${selectClause} ORDER BY a.engagement_score DESC, a.published_at DESC LIMIT ?`;
+    const { results: raw } = await env.DB.prepare(sql).bind(limit).all();
     results = raw;
   }
   return results;
