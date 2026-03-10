@@ -30,7 +30,7 @@ export class NeuralEngine {
   static async getVisualEmbedding(env, imageArrayBuffer) {
     if (!imageArrayBuffer) return new Array(512).fill(0);
     try {
-      const response = await env.AI.run('@cf/openai/clip-vit-base-patch32', { image: [...new Uint8Array(imageArrayBuffer)] });
+      const response = await env.AI.run('@cf/meta/llama-3.2-11b-vision-instruct', { image: [...new Uint8Array(imageArrayBuffer)] });
       return response.data[0];
     } catch (e) {
       console.error("Visual Embedding failed:", e);
