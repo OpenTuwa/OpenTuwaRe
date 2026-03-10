@@ -30,43 +30,53 @@ export async function onRequestPost(context) {
     let visualLearningRate = 0;
     const activeDuration = duration || 1;
 
+    const article = await env.DB.prepare(`SELECT neural_vector, visual_vector, avg_time_spent FROM articles WHERE slug = ?`).bind(slug).first();
+    let articleBaseline = 10;
+    if (article && article.avg_time_spent > 0) {
+        articleBaseline = article.avg_time_spent;
+    }
+
     // DOPAMINE REWARD PREDICTION ERROR (RPE) CALCULATION
-    // RPE = Actual Engagement - Expected Engagement
-    const rpe = activeDuration - baselineDwell;
+    // RPE = Actual Engagement - Expected Engagement (blending personal and content baselines)
+    const expectedDwell = (baselineDwell + articleBaseline) / 2;
+    const rpe = activeDuration - expectedDwell;
     
-    // Sigmoid function to convert RPE into a learning multiplier (0.5 to 2.5x)
-    const rpeMultiplier = 1 + (1.5 / (1 + Math.exp(-rpe / 10)));
+    // Dynamic scaling: Positive RPE (longer dwell than expected) amplifies learning 
+    // literally learning to prioritize content that held attention beyond usual baselines.
+    let rpeMultiplier = 1;
+    if (rpe > 0) {
+        rpeMultiplier = 1 + (2.0 / (1 + Math.exp(-rpe / 15))); // Boosts up to ~3x for high positive RPE
+    } else {
+        rpeMultiplier = Math.max(0.2, 1 + (rpe / Math.max(expectedDwell, 1))); // Punishes below expected
+    }
 
     if (action === 'view') {
         textLearningRate = 0.05; 
         visualLearningRate = 0.10; 
     } else if (action === 'dwell_image') {
         // Apply RPE: If they stare longer than usual, rewire visual vectors heavily
-        visualLearningRate = Math.min(0.75, 0.20 * rpeMultiplier); 
+        visualLearningRate = Math.min(0.85, 0.20 * rpeMultiplier); 
     } else if (action === 'read') {
         // Apply RPE: If they read longer than their baseline, wire the text vector
-        textLearningRate = Math.min(0.70, 0.25 * rpeMultiplier); 
+        textLearningRate = Math.min(0.80, 0.25 * rpeMultiplier); 
     } else if (action === 'share') {
         textLearningRate = 0.50; // Manual high-signal override
         visualLearningRate = 0.50;
     }
 
     // Update vectors using the dynamic learning rates
-    if (textLearningRate > 0 || visualLearningRate > 0) {
-        const article = await env.DB.prepare(`SELECT neural_vector, visual_vector FROM articles WHERE slug = ?`).bind(slug).first();
-        if (article) {
-            if (textLearningRate > 0 && article.neural_vector) {
-                try {
-                    const articleVector = JSON.parse(article.neural_vector);
-                    userBrainVector = NeuralEngine.updateBrainVector(userBrainVector, articleVector, textLearningRate, 768);
-                } catch (e) {}
-            }
-            if (visualLearningRate > 0 && article.visual_vector) {
-                try {
-                    const imgVector = JSON.parse(article.visual_vector);
-                    userVisualVector = NeuralEngine.updateBrainVector(userVisualVector, imgVector, visualLearningRate, 512);
-                } catch (e) {}
-            }
+    if ((textLearningRate > 0 || visualLearningRate > 0) && article) {
+        if (textLearningRate > 0 && article.neural_vector) {
+            try {
+                const articleVector = JSON.parse(article.neural_vector);
+                userBrainVector = NeuralEngine.updateBrainVector(userBrainVector, articleVector, textLearningRate, 768);
+            } catch (e) {}
+        }
+        if (visualLearningRate > 0 && article.visual_vector) {
+            try {
+                const imgVector = JSON.parse(article.visual_vector);
+                userVisualVector = NeuralEngine.updateBrainVector(userVisualVector, imgVector, visualLearningRate, 512);
+            } catch (e) {}
         }
     }
 

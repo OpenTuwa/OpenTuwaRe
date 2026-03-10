@@ -9,7 +9,8 @@ export const SCORING_WEIGHTS = {
   TIER_1_VISUAL_TRIGGER: 35,   // Increased: Amygdala/Visual hijack 
   TIER_2_SESSION_HABIT: 15,   
   TIER_3_WORLDWIDE_VOTE: 15,
-  NOVELTY_BONUS: 5             // New: Dopamine exploration reward
+  NOVELTY_BONUS: 10,           // Updated: Dopamine exploration reward
+  EMOTIONAL_RESONANCE: 10      // NEW: Emotional intensity weight
 };
 
 // =================================================================================================
@@ -112,6 +113,41 @@ export class ContentIQ {
     }
     return entropy;
   }
+
+  static analyzeSentiment(text) {
+    if (!text) return { valence: 0, intensity: 0 };
+    // Sentiment Model: captures both very positive and very negative valence
+    const lexicon = {
+      'amazing': 4, 'brilliant': 4, 'excellent': 3, 'fantastic': 4, 'incredible': 4,
+      'miracle': 4, 'perfect': 3, 'spectacular': 4, 'wonderful': 4, 'glorious': 4,
+      'ecstatic': 4, 'thrilled': 4, 'delighted': 3, 'love': 3, 'beautiful': 3,
+      'gorgeous': 3, 'astonishing': 4, 'joy': 3, 'happy': 3, 'great': 3, 'good': 2,
+      'terrible': -4, 'awful': -4, 'horrible': -4, 'tragic': -4, 'devastating': -4,
+      'appalling': -4, 'disgusting': -4, 'hideous': -4, 'ruined': -3, 'outrageous': -3,
+      'catastrophe': -4, 'frightening': -3, 'sorrow': -3, 'terrified': -4, 'panic': -3,
+      'angry': -3, 'furious': -4, 'hate': -3, 'disaster': -4, 'bad': -2, 'sad': -2,
+      'fear': -3, 'worst': -4, 'dead': -3, 'murder': -4, 'destroy': -3, 'fail': -2
+    };
+    const words = text.toLowerCase().split(/\W+/);
+    let totalValence = 0;
+    let wordCount = 0;
+    
+    for (const w of words) {
+      if (w.length > 2) {
+        wordCount++;
+        if (lexicon[w]) {
+          totalValence += lexicon[w];
+        }
+      }
+    }
+    
+    if (wordCount === 0) return { valence: 0, intensity: 0 };
+    
+    const avgValence = totalValence / Math.max(1, wordCount * 0.05); 
+    const intensity = Math.min(1, Math.abs(avgValence) / 4);
+    
+    return { valence: avgValence, intensity };
+  }
 }
 
 // =================================================================================================
@@ -179,10 +215,18 @@ export class RecommendationEngine {
           relevance += (normalizedGravity * SCORING_WEIGHTS.TIER_3_WORLDWIDE_VOTE); 
         }
 
+        // Explicitly measure and weight emotional intensity of content
+        const sentiment = ContentIQ.analyzeSentiment(article.content_html || article.seo_description || article.title || '');
+        relevance += (sentiment.intensity * SCORING_WEIGHTS.EMOTIONAL_RESONANCE);
+
         if (currentSlug) {
-          const combined = currentSlug + ':' + article.slug; 
-          const adjustment = (this._hash(combined) % 100) / 10000 * SCORING_WEIGHTS.NOVELTY_BONUS; 
-          relevance += adjustment; // The Exploration/Novelty Bonus
+          let novelty = 1.0;
+          if (aiTextMatch) {
+             novelty = Math.max(0, 1 - aiTextMatch.score); 
+          }
+          // Inverted-U function to novelty: moderately different (around 30% novel) is boosted
+          const invertedU = Math.exp(-Math.pow(novelty - 0.3, 2) / 0.05);
+          relevance += invertedU * SCORING_WEIGHTS.NOVELTY_BONUS;
         }
 
         return { ...article, _relevance: relevance };
