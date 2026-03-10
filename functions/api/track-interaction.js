@@ -33,13 +33,26 @@ export async function onRequestPost(context) {
     if (action === 'ping') interactionMap[slug].time_spent += (duration || 5);
 
     if (action === 'view') {
-        const article = await env.DB.prepare(`SELECT title, subtitle, seo_description FROM articles WHERE slug = ?`).bind(slug).first();
+        // Fetch full article content along with metadata
+        const article = await env.DB.prepare(`
+          SELECT title, subtitle, seo_description, content_html
+          FROM articles WHERE slug = ?
+        `).bind(slug).first();
+        
         if (article) {
-            const articleText = `${article.title} ${article.subtitle} ${article.seo_description}`;
+            // Build text that includes the full content (HTML will be stripped inside getEmbedding)
+            const articleText = `
+                ${article.title} 
+                ${article.subtitle || ''} 
+                ${article.seo_description || ''} 
+                ${article.content_html || ''}
+            `;
             const articleVector = await NeuralEngine.getEmbedding(env, articleText);
             
             if (articleVector && articleVector.length === 768) {
+                // Upsert article vector to Vectorize index
                 await env.VECTORIZE.upsert([{ id: slug, values: articleVector }]);
+                // Update user brain vector (average)
                 userBrainVector = NeuralEngine.updateAverageVector(userBrainVector, articleVector, totalInteractions);
             }
         }

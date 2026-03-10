@@ -17,8 +17,8 @@ export class NeuralEngine {
   // Generates a 768-dimension vector using Cloudflare GPUs
   static async getEmbedding(env, text) {
     if (!text) return new Array(768).fill(0);
-    // Limit text length to prevent AI token limits
-    const cleanText = text.replace(/<[^>]*>?/gm, ' ').substring(0, 1000);
+    // Limit text length to prevent AI token limits (increased to 3000 chars)
+    const cleanText = text.replace(/<[^>]*>?/gm, ' ').substring(0, 3000);
     try {
       const response = await env.AI.run('@cf/baai/bge-base-en-v1.5', { text: cleanText });
       return response.data[0];
@@ -172,6 +172,7 @@ export async function fetchCandidates(env, limit = 100, searchQuery = null) {
   let results = [];
   const selectClause = `
     SELECT a.slug, a.title, a.subtitle, a.author, a.published_at, a.read_time_minutes, a.image_url, a.tags, a.seo_description,
+           a.content_html,   -- Added to include full article content
            COALESCE(a.engagement_score, 0) as engagement_score,
            COALESCE(a.avg_time_spent, 0) as avg_time_spent,
            COALESCE(a.total_views, 0) as _raw_views,
