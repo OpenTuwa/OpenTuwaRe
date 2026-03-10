@@ -31,25 +31,28 @@ export async function onRequestPost(context) {
     let textLearningRate = 0;
     let visualLearningRate = 0;
 
-    // The Exploitative Routing Logic
+    // ENHANCED: Dynamic Exploitative Routing Logic (Reward Prediction Error)
+    const activeDuration = duration || 1;
+
     if (action === 'view') {
         interactionMap[slug].views++;
         textLearningRate = 0.05; 
-        visualLearningRate = 0.10; // Instantly imprint hero image on view
+        visualLearningRate = 0.15; // Baseline visual imprint
     } else if (action === 'dwell_image') {
-        // Micro-engagement loop. User stopped scrolling to look at an image.
-        interactionMap[slug].image_dwell += (duration || 2);
-        visualLearningRate = 0.40; // Visceral reaction. Massive weight shift.
+        interactionMap[slug].image_dwell += activeDuration;
+        // Dynamic intensity scaling: Longer dwell = exponential visual weight shift
+        visualLearningRate = Math.min(0.60, 0.15 + (Math.log10(activeDuration + 1) * 0.2)); 
     } else if (action === 'read') {
         interactionMap[slug].reads++;
-        textLearningRate = 0.20; 
+        // Dynamic intensity scaling based on reading depth
+        textLearningRate = Math.min(0.50, 0.10 + (Math.log10(activeDuration + 1) * 0.15)); 
     } else if (action === 'share') {
         interactionMap[slug].shares++;
-        textLearningRate = 0.30; 
-        visualLearningRate = 0.30;
+        textLearningRate = 0.40; // High dopamine event
+        visualLearningRate = 0.40;
     } else if (action === 'ping') {
-        interactionMap[slug].time_spent += (duration || 5);
-        textLearningRate = 0.01; 
+        interactionMap[slug].time_spent += activeDuration;
+        textLearningRate = 0.02; 
     }
 
     if (textLearningRate > 0 || visualLearningRate > 0) {
@@ -90,7 +93,7 @@ export async function onRequestPost(context) {
         interaction_history = excluded.interaction_history
     `).bind(
       sid, 
-      (action === 'ping' ? (duration || 5) : 0),
+      (action === 'ping' ? activeDuration : 0),
       JSON.stringify(userBrainVector), 
       JSON.stringify(userVisualVector),
       JSON.stringify(interactionMap)

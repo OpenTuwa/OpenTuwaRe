@@ -5,10 +5,11 @@ export const SCORING_WEIGHTS = {
   READ: 5, 
   SHARE: 10, 
   TIME_SPENT_FACTOR: 0.1,
-  TIER_1_CONTENT_MATCH: 30,    // Text relevance 
-  TIER_1_VISUAL_TRIGGER: 30,   // Amygdala/Visual hijack 
-  TIER_2_SESSION_HABIT: 20,   
-  TIER_3_WORLDWIDE_VOTE: 20   
+  TIER_1_CONTENT_MATCH: 35,    // Increased: Text relevance 
+  TIER_1_VISUAL_TRIGGER: 35,   // Increased: Amygdala/Visual hijack 
+  TIER_2_SESSION_HABIT: 15,   
+  TIER_3_WORLDWIDE_VOTE: 15,
+  NOVELTY_BONUS: 5             // New: Dopamine exploration reward
 };
 
 // =================================================================================================
@@ -38,15 +39,22 @@ export class NeuralEngine {
     }
   }
 
+  // ENHANCED: Applies a non-linear learning curve based on Hebbian principles
   static updateBrainVector(currentVector, newVector, actionWeight = 0.1, dimensions = 768) {
     if (!currentVector || currentVector.length !== dimensions) return newVector;
     if (!newVector || newVector.length !== dimensions) return currentVector;
     
-    const alpha = Math.max(0.05, Math.min(actionWeight, 0.5)); 
+    // Logarithmic scaling (Weber-Fechner Law) for learning rate
+    const alpha = Math.max(0.01, Math.min(0.2 * Math.log10(actionWeight * 10 + 1), 0.8)); 
     
     return currentVector.map((val, i) => 
       (alpha * (newVector[i] || 0)) + ((1 - alpha) * val)
     );
+  }
+
+  // NEW: Neural Action Potential Threshold
+  static sigmoid(x) {
+    return 1 / (1 + Math.exp(-x));
   }
 }
 
@@ -59,8 +67,9 @@ export class TemporalGravity {
     return ambientTemperature + (initialTemperature - ambientTemperature) * Math.exp(-k * ageInHours);
   }
 
-  static hackerNewsGravity(points, hoursSinceSubmit, gravity = 1.8) {
-    return (points - 1) / Math.pow((hoursSinceSubmit + 2), gravity);
+  // ENHANCED: Slightly sharper decay to prioritize fresh dopamine triggers
+  static hackerNewsGravity(points, hoursSinceSubmit, gravity = 1.85) {
+    return (points - 1) / Math.pow((hoursSinceSubmit + 1.5), gravity);
   }
 }
 
@@ -128,7 +137,7 @@ export class RecommendationEngine {
         let score = 0;
         if (article.engagement_score) {
           const hoursOld = Math.max(0, (Date.now() - new Date(article.published_at || Date.now())) / 3600000);
-          score = TemporalGravity.hackerNewsGravity(article.engagement_score, hoursOld, 1.8);
+          score = TemporalGravity.hackerNewsGravity(article.engagement_score, hoursOld, 1.85);
         }
         const chronScore = new Date(article.published_at || Date.now()).getTime() / 10000000000;
         return { ...article, _trending_score: score + chronScore };
@@ -149,27 +158,31 @@ export class RecommendationEngine {
 
         let relevance = 0;
         
+        // Apply Non-Linear Thresholding to Neural Matches
         const aiTextMatch = textMatches.find(v => v.id === article.slug);
         if (aiTextMatch) {
-           relevance += (aiTextMatch.score * SCORING_WEIGHTS.TIER_1_CONTENT_MATCH);
+           // Emphasize high-confidence matches, suppress weak noise
+           const activatedScore = NeuralEngine.sigmoid(aiTextMatch.score * 5 - 2.5);
+           relevance += (activatedScore * SCORING_WEIGHTS.TIER_1_CONTENT_MATCH);
         }
 
         const aiVisualMatch = visualMatches.find(v => v.id === article.slug);
         if (aiVisualMatch) {
-           relevance += (aiVisualMatch.score * SCORING_WEIGHTS.TIER_1_VISUAL_TRIGGER);
+           const activatedScore = NeuralEngine.sigmoid(aiVisualMatch.score * 5 - 2.5);
+           relevance += (activatedScore * SCORING_WEIGHTS.TIER_1_VISUAL_TRIGGER);
         }
 
         if (article.engagement_score) {
           const hoursOld = Math.max(0, (Date.now() - new Date(article.published_at || Date.now())) / 3600000);
-          const gravityScore = TemporalGravity.hackerNewsGravity(article.engagement_score, hoursOld, 1.8);
-          const normalizedGravity = Math.min(1, Math.log10(gravityScore + 1) / 2);
+          const gravityScore = TemporalGravity.hackerNewsGravity(article.engagement_score, hoursOld, 1.85);
+          const normalizedGravity = Math.min(1, Math.log10(gravityScore + 1.5) / 2);
           relevance += (normalizedGravity * SCORING_WEIGHTS.TIER_3_WORLDWIDE_VOTE); 
         }
 
         if (currentSlug) {
           const combined = currentSlug + ':' + article.slug; 
-          const adjustment = (this._hash(combined) % 100) / 10000 * maxWeight; 
-          relevance += adjustment;
+          const adjustment = (this._hash(combined) % 100) / 10000 * SCORING_WEIGHTS.NOVELTY_BONUS; 
+          relevance += adjustment; // The Exploration/Novelty Bonus
         }
 
         return { ...article, _relevance: relevance };
@@ -180,10 +193,8 @@ export class RecommendationEngine {
   }
 
   getHybridVideoRecommendations(textMatches, visualMatches, limit = 6, currentSlug = null) {
-    // 1. Fetch a deeper pool using your standard, high-quality logic
     const deepPool = this.getHybridRecommendations(textMatches, visualMatches, limit * 4, currentSlug);
 
-    // 2. Separate into video and non-video articles
     const videoArticles = deepPool.filter(article => 
       article.content_html && (article.content_html.includes('<video') || article.content_html.includes('iframe'))
     );
@@ -191,9 +202,6 @@ export class RecommendationEngine {
       !(article.content_html && (article.content_html.includes('<video') || article.content_html.includes('iframe')))
     );
 
-    // 3. Blend them: Prioritize videos for the auto-play feed, but pad with the best text articles.
-    // This fixes the "only 3 showing" issue AND ensures the loop breaks naturally
-    // by stopping at an article which contains no video once the video pool is exhausted.
     return [...videoArticles, ...textArticles].slice(0, limit);
   }
 }
@@ -206,7 +214,8 @@ export async function fetchCandidates(env, limit = 100, searchQuery = null) {
            COALESCE(a.engagement_score, 0) as engagement_score,
            COALESCE(a.avg_time_spent, 0) as avg_time_spent,
            COALESCE(a.total_views, 0) as _raw_views,
-           COALESCE(a.trending_velocity, 0) as trending_velocity
+           COALESCE(a.trending_velocity, 0) as trending_velocity,
+           a.neural_vector, a.visual_vector
     FROM articles a
   `;
 
