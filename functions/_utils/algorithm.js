@@ -5,31 +5,44 @@ export const SCORING_WEIGHTS = {
   READ: 5, 
   SHARE: 10, 
   TIME_SPENT_FACTOR: 0.1,
-  TIER_1_CONTENT_MATCH: 40,   
-  TIER_2_SESSION_HABIT: 35,   
-  TIER_3_WORLDWIDE_VOTE: 25   
+  TIER_1_CONTENT_MATCH: 30,    // Text relevance 
+  TIER_1_VISUAL_TRIGGER: 30,   // Amygdala/Visual hijack 
+  TIER_2_SESSION_HABIT: 20,   
+  TIER_3_WORLDWIDE_VOTE: 20   
 };
 
 // =================================================================================================
 //  MODULE 1: NEURAL AI ENGINE (Cloudflare Workers AI + Vectorize)
 // =================================================================================================
 export class NeuralEngine {
-  static async getEmbedding(env, text) {
+  static async getTextEmbedding(env, text) {
     if (!text) return new Array(768).fill(0);
     const cleanText = text.replace(/<[^>]*>?/gm, ' ').substring(0, 3000);
     try {
       const response = await env.AI.run('@cf/baai/bge-base-en-v1.5', { text: cleanText });
       return response.data[0];
     } catch (e) {
-      console.error("AI Embedding failed:", e);
+      console.error("Text Embedding failed:", e);
       return new Array(768).fill(0);
     }
   }
 
+  // Processes raw image arrays (Uint8Array) or Base64 into 512d visual triggers
+  static async getVisualEmbedding(env, imageArrayBuffer) {
+    if (!imageArrayBuffer) return new Array(512).fill(0);
+    try {
+      const response = await env.AI.run('@cf/openai/clip-vit-base-patch32', { image: [...new Uint8Array(imageArrayBuffer)] });
+      return response.data[0];
+    } catch (e) {
+      console.error("Visual Embedding failed:", e);
+      return new Array(512).fill(0);
+    }
+  }
+
   // Enhanced: Synaptic Plasticity via Exponential Moving Average (EMA)
-  static updateBrainVector(currentVector, newVector, actionWeight = 0.1) {
-    if (!currentVector || currentVector.length !== 768) return newVector;
-    if (!newVector || newVector.length !== 768) return currentVector;
+  static updateBrainVector(currentVector, newVector, actionWeight = 0.1, dimensions = 768) {
+    if (!currentVector || currentVector.length !== dimensions) return newVector;
+    if (!newVector || newVector.length !== dimensions) return currentVector;
     
     // actionWeight acts as 'alpha' (learning rate). Higher weight = higher neuroplasticity.
     const alpha = Math.max(0.05, Math.min(actionWeight, 0.5)); 
@@ -95,18 +108,6 @@ export class ContentIQ {
   }
 }
 
-export function calculateFairReadingTime(htmlContent) {
-  if (!htmlContent) return 60;
-  const text = htmlContent.replace(/&[a-z0-9#]+;/gi, ' ').replace(/<[^>]*>?/gm, ' ');
-  const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
-  let expectedSeconds = (wordCount / 200) * 60;
-  const imageCount = (htmlContent.match(/<img[^>]+>/g) || []).length;
-  expectedSeconds += (imageCount * 10);
-  const videoCount = (htmlContent.match(/<iframe[^>]+>|<video[^>]+>/g) || []).length;
-  expectedSeconds += (videoCount * 180);
-  return Math.max(60, expectedSeconds); 
-}
-
 // =================================================================================================
 //  MODULE 4: THE HYBRID SCORER (AI + Physics)
 // =================================================================================================
@@ -124,38 +125,9 @@ export class RecommendationEngine {
     return Math.abs(hash);
   }
 
-  _calculateTrendingScore(article) {
-    const sampleText = (article.title || '') + '. ' + (article.subtitle || '') + '. ' + (article.seo_description || '');
-    const gradeLevel = article.iq_score || ContentIQ.calculateGradeLevel(sampleText) || 10;
-    const entropy = article.entropy_score || ContentIQ.calculateEntropy(sampleText) || 3;
-    let iqScore = Math.min(50, (gradeLevel * 1.5) + (entropy * 5)); 
-
-    let heatScore = 0;
-    const pubDate = new Date(article.published_at || Date.now());
-    const hoursOld = Math.max(0, (Date.now() - pubDate) / 3600000);
-
-    if (article.engagement_score) {
-       heatScore = TemporalGravity.newtonianCooling(article.engagement_score, hoursOld, 0.05);
-       if (article.trending_velocity) {
-          heatScore += (article.trending_velocity * 25); 
-       }
-    }
-
-    let freshnessScore = 0;
-    if (hoursOld < 72) freshnessScore = (72 - hoursOld) * 0.5; 
-
-    return heatScore + iqScore + freshnessScore;
-  }
-
-  getTrending(limit = 20) {
-    return this.articles
-      .map(article => ({ ...article, _trendingScore: this._calculateTrendingScore(article) }))
-      .sort((a, b) => b._trendingScore - a._trendingScore)
-      .slice(0, limit);
-  }
-
-  getHybridRecommendations(vectorizeMatches, limit = 6, currentSlug = null) {
+  getHybridRecommendations(textMatches, visualMatches, limit = 6, currentSlug = null) {
     const maxWeight = SCORING_WEIGHTS.TIER_1_CONTENT_MATCH +
+                      SCORING_WEIGHTS.TIER_1_VISUAL_TRIGGER +
                       SCORING_WEIGHTS.TIER_2_SESSION_HABIT +
                       SCORING_WEIGHTS.TIER_3_WORLDWIDE_VOTE; 
 
@@ -165,11 +137,19 @@ export class RecommendationEngine {
 
         let relevance = 0;
         
-        const aiMatch = vectorizeMatches.find(v => v.id === article.slug);
-        if (aiMatch) {
-           relevance += (aiMatch.score * (SCORING_WEIGHTS.TIER_1_CONTENT_MATCH + SCORING_WEIGHTS.TIER_2_SESSION_HABIT));
+        // Logical/Text Cortex Match
+        const aiTextMatch = textMatches.find(v => v.id === article.slug);
+        if (aiTextMatch) {
+           relevance += (aiTextMatch.score * SCORING_WEIGHTS.TIER_1_CONTENT_MATCH);
         }
 
+        // Amygdala/Visual Hijack Match
+        const aiVisualMatch = visualMatches.find(v => v.id === article.slug);
+        if (aiVisualMatch) {
+           relevance += (aiVisualMatch.score * SCORING_WEIGHTS.TIER_1_VISUAL_TRIGGER);
+        }
+
+        // Temporal Gravity Merge
         if (article.engagement_score) {
           const hoursOld = Math.max(0, (Date.now() - new Date(article.published_at || Date.now())) / 3600000);
           const gravityScore = TemporalGravity.hackerNewsGravity(article.engagement_score, hoursOld, 1.8);
@@ -210,7 +190,6 @@ export async function fetchCandidates(env, limit = 100, searchQuery = null) {
     const { results: raw } = await env.DB.prepare(sql).bind(wildcard, wildcard, wildcard, limit).all();
     results = raw;
   } else {
-    // Optimized indexing utilization
     const sql = `${selectClause} ORDER BY a.engagement_score DESC, a.published_at DESC LIMIT ?`;
     const { results: raw } = await env.DB.prepare(sql).bind(limit).all();
     results = raw;

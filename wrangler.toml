@@ -6,8 +6,12 @@ pages_build_output_dir = "dist"
 binding = "AI"
 
 [[vectorize]]
-binding = "VECTORIZE"
+binding = "VECTORIZE_TEXT"
 index_name = "tuwa-brain"
+
+[[vectorize]]
+binding = "VECTORIZE_VISION"
+index_name = "tuwa-vision"
 
 [[d1_databases]]
 binding = "DB"

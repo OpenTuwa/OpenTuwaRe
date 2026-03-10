@@ -1,4 +1,4 @@
-import { NeuralEngine } from '../_utils/algorithm.js';
+import { NeuralEngine, SCORING_WEIGHTS } from '../_utils/algorithm.js';
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -17,68 +17,88 @@ export async function onRequestPost(context) {
     const sessionProfile = await env.DB.prepare(`SELECT * FROM algo_user_sessions WHERE session_id = ?`).bind(sid).first();
     
     let interactionMap = {};
-    let userBrainVector = [];
-    let totalInteractions = 0;
+    let userBrainVector = [];   // 768d text vector
+    let userVisualVector = [];  // 512d image vector
     
     if (sessionProfile) {
        try { interactionMap = JSON.parse(sessionProfile.interaction_history || '{}'); } catch(e) {}
        try { userBrainVector = JSON.parse(sessionProfile.lexical_history || '[]'); } catch(e) {}
-       totalInteractions = sessionProfile.total_interactions || 0;
+       try { userVisualVector = JSON.parse(sessionProfile.visual_history || '[]'); } catch(e) {}
     }
 
-    if (!interactionMap[slug]) interactionMap[slug] = { views: 0, reads: 0, shares: 0, time_spent: 0 };
-    if (action === 'view') interactionMap[slug].views++;
-    if (action === 'read') interactionMap[slug].reads++;
-    if (action === 'share') interactionMap[slug].shares++;
-    if (action === 'ping') interactionMap[slug].time_spent += (duration || 5);
+    if (!interactionMap[slug]) interactionMap[slug] = { views: 0, reads: 0, shares: 0, image_dwell: 0, time_spent: 0 };
+    
+    let textLearningRate = 0;
+    let visualLearningRate = 0;
 
+    // The Exploitative Routing Logic
     if (action === 'view') {
-        // Fetch full article content along with metadata
+        interactionMap[slug].views++;
+        textLearningRate = 0.05; 
+        visualLearningRate = 0.10; // Instantly imprint hero image on view
+    } else if (action === 'dwell_image') {
+        // Micro-engagement loop. User stopped scrolling to look at an image.
+        interactionMap[slug].image_dwell += (duration || 2);
+        visualLearningRate = 0.40; // Visceral reaction. Massive weight shift.
+    } else if (action === 'read') {
+        interactionMap[slug].reads++;
+        textLearningRate = 0.20; 
+    } else if (action === 'share') {
+        interactionMap[slug].shares++;
+        textLearningRate = 0.30; 
+        visualLearningRate = 0.30;
+    } else if (action === 'ping') {
+        interactionMap[slug].time_spent += (duration || 5);
+        textLearningRate = 0.01; 
+    }
+
+    if (textLearningRate > 0 || visualLearningRate > 0) {
         const article = await env.DB.prepare(`
-          SELECT title, subtitle, seo_description, content_html
-          FROM articles WHERE slug = ?
+          SELECT neural_vector, visual_vector FROM articles WHERE slug = ?
         `).bind(slug).first();
         
         if (article) {
-            // Build text that includes the full content (HTML will be stripped inside getEmbedding)
-            const articleText = `
-                ${article.title} 
-                ${article.subtitle || ''} 
-                ${article.seo_description || ''} 
-                ${article.content_html || ''}
-            `;
-            const articleVector = await NeuralEngine.getEmbedding(env, articleText);
-            
-            if (articleVector && articleVector.length === 768) {
-                // Upsert article vector to Vectorize index
-                await env.VECTORIZE.upsert([{ id: slug, values: articleVector }]);
-                // Update user brain vector (average)
-                userBrainVector = NeuralEngine.updateAverageVector(userBrainVector, articleVector, totalInteractions);
+            if (textLearningRate > 0 && article.neural_vector) {
+                try {
+                    const articleVector = JSON.parse(article.neural_vector);
+                    if (articleVector.length === 768) {
+                        userBrainVector = NeuralEngine.updateBrainVector(userBrainVector, articleVector, textLearningRate, 768);
+                    }
+                } catch (e) { console.error("Lexical parse failed", e); }
+            }
+            if (visualLearningRate > 0 && article.visual_vector) {
+                try {
+                    const imgVector = JSON.parse(article.visual_vector);
+                    if (imgVector.length === 512) {
+                        userVisualVector = NeuralEngine.updateBrainVector(userVisualVector, imgVector, visualLearningRate, 512);
+                    }
+                } catch (e) { console.error("Visual parse failed", e); }
             }
         }
     }
 
     await env.DB.prepare(`
       INSERT INTO algo_user_sessions (
-        session_id, first_seen_at, last_seen_at, total_interactions, total_time_spent, lexical_history, interaction_history
-      ) VALUES (?, datetime('now'), datetime('now'), 1, ?, ?, ?)
+        session_id, first_seen_at, last_seen_at, total_interactions, total_time_spent, lexical_history, visual_history, interaction_history
+      ) VALUES (?, datetime('now'), datetime('now'), 1, ?, ?, ?, ?)
       ON CONFLICT(session_id) DO UPDATE SET
         last_seen_at = datetime('now'),
         total_interactions = total_interactions + 1,
         total_time_spent = total_time_spent + excluded.total_time_spent,
         lexical_history = excluded.lexical_history,
+        visual_history = excluded.visual_history,
         interaction_history = excluded.interaction_history
     `).bind(
       sid, 
       (action === 'ping' ? (duration || 5) : 0),
       JSON.stringify(userBrainVector), 
+      JSON.stringify(userVisualVector),
       JSON.stringify(interactionMap)
     ).run();
 
     return new Response(JSON.stringify({ success: true }), { status: 200, headers: { "Content-Type": "application/json" } });
 
   } catch (error) {
-    console.error("Tracking Error:", error);
     return new Response(JSON.stringify({ error: "Failed to track interaction", details: error.message }), { status: 500 });
   }
 }

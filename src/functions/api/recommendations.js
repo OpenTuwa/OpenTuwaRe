@@ -10,33 +10,53 @@ export async function onRequestGet(context) {
 
   try {
     let userBrainVector = null;
+    let userVisualVector = null;
 
     if (sessionId) {
-      const sessionData = await env.DB.prepare(`SELECT lexical_history FROM algo_user_sessions WHERE session_id = ?`).bind(sessionId).first();
-      if (sessionData && sessionData.lexical_history) {
-        try { 
-            const parsed = JSON.parse(sessionData.lexical_history); 
-            if (Array.isArray(parsed) && parsed.length === 768) userBrainVector = parsed;
-        } catch(e) {}
+      const sessionData = await env.DB.prepare(`SELECT lexical_history, visual_history FROM algo_user_sessions WHERE session_id = ?`).bind(sessionId).first();
+      if (sessionData) {
+        if (sessionData.lexical_history) {
+            try { 
+                const parsed = JSON.parse(sessionData.lexical_history); 
+                if (Array.isArray(parsed) && parsed.length === 768) userBrainVector = parsed;
+            } catch(e) {}
+        }
+        if (sessionData.visual_history) {
+            try {
+                const parsed = JSON.parse(sessionData.visual_history);
+                if (Array.isArray(parsed) && parsed.length === 512) userVisualVector = parsed;
+            } catch(e) {}
+        }
       }
     }
 
-    let aiMatches = [];
+    let aiTextMatches = [];
+    let aiVisualMatches = [];
 
+    // Execute neural searches concurrently to prevent latency drop-off
+    const vectorTasks = [];
+    
     if (userBrainVector) {
-        try {
-            const vectorRes = await env.VECTORIZE.query(userBrainVector, { topK: 20 });
-            aiMatches = vectorRes.matches || []; 
-        } catch (err) {
-            console.error("Vectorize query failed, skipping AI tier:", err);
-        }
+        vectorTasks.push(env.VECTORIZE_TEXT.query(userBrainVector, { topK: 20 })
+            .then(res => aiTextMatches = res.matches || [])
+            .catch(err => console.error("Text vectorize failed:", err)));
     }
+    
+    if (userVisualVector) {
+        vectorTasks.push(env.VECTORIZE_VISION.query(userVisualVector, { topK: 20 })
+            .then(res => aiVisualMatches = res.matches || [])
+            .catch(err => console.error("Visual vectorize failed:", err)));
+    }
+
+    await Promise.all(vectorTasks);
 
     const candidates = await fetchCandidates(env, 100, null);
     const engine = new RecommendationEngine(candidates);
-    const recommendations = engine.getHybridRecommendations(aiMatches, 12);
+    
+    // The feed is now a blend of logical interest and raw visual stimuli
+    const recommendations = engine.getHybridRecommendations(aiTextMatches, aiVisualMatches, 12, currentSlug);
 
-    const finalFeed = recommendations.filter(a => a.slug !== currentSlug).slice(0, 6);
+    const finalFeed = recommendations.slice(0, 6);
 
     return new Response(JSON.stringify(finalFeed), { headers: { "Content-Type": "application/json" } });
 
