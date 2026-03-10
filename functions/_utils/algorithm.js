@@ -22,6 +22,7 @@ export class NeuralEngine {
       const response = await env.AI.run('@cf/baai/bge-base-en-v1.5', { text: cleanText });
       return response.data[0];
     } catch (e) {
+      console.error("Text Embedding failed:", e);
       return new Array(768).fill(0);
     }
   }
@@ -32,6 +33,7 @@ export class NeuralEngine {
       const response = await env.AI.run('@cf/meta/llama-3.2-11b-vision-instruct', { image: [...new Uint8Array(imageArrayBuffer)] });
       return response.data[0];
     } catch (e) {
+      console.error("Visual Embedding failed:", e);
       return new Array(512).fill(0);
     }
   }
@@ -60,7 +62,9 @@ export class NeuralEngine {
 // =================================================================================================
 export class TemporalGravity {
   static hackerNewsGravity(points, hoursSinceSubmit, gravity = 1.8) {
-    return (points - 1) / Math.pow((hoursSinceSubmit + 2), gravity);
+    // Failsafe to prevent negative gravity if points are 0
+    const adjustedPoints = Math.max(points, 1); 
+    return (adjustedPoints - 1) / Math.pow((hoursSinceSubmit + 2), gravity);
   }
 }
 
@@ -78,21 +82,26 @@ export class RecommendationEngine {
     return (novelty / optimalNovelty) * Math.exp(1 - (novelty / optimalNovelty));
   }
 
-  // NEW: Trending algorithm for article listings and archives
+  // FIXED: Restored chronScore fallback so 0-engagement articles still sort correctly
   getTrending(limit = 100) {
     return this.articles
       .map(article => {
-        const hoursOld = Math.max(0, (Date.now() - new Date(article.published_at || Date.now())) / 3600000);
-        // Use engagement_score as "points", default to 1 if missing
-        const points = article.engagement_score || 1;
-        const gravity = TemporalGravity.hackerNewsGravity(points, hoursOld, 1.8);
-        return { ...article, _gravity: gravity };
+        let score = 0;
+        if (article.engagement_score) {
+          const hoursOld = Math.max(0, (Date.now() - new Date(article.published_at || Date.now())) / 3600000);
+          score = TemporalGravity.hackerNewsGravity(article.engagement_score, hoursOld, 1.8);
+        }
+        // Base chronological score to prevent everything defaulting to 0
+        const chronScore = new Date(article.published_at || Date.now()).getTime() / 10000000000;
+        
+        return { ...article, _gravity: score + chronScore };
       })
       .sort((a, b) => b._gravity - a._gravity)
       .slice(0, limit);
   }
 
-  getHybridRecommendations(textMatches, visualMatches, limit = 6, currentSlug = null) {
+  // FIXED: Added default empty arrays to prevent undefined .find() crashes
+  getHybridRecommendations(textMatches = [], visualMatches = [], limit = 6, currentSlug = null) {
     return this.articles
       .map(article => {
         if (currentSlug && article.slug === currentSlug) return null;
@@ -128,7 +137,7 @@ export class RecommendationEngine {
       .slice(0, limit);
   }
 
-  getHybridVideoRecommendations(textMatches, visualMatches, limit = 6, currentSlug = null) {
+  getHybridVideoRecommendations(textMatches = [], visualMatches = [], limit = 6, currentSlug = null) {
     const deepPool = this.getHybridRecommendations(textMatches, visualMatches, limit * 4, currentSlug);
     const videoArticles = deepPool.filter(a => a.content_html && (a.content_html.includes('<video') || a.content_html.includes('iframe')));
     const textArticles = deepPool.filter(a => !(a.content_html && (a.content_html.includes('<video') || a.content_html.includes('iframe'))));
@@ -136,15 +145,28 @@ export class RecommendationEngine {
   }
 }
 
+// FIXED: Restored all missing DB columns and the Search Logic
 export async function fetchCandidates(env, limit = 100, searchQuery = null) {
   let results = [];
   const selectClause = `
-    SELECT a.slug, a.title, a.published_at, a.content_html, 
+    SELECT a.slug, a.title, a.subtitle, a.author, a.published_at, a.read_time_minutes, a.image_url, a.tags, a.seo_description,
+           a.content_html, 
            COALESCE(a.engagement_score, 0) as engagement_score,
            COALESCE(a.emotional_arousal_score, 0.5) as emotional_arousal_score
     FROM articles a
   `;
-  const sql = `${selectClause} ORDER BY a.engagement_score DESC, a.published_at DESC LIMIT ?`;
-  const { results: raw } = await env.DB.prepare(sql).bind(limit).all();
-  return raw;
+
+  if (searchQuery) {
+    const q = searchQuery.trim();
+    const wildcard = `%${q.replace(/%/g, '\\%').replace(/_/g, '\\_')}%`;
+    const sql = `${selectClause} WHERE (a.title LIKE ? ESCAPE '\\' OR a.subtitle LIKE ? ESCAPE '\\' OR a.seo_description LIKE ? ESCAPE '\\') ORDER BY a.published_at DESC LIMIT ?`;
+    const { results: raw } = await env.DB.prepare(sql).bind(wildcard, wildcard, wildcard, limit).all();
+    results = raw;
+  } else {
+    const sql = `${selectClause} ORDER BY a.engagement_score DESC, a.published_at DESC LIMIT ?`;
+    const { results: raw } = await env.DB.prepare(sql).bind(limit).all();
+    results = raw;
+  }
+  
+  return results;
 }
