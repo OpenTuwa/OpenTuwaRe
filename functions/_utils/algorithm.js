@@ -156,15 +156,6 @@ export class RecommendationEngine {
            relevance += (aiTextMatch.score * SCORING_WEIGHTS.TIER_1_CONTENT_MATCH);
         }
 
-// Inside RecommendationEngine class in algorithm.js, add this new method below getHybridRecommendations:
-
-  getHybridVideoRecommendations(textMatches, visualMatches, limit = 6, currentSlug = null) {
-    // Uses the exact same algorithm set, but strictly filters for video-containing articles
-    return this.getHybridRecommendations(textMatches, visualMatches, limit * 3, currentSlug)
-      .filter(article => article.content_html && (article.content_html.includes('<video') || article.content_html.includes('iframe')))
-      .slice(0, limit);
-  }
-
         const aiVisualMatch = visualMatches.find(v => v.id === article.slug);
         if (aiVisualMatch) {
            relevance += (aiVisualMatch.score * SCORING_WEIGHTS.TIER_1_VISUAL_TRIGGER);
@@ -187,6 +178,13 @@ export class RecommendationEngine {
       })
       .filter(article => article !== null) 
       .sort((a, b) => b._relevance - a._relevance)
+      .slice(0, limit);
+  }
+
+  getHybridVideoRecommendations(textMatches, visualMatches, limit = 6, currentSlug = null) {
+    // Uses the exact same algorithm set, but strictly filters for video-containing articles
+    return this.getHybridRecommendations(textMatches, visualMatches, limit * 3, currentSlug)
+      .filter(article => article.content_html && (article.content_html.includes('<video') || article.content_html.includes('iframe')))
       .slice(0, limit);
   }
 }
