@@ -161,7 +161,10 @@ export default function Home() {
           <h1 className="text-4xl md:text-5xl font-extrabold font-heading text-white mb-3 flex items-center justify-center gap-2">
             {authorData.name}
             {(authorData.role === 'Founder and Editor-in-Chief' || authorData.role === 'Developer') && (
-              <svg className="w-6 h-6 flex-shrink-0" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="12" fill="#1D9BF0"/><path d="M9.5 12.5L11 14L15 10" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <svg className="w-6 h-6 flex-shrink-0" viewBox="0 0 24 24" fill="none">
+  <circle cx="12" cy="12" r="12" className="fill-[#1D9BF0]" style={{ fill: '#1D9BF0' }} />
+  <path d="M9.5 12.5L11 14L15 10" className="stroke-white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ stroke: 'white' }} />
+</svg>
             )}
           </h1>
           <div className="text-tuwa-accent font-bold tracking-widest uppercase text-xs mb-4">{authorData.role || 'Contributor'}</div>
