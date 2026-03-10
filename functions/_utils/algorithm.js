@@ -1,363 +1,223 @@
-// =================================================================================================
-//  THE NEURAL BRAIN - HYBRID AI RECOMMENDATION ENGINE (v3.0)
-//  Neurosurgical Enhancements for OpenTuwa
-//  =================================================================================================
+// The Neural Brain - Hybrid AI Recommendation Engine for OpenTuwa
 
 export const SCORING_WEIGHTS = {
-  VIEW: 1,
-  READ: 5,
-  SHARE: 10,
+  VIEW: 1, 
+  READ: 5, 
+  SHARE: 10, 
   TIME_SPENT_FACTOR: 0.1,
-  TIER_1_CONTENT_MATCH: 40,   
-  TIER_2_SESSION_HABIT: 35,   
-  TIER_3_WORLDWIDE_VOTE: 25,  
-  NOVELTY_BONUS: 5,            
-  DIVERSITY_PENALTY: 3,        
-  CIRCADIAN_BOOST: 2,          
-  PREDICTION_ERROR: 4,         
-  EMOTIONAL_ALIGNMENT: 3,      
-  HOMEOSTATIC_BASELINE: 2      
+  TIER_1_CONTENT_MATCH: 40,   // Neural Vector similarity
+  TIER_2_SESSION_HABIT: 35,   // User Brain overlap
+  TIER_3_WORLDWIDE_VOTE: 25   // Viral Gravity
 };
 
-// -------------------------------------------------------------------------------------------------
-//  MODULE 1: NEURAL ENCODING
-// -------------------------------------------------------------------------------------------------
+// =================================================================================================
+//  MODULE 1: NEURAL AI ENGINE (Cloudflare Workers AI + Vectorize)
+// =================================================================================================
 export class NeuralEngine {
-  static async getEmbedding(env, text, title = '', imageUrl = null) {
-    if (!text && !title && !imageUrl) return new Array(768).fill(0);
-    const cleanText = (text || '').replace(/<[^>]*>?/gm, ' ').substring(0, 5000);
-    const cleanTitle = (title || '').replace(/<[^>]*>?/gm, ' ').substring(0, 500);
-    let textVector = null, titleVector = null, imageVector = null;
-
+  // Generates a 768-dimension vector using Cloudflare GPUs
+  static async getEmbedding(env, text) {
+    if (!text) return new Array(768).fill(0);
+    // Limit text length to prevent AI token limits (increased to 3000 chars)
+    const cleanText = text.replace(/<[^>]*>?/gm, ' ').substring(0, 3000);
     try {
-      if (cleanText.length > 50) {
-        const response = await env.AI.run('@cf/baai/bge-base-en-v1.5', { text: cleanText });
-        textVector = response.data[0];
-      }
-      if (cleanTitle.length > 10) {
-        const response = await env.AI.run('@cf/baai/bge-base-en-v1.5', { text: cleanTitle });
-        titleVector = response.data[0];
-      }
-      const fusion = (vecs) => {
-        if (vecs.length === 0) return null;
-        const sum = vecs.reduce((acc, v) => acc.map((x, i) => x + v[i]), new Array(768).fill(0));
-        return sum.map(x => x / vecs.length);
-      };
-      const available = [];
-      if (textVector) available.push(textVector);
-      if (titleVector) available.push(titleVector);
-      if (imageVector) available.push(imageVector);
-
-      if (available.length > 0) return fusion(available);
-      return new Array(768).fill(0);
+      const response = await env.AI.run('@cf/baai/bge-base-en-v1.5', { text: cleanText });
+      return response.data[0];
     } catch (e) {
       console.error("AI Embedding failed:", e);
       return new Array(768).fill(0);
     }
   }
 
-  static cosineSimilarity(vecA, vecB) {
-    if (!vecA || !vecB || vecA.length !== vecB.length) return 0;
-    let dot = 0, magA = 0, magB = 0;
-    for (let i = 0; i < vecA.length; i++) {
-      dot += vecA[i] * vecB[i];
-      magA += vecA[i] * vecA[i];
-      magB += vecB[i] * vecB[i];
-    }
-    if (magA === 0 || magB === 0) return 0;
-    return dot / (Math.sqrt(magA) * Math.sqrt(magB));
-  }
-
-  static predictiveUpdate(priorMean, priorCovariance, observation, observationCovariance) {
-    const gain = priorCovariance / (priorCovariance + observationCovariance);
-    const posteriorMean = priorMean + gain * (observation - priorMean);
-    const posteriorCovariance = (1 - gain) * priorCovariance;
-    return { mean: posteriorMean, covariance: posteriorCovariance, innovation: observation - priorMean };
-  }
-
-  static updateUserProfile(profile, newVector, timeSinceLastHours, interactionCount) {
-    if (!profile || !profile.mean) {
-      return { mean: newVector, covariance: new Array(768).fill(0.1), lastUpdate: Date.now(), surprise: 0 };
-    }
-    const decayFactor = Math.exp(-0.01 * timeSinceLastHours);
-    const inflatedCov = profile.covariance.map(c => c / decayFactor + 0.001);
-    const newMean = [], newCov = [];
-    let totalSurprise = 0;
-    const obsNoise = 0.05;
-    for (let i = 0; i < 768; i++) {
-      const priorMean = profile.mean[i], priorCov = inflatedCov[i], obs = newVector[i] || 0;
-      const gain = priorCov / (priorCov + obsNoise);
-      const posteriorMean = priorMean + gain * (obs - priorMean);
-      const posteriorCov = (1 - gain) * priorCov;
-      newMean.push(posteriorMean);
-      newCov.push(posteriorCov);
-      totalSurprise += Math.abs(obs - priorMean);
-    }
-    return { mean: newMean, covariance: newCov, lastUpdate: Date.now(), surprise: totalSurprise / 768 };
+  // Updates the user's "Ghost Profile" by averaging their brain vector with the new article
+  static updateAverageVector(currentAvg, newVector, previousInteractionCount) {
+    if (!currentAvg || currentAvg.length === 0) return newVector;
+    return currentAvg.map((val, i) => 
+      ((val * previousInteractionCount) + (newVector[i] || 0)) / (previousInteractionCount + 1)
+    );
   }
 }
 
-// -------------------------------------------------------------------------------------------------
-//  MODULE 2: TEMPORAL GRAVITY
-// -------------------------------------------------------------------------------------------------
+// =================================================================================================
+//  MODULE 2: TEMPORAL GRAVITY ENGINE (Physics)
+// =================================================================================================
 export class TemporalGravity {
-  static adaptiveCooling(initialTemperature, ageInHours, recentVelocity) {
-    const baseK = 0.1;
-    const k = baseK * Math.exp(-0.5 * Math.max(0, recentVelocity));
-    return (initialTemperature) * Math.exp(-k * ageInHours);
+  static newtonianCooling(initialTemperature, ageInHours, k = 0.1) {
+    const ambientTemperature = 0;
+    return ambientTemperature + (initialTemperature - ambientTemperature) * Math.exp(-k * ageInHours);
   }
-  static hackerNewsGravity(points, hoursSinceSubmit, gravity = 1.8, recentSpike = 0) {
-    const base = (points - 1) / Math.pow((hoursSinceSubmit + 2), gravity);
-    return base + (recentSpike * 0.2);
-  }
-  static circadianModifier(hour = new Date().getHours(), minute = new Date().getMinutes()) {
-    const peakHour = 20, amp = 0.2;
-    const circPhase = (hour - peakHour) * (Math.PI / 12);
-    const circ = 1 + amp * Math.cos(circPhase);
-    const ultraAmp = 0.05, ultraPhase = (minute / 90) * 2 * Math.PI;
-    const ultra = 1 + ultraAmp * Math.sin(ultraPhase);
-    return circ * ultra;
+
+  static hackerNewsGravity(points, hoursSinceSubmit, gravity = 1.8) {
+    return (points - 1) / Math.pow((hoursSinceSubmit + 2), gravity);
   }
 }
 
-// -------------------------------------------------------------------------------------------------
-//  MODULE 3: CONTENT IQ
-// -------------------------------------------------------------------------------------------------
+// =================================================================================================
+//  MODULE 3: CONTENT DEPTH & FAIRNESS METRICS
+// =================================================================================================
 export class ContentIQ {
-  static countSyllables(word) { return 1; }
-  static fleschKincaidGrade(text) { return 10; }
-  static smogGrade(text) { return 10; }
-  static calculateEntropy(text) { return 3; }
-  static sentimentScore(text) {
-    const positive = ['good', 'great', 'excellent', 'amazing', 'love', 'best', 'hope', 'inspire'];
-    const negative = ['bad', 'terrible', 'awful', 'hate', 'worst', 'poor', 'fear', 'crisis'];
-    const words = text.toLowerCase().split(/\W+/);
-    let score = 0;
-    for (const w of words) {
-      if (positive.includes(w)) score += 1;
-      if (negative.includes(w)) score -= 1;
-    }
-    return score / (words.length || 1);
+  static countSyllables(word) {
+    word = word.toLowerCase();
+    if (word.length <= 3) return 1;
+    word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '');
+    word = word.replace(/^y/, '');
+    const syllables = word.match(/[aeiouy]{1,2}/g);
+    return syllables ? syllables.length : 1;
   }
-  static keywordDiversity(text) { return 0.5; }
-  static noveltyScore(articleEmbedding, recentEmbeddings) {
-    if (!articleEmbedding || recentEmbeddings.length === 0) return 0.5;
-    let totalDist = 0;
-    for (const emb of recentEmbeddings) {
-      totalDist += (1 - NeuralEngine.cosineSimilarity(articleEmbedding, emb));
-    }
-    return totalDist / recentEmbeddings.length;
+
+  static calculateGradeLevel(text) {
+    if (!text) return 0;
+    const sentences = text.split(/[.!?]+/).length || 1;
+    const words = text.split(/\s+/).filter(w => w.length > 0);
+    const wordCount = words.length || 1;
+    let syllableCount = 0;
+    for (const w of words) syllableCount += this.countSyllables(w);
+    const score = (0.39 * (wordCount / sentences)) + (11.8 * (syllableCount / wordCount)) - 15.59;
+    return Math.max(0, Math.min(score, 20)); 
   }
-  static calculateFairReadingTime(htmlContent) { return 5; }
+
+  static calculateEntropy(text) {
+    if (!text) return 0;
+    const len = text.length;
+    const frequencies = {};
+    for (let i = 0; i < len; i++) {
+      const char = text.charAt(i);
+      frequencies[char] = (frequencies[char] || 0) + 1;
+    }
+    let entropy = 0;
+    for (const count of Object.values(frequencies)) {
+      const p = count / len;
+      entropy -= p * Math.log2(p);
+    }
+    return entropy;
+  }
 }
 
-// -------------------------------------------------------------------------------------------------
-//  MODULE 4: HYBRID SCORER
-// -------------------------------------------------------------------------------------------------
+export function calculateFairReadingTime(htmlContent) {
+  if (!htmlContent) return 60;
+  const text = htmlContent.replace(/&[a-z0-9#]+;/gi, ' ').replace(/<[^>]*>?/gm, ' ');
+  const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
+  let expectedSeconds = (wordCount / 200) * 60;
+  const imageCount = (htmlContent.match(/<img[^>]+>/g) || []).length;
+  expectedSeconds += (imageCount * 10);
+  const videoCount = (htmlContent.match(/<iframe[^>]+>|<video[^>]+>/g) || []).length;
+  expectedSeconds += (videoCount * 180);
+  return Math.max(60, expectedSeconds); 
+}
+
+// =================================================================================================
+//  MODULE 4: THE HYBRID SCORER (AI + Physics)
+// =================================================================================================
 export class RecommendationEngine {
-  constructor(articles, userProfile = null) {
+  constructor(articles) {
     this.articles = articles || [];
-    this.userProfile = userProfile;
-    this.weights = { ...SCORING_WEIGHTS };
-    this.averageRelevance = 0;
-    this.nUpdates = 0;
   }
 
-  _hash(str) { 
+  // Simple hash function for asymmetric adjustment
+  _hash(str) {
     let hash = 0;
-    for (let i = 0; i < str.length; i++) { hash = ((hash << 5) - hash) + str.charCodeAt(i); hash |= 0; }
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) - hash) + str.charCodeAt(i);
+      hash |= 0; // Convert to 32-bit integer
+    }
     return Math.abs(hash);
-  }
-
-  _metaLearningRate(baseRate = 0.01) {
-    if (!this.userProfile) return baseRate;
-    return baseRate * (1 + 2 * (this.userProfile.surprise || 0));
-  }
-
-  _homeostaticScale() {
-    const total = Object.values(this.weights).reduce((s, v) => s + v, 0);
-    const target = SCORING_WEIGHTS.VIEW + SCORING_WEIGHTS.READ + SCORING_WEIGHTS.SHARE + SCORING_WEIGHTS.TIER_1_CONTENT_MATCH + SCORING_WEIGHTS.TIER_2_SESSION_HABIT + SCORING_WEIGHTS.TIER_3_WORLDWIDE_VOTE + SCORING_WEIGHTS.NOVELTY_BONUS + SCORING_WEIGHTS.DIVERSITY_PENALTY + SCORING_WEIGHTS.CIRCADIAN_BOOST + SCORING_WEIGHTS.PREDICTION_ERROR + SCORING_WEIGHTS.EMOTIONAL_ALIGNMENT + SCORING_WEIGHTS.HOMEOSTATIC_BASELINE;
-    const factor = target / total;
-    for (const k in this.weights) this.weights[k] *= factor;
-  }
-
-  updateWeights(interactionFeatures, reward, predictedRelevance) {
-    const lr = this._metaLearningRate(), delta = reward - predictedRelevance;
-    for (const [feature, value] of Object.entries(interactionFeatures)) {
-      if (this.weights.hasOwnProperty(feature)) {
-        this.weights[feature] += lr * delta * value;
-        this.weights[feature] = Math.max(0, this.weights[feature]);
-      }
-    }
-    this._homeostaticScale();
-  }
-
-  _computeRelevance(article, vectorizeMatches, userContext = {}) {
-    let relevance = 0;
-    const aiMatch = vectorizeMatches ? vectorizeMatches.find(v => v.id === article.slug) : null;
-    if (aiMatch) {
-      relevance += aiMatch.score * (this.weights.TIER_1_CONTENT_MATCH + this.weights.TIER_2_SESSION_HABIT);
-    } else if (userContext.recentTags && article.tags) {
-      const common = (article.tags || []).filter(t => userContext.recentTags.includes(t)).length;
-      const max = Math.max(article.tags.length, userContext.recentTags.length, 1);
-      relevance += (common / max) * (this.weights.TIER_1_CONTENT_MATCH + this.weights.TIER_2_SESSION_HABIT) * 0.5;
-    }
-    if (article.engagement_score) {
-      const hoursOld = Math.max(0, (Date.now() - new Date(article.published_at || Date.now())) / 3600000);
-      const recentVelocity = article.trending_velocity || 0;
-      const gravityScore = TemporalGravity.hackerNewsGravity(article.engagement_score, hoursOld, 1.8, recentVelocity);
-      const normalizedGravity = Math.min(1, Math.log10(gravityScore + 1) / 2);
-      const circadian = TemporalGravity.circadianModifier(userContext.hour, userContext.minute);
-      relevance += normalizedGravity * this.weights.TIER_3_WORLDWIDE_VOTE * circadian;
-    }
-    if (userContext.recentEmbeddings && article.embedding) {
-      const novelty = ContentIQ.noveltyScore(article.embedding, userContext.recentEmbeddings);
-      relevance += novelty * this.weights.NOVELTY_BONUS;
-    }
-    if (this.userProfile && article.embedding) {
-      let surprise = 0;
-      for (let i = 0; i < 768; i++) surprise += Math.abs((article.embedding[i] || 0) - this.userProfile.mean[i]);
-      surprise /= 768;
-      relevance += Math.min(1, surprise) * this.weights.PREDICTION_ERROR;
-    }
-    if (userContext.recentSentiment !== undefined && article.sentiment !== undefined) {
-      const alignment = 1 - Math.abs(userContext.recentSentiment - article.sentiment);
-      relevance += alignment * this.weights.EMOTIONAL_ALIGNMENT;
-    }
-    if (article.iq_score) relevance += (article.iq_score / 20) * 2;
-    relevance += this.weights.HOMEOSTATIC_BASELINE * 0.1;
-    return relevance;
-  }
-
-  getHybridRecommendations(vectorizeMatches, limit = 6, currentSlug = null, userContext = {}, lambdaBase = 0.3) {
-    const candidates = this.articles
-      .filter(article => !currentSlug || article.slug !== currentSlug)
-      .map(article => ({ ...article, _relevance: this._computeRelevance(article, vectorizeMatches || [], userContext) }))
-      .filter(c => c._relevance > 0);
-
-    // Safe fallback so we never return "No recommendations available"
-    if (candidates.length === 0) return this.articles.filter(a => a.slug !== currentSlug).slice(0, limit).map(a => ({ ...a, _relevance: 1 }));
-
-    candidates.sort((a, b) => b._relevance - a._relevance);
-    let lambda = lambdaBase;
-    if (this.userProfile && this.userProfile.surprise > 0.3) lambda = Math.max(0.1, lambdaBase - 0.2);
-
-    const selected = [], remaining = [...candidates];
-    while (selected.length < limit && remaining.length > 0) {
-      let bestIdx = 0, bestScore = -Infinity;
-      for (let i = 0; i < remaining.length; i++) {
-        const candidate = remaining[i];
-        let score = candidate._relevance;
-        if (selected.length > 0) {
-          let maxSim = 0;
-          for (const sel of selected) {
-            if (candidate.embedding && sel.embedding) {
-              const sim = NeuralEngine.cosineSimilarity(candidate.embedding, sel.embedding);
-              if (sim > maxSim) maxSim = sim;
-            } else {
-              const commonTags = (candidate.tags || []).filter(t => (sel.tags || []).includes(t)).length;
-              const totalTags = Math.max((candidate.tags || []).length, (sel.tags || []).length, 1);
-              maxSim = Math.max(maxSim, commonTags / totalTags);
-            }
-          }
-          score = lambda * candidate._relevance - (1 - lambda) * maxSim;
-        }
-        if (score > bestScore) { bestScore = score; bestIdx = i; }
-      }
-      selected.push(remaining[bestIdx]);
-      remaining.splice(bestIdx, 1);
-    }
-    for (let i = 0; i < selected.length; i++) {
-      if (currentSlug) selected[i]._relevance += (this._hash(currentSlug + ':' + selected[i].slug) % 100) / 100000;
-    }
-    return selected.slice(0, limit);
   }
 
   _calculateTrendingScore(article) {
     const sampleText = (article.title || '') + '. ' + (article.subtitle || '') + '. ' + (article.seo_description || '');
-    const gradeLevel = article.iq_score || ContentIQ.fleschKincaidGrade(sampleText) || 10;
+    const gradeLevel = article.iq_score || ContentIQ.calculateGradeLevel(sampleText) || 10;
     const entropy = article.entropy_score || ContentIQ.calculateEntropy(sampleText) || 3;
-    let iqScore = Math.min(50, (gradeLevel * 1.5) + (entropy * 5));
+    let iqScore = Math.min(50, (gradeLevel * 1.5) + (entropy * 5)); 
 
     let heatScore = 0;
     const pubDate = new Date(article.published_at || Date.now());
     const hoursOld = Math.max(0, (Date.now() - pubDate) / 3600000);
-    const recentVelocity = article.trending_velocity || 0;
 
     if (article.engagement_score) {
-      heatScore = TemporalGravity.adaptiveCooling(article.engagement_score, hoursOld, recentVelocity);
-      heatScore += (recentVelocity * 25);
+       heatScore = TemporalGravity.newtonianCooling(article.engagement_score, hoursOld, 0.05);
+       if (article.trending_velocity) {
+          heatScore += (article.trending_velocity * 25); 
+       }
     }
-    let freshnessScore = hoursOld < 72 ? (72 - hoursOld) * 0.5 : 0;
-    return (heatScore + iqScore + freshnessScore) * TemporalGravity.circadianModifier();
+
+    let freshnessScore = 0;
+    if (hoursOld < 72) freshnessScore = (72 - hoursOld) * 0.5; 
+
+    return heatScore + iqScore + freshnessScore;
   }
 
   getTrending(limit = 20) {
-    if (!this.articles || this.articles.length === 0) return [];
     return this.articles
       .map(article => ({ ...article, _trendingScore: this._calculateTrendingScore(article) }))
       .sort((a, b) => b._trendingScore - a._trendingScore)
       .slice(0, limit);
   }
+
+  // Updated to accept currentSlug and break recommendation loops
+  getHybridRecommendations(vectorizeMatches, limit = 6, currentSlug = null) {
+    // Maximum possible relevance for scaling the asymmetric adjustment
+    const maxWeight = SCORING_WEIGHTS.TIER_1_CONTENT_MATCH +
+                      SCORING_WEIGHTS.TIER_2_SESSION_HABIT +
+                      SCORING_WEIGHTS.TIER_3_WORLDWIDE_VOTE; // = 100
+
+    return this.articles
+      .map(article => {
+        // Skip the article the user is currently reading
+        if (currentSlug && article.slug === currentSlug) return null;
+
+        let relevance = 0;
+        
+        // TIER 1 & 2: Neural Semantic Match (From Cloudflare Vectorize)
+        // Vectorize returns scores between 0 and 1. We multiply by our weights.
+        const aiMatch = vectorizeMatches.find(v => v.id === article.slug);
+        if (aiMatch) {
+           relevance += (aiMatch.score * (SCORING_WEIGHTS.TIER_1_CONTENT_MATCH + SCORING_WEIGHTS.TIER_2_SESSION_HABIT));
+        }
+
+        // TIER 3: Worldwide Vote & Gravity (From D1)
+        if (article.engagement_score) {
+          const hoursOld = Math.max(0, (Date.now() - new Date(article.published_at || Date.now())) / 3600000);
+          const gravityScore = TemporalGravity.hackerNewsGravity(article.engagement_score, hoursOld, 1.8);
+          const normalizedGravity = Math.min(1, Math.log10(gravityScore + 1) / 2);
+          relevance += (normalizedGravity * SCORING_WEIGHTS.TIER_3_WORLDWIDE_VOTE); 
+        }
+
+        // Asymmetric adjustment (only if we have a current slug)
+        if (currentSlug) {
+          const combined = currentSlug + ':' + article.slug; // direction matters
+          const adjustment = (this._hash(combined) % 100) / 10000 * maxWeight; // ≤ 1% of total weight
+          relevance += adjustment;
+        }
+
+        return { ...article, _relevance: relevance };
+      })
+      .filter(article => article !== null) // Remove skipped current article
+      .sort((a, b) => b._relevance - a._relevance)
+      .slice(0, limit);
+  }
 }
 
-// -------------------------------------------------------------------------------------------------
-//  MODULE 5: DATA FETCHING – SAFE AND COMPATIBLE WITH ANY D1 SCHEMA
-// -------------------------------------------------------------------------------------------------
 export async function fetchCandidates(env, limit = 100, searchQuery = null) {
   let results = [];
-  try {
-    if (searchQuery) {
-      const q = searchQuery.trim();
-      const wildcard = `%${q.replace(/%/g, '\\%').replace(/_/g, '\\_')}%`;
-      const sql = `SELECT * FROM articles WHERE (title LIKE ? ESCAPE '\\' OR subtitle LIKE ? ESCAPE '\\' OR seo_description LIKE ? ESCAPE '\\') ORDER BY published_at DESC LIMIT ?`;
-      const { results: raw } = await env.DB.prepare(sql).bind(wildcard, wildcard, wildcard, limit).all();
-      results = raw;
-    } else {
-      // Safely try to order by engagement_score if it exists, otherwise fallback to published_at to prevent query errors.
-      try {
-        const sql = `SELECT * FROM articles ORDER BY engagement_score DESC, published_at DESC LIMIT ?`;
-        const { results: raw } = await env.DB.prepare(sql).bind(limit).all();
-        results = raw;
-      } catch (err) {
-        // Fallback for strict schemas lacking engagement_score
-        const fallbackSql = `SELECT * FROM articles ORDER BY published_at DESC LIMIT ?`;
-        const { results: raw } = await env.DB.prepare(fallbackSql).bind(limit).all();
-        results = raw;
-      }
-    }
-  } catch (globalErr) {
-    console.error("Database fetch error:", globalErr);
-    return []; // Fail gracefully
-  }
+  const selectClause = `
+    SELECT a.slug, a.title, a.subtitle, a.author, a.published_at, a.read_time_minutes, a.image_url, a.tags, a.seo_description,
+           a.content_html,   -- Added to include full article content
+           COALESCE(a.engagement_score, 0) as engagement_score,
+           COALESCE(a.avg_time_spent, 0) as avg_time_spent,
+           COALESCE(a.total_views, 0) as _raw_views,
+           COALESCE(a.trending_velocity, 0) as trending_velocity
+    FROM articles a
+  `;
 
-  for (const row of results) {
-    // Safely map values in case columns don't exist in the database
-    row.engagement_score = row.engagement_score || 0;
-    row.avg_time_spent = row.avg_time_spent || 0;
-    row._raw_views = row.total_views || 0;
-    row.trending_velocity = row.trending_velocity || 0;
-
-    if (row.tags && typeof row.tags === 'string') {
-      try { row.tags = JSON.parse(row.tags); } 
-      catch { row.tags = row.tags.split(',').map(t => t.trim()); }
-    } else {
-      row.tags = [];
-    }
-
-    if (row.embedding_cache && typeof row.embedding_cache === 'string') {
-      try { row.embedding = JSON.parse(row.embedding_cache); } 
-      catch { row.embedding = null; }
-    } else {
-      row.embedding = null;
-    }
-
-    if (row.sentiment_score === undefined || row.sentiment_score === null) {
-      const sampleText = (row.title || '') + '. ' + (row.subtitle || '') + '. ' + (row.seo_description || '');
-      row.sentiment = ContentIQ.sentimentScore(sampleText);
-    } else {
-      row.sentiment = row.sentiment_score;
-    }
+  if (searchQuery) {
+    const q = searchQuery.trim();
+    const wildcard = `%${q.replace(/%/g, '\\%').replace(/_/g, '\\_')}%`;
+    const sql = `${selectClause} WHERE (a.title LIKE ? ESCAPE '\\' OR a.subtitle LIKE ? ESCAPE '\\' OR a.seo_description LIKE ? ESCAPE '\\') ORDER BY a.published_at DESC LIMIT ?`;
+    const { results: raw } = await env.DB.prepare(sql).bind(wildcard, wildcard, wildcard, limit).all();
+    results = raw;
+  } else {
+    const sql = `${selectClause} ORDER BY a.engagement_score DESC, a.published_at DESC LIMIT 500`;
+    const { results: raw } = await env.DB.prepare(sql).bind().all();
+    results = raw;
   }
   return results;
 }
