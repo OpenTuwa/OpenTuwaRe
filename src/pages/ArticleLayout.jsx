@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import Footer from '../components/Footer';
@@ -29,6 +29,23 @@ export default function ArticleLayout() {
 
   const [email, setEmail] = useState('');
   const [subStatus, setSubStatus] = useState({ loading: false, message: '', type: '' });
+
+  // Refs for video auto‑navigation
+  const recommendedRef = useRef(recommended);
+  const videoListenersRef = useRef([]); // store [video, handler] for cleanup
+
+  // Keep recommendedRef in sync
+  useEffect(() => {
+    recommendedRef.current = recommended;
+  }, [recommended]);
+
+  // Handler for video end → navigate to first recommended article
+  const handleVideoEnd = useCallback(() => {
+    const currentRecommended = recommendedRef.current;
+    if (currentRecommended.length > 0) {
+      navigate(`/articles/${currentRecommended[0].slug}`);
+    }
+  }, [navigate]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -141,6 +158,34 @@ export default function ArticleLayout() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [article]);
 
+  // Attach ended listeners to HTML5 videos
+  useEffect(() => {
+    if (!article || !article.content_html) return;
+
+    const container = document.querySelector('.prose'); // the article content container
+    if (!container) return;
+
+    // Clear previous listeners
+    videoListenersRef.current.forEach(([video, handler]) => {
+      video.removeEventListener('ended', handler);
+    });
+    videoListenersRef.current = [];
+
+    const videos = container.querySelectorAll('video');
+    videos.forEach(video => {
+      video.addEventListener('ended', handleVideoEnd);
+      videoListenersRef.current.push([video, handleVideoEnd]);
+    });
+
+    // Cleanup on unmount or when article changes
+    return () => {
+      videoListenersRef.current.forEach(([video, handler]) => {
+        video.removeEventListener('ended', handler);
+      });
+      videoListenersRef.current = [];
+    };
+  }, [article, handleVideoEnd]);
+
   useEffect(() => {
     if (!article || !article.content_html) return;
 
@@ -220,6 +265,13 @@ export default function ArticleLayout() {
                   setInterval(() => {
                     if (event.target.getPlayerState() === window.YT.PlayerState.PLAYING) p.render(event.target.getCurrentTime());
                   }, 100);
+
+                  // Listen for video end to auto‑navigate
+                  event.target.addEventListener('onStateChange', (state) => {
+                    if (state.data === window.YT.PlayerState.ENDED) {
+                      handleVideoEnd();
+                    }
+                  });
                 }
               }
             });
@@ -239,7 +291,7 @@ export default function ArticleLayout() {
     };
 
     setTimeout(initHybridSubtitles, 500);
-  }, [article]);
+  }, [article, handleVideoEnd]);
 
   const handleSearch = (e) => {
     if (e.key === 'Enter' && searchQuery.trim()) navigate(`/?q=${encodeURIComponent(searchQuery.trim())}`);

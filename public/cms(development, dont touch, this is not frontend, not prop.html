@@ -375,13 +375,14 @@
             else if (type === 'youtube_vtt') {
                 const vidId = prompt("YouTube Video ID:"); if (!vidId) return;
                 const vttUrl = prompt("VTT URL path (optional):", ""); const uniqueId = 'media-' + generateMediaId();
-                tpl = `\n<iframe id="${uniqueId}" src="https://www.youtube.com/embed/${vidId}?enablejsapi=1" style="width: 100%; aspect-ratio: 16 / 9;" frameborder="0" allowfullscreen></iframe>\n`;
+                tpl = `\n<iframe id="${uniqueId}" src="https://www.youtube.com/embed/${vidId}?enablejsapi=1&autoplay=1" style="width: 100%; aspect-ratio: 16 / 9;" frameborder="0"   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+  referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>\n`;
                 if (vttUrl) tpl += `<div class="tuwa-subtitle-box" data-video="${uniqueId}" data-vtt="${vttUrl}"></div>\n`;
             }
             else if (type === 'video_vtt') {
                 const mp4Url = prompt("MP4 URL:"); if (!mp4Url) return;
                 const vttUrl = prompt("VTT URL path (optional):", ""); const uniqueId = 'media-' + generateMediaId();
-                tpl = `\n<video id="${uniqueId}" controls style="width:100%;">\n  <source src="${mp4Url}" type="video/mp4">\n</video>\n`;
+                tpl = `\n<video id="${uniqueId}" controls autoplay playsinline style="width:100%;">\n  <source src="${mp4Url}" type="video/mp4">\n</video>\n`;
                 if (vttUrl) tpl += `<div class="tuwa-subtitle-box" data-video="${uniqueId}" data-vtt="${vttUrl}"></div>\n`;
             }
 
