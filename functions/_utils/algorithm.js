@@ -122,7 +122,6 @@ export class RecommendationEngine {
     return Math.abs(hash);
   }
 
-  // Restored: Standard temporal gravity feed for Home & Archive endpoints
   getTrending(limit = 100) {
     return this.articles
       .map(article => {
@@ -131,7 +130,6 @@ export class RecommendationEngine {
           const hoursOld = Math.max(0, (Date.now() - new Date(article.published_at || Date.now())) / 3600000);
           score = TemporalGravity.hackerNewsGravity(article.engagement_score, hoursOld, 1.8);
         }
-        // Fallback to strict chronology if no engagement exists yet
         const chronScore = new Date(article.published_at || Date.now()).getTime() / 10000000000;
         return { ...article, _trending_score: score + chronScore };
       })
@@ -182,10 +180,21 @@ export class RecommendationEngine {
   }
 
   getHybridVideoRecommendations(textMatches, visualMatches, limit = 6, currentSlug = null) {
-    // Uses the exact same algorithm set, but strictly filters for video-containing articles
-    return this.getHybridRecommendations(textMatches, visualMatches, limit * 3, currentSlug)
-      .filter(article => article.content_html && (article.content_html.includes('<video') || article.content_html.includes('iframe')))
-      .slice(0, limit);
+    // 1. Fetch a deeper pool using your standard, high-quality logic
+    const deepPool = this.getHybridRecommendations(textMatches, visualMatches, limit * 4, currentSlug);
+
+    // 2. Separate into video and non-video articles
+    const videoArticles = deepPool.filter(article => 
+      article.content_html && (article.content_html.includes('<video') || article.content_html.includes('iframe'))
+    );
+    const textArticles = deepPool.filter(article => 
+      !(article.content_html && (article.content_html.includes('<video') || article.content_html.includes('iframe')))
+    );
+
+    // 3. Blend them: Prioritize videos for the auto-play feed, but pad with the best text articles.
+    // This fixes the "only 3 showing" issue AND ensures the loop breaks naturally
+    // by stopping at an article which contains no video once the video pool is exhausted.
+    return [...videoArticles, ...textArticles].slice(0, limit);
   }
 }
 
