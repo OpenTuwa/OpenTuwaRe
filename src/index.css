@@ -46,11 +46,10 @@
     font-family: 'Inter', sans-serif !important;
   }
 
-  /* Force headers to remain white even if extensions inject spans/fonts */
+/* Force headers to remain white even if extensions inject spans/fonts, excluding SVGs */
   .tuwa-upgrade h1,
-  .tuwa-upgrade h1 *,
+  .tuwa-upgrade h1 *:not(svg):not(path):not(circle),
   .tuwa-upgrade .prose h1 {
     color: #ffffff !important;
-    fill: #ffffff !important;
   }
 }
