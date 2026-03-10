@@ -62,16 +62,9 @@ export async function onRequestGet(context) {
     const finalFeed = recommendations.slice(0, 6);
 
     return new Response(JSON.stringify(finalFeed), { headers: { "Content-Type": "application/json" } });
-    
-    // The feed is now a blend of logical interest and raw visual stimuli
-    const recommendations = engine.getHybridRecommendations(aiTextMatches, aiVisualMatches, 12, currentSlug);
-
-    const finalFeed = recommendations.slice(0, 6);
-
-    return new Response(JSON.stringify(finalFeed), { headers: { "Content-Type": "application/json" } });
 
   } catch (err) {
     console.error("Recs API Error:", err);
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: "Internal Server Error" }), { status: 500 });
   }
 }
