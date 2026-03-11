@@ -78,7 +78,11 @@ export async function onRequestGet(context) {
         ? engine.getHybridVideoRecommendations(aiTextMatches, aiVisualMatches, 12, currentSlug)
         : engine.getHybridRecommendations(aiTextMatches, aiVisualMatches, 12, currentSlug);
 
-    const finalFeed = recommendations.slice(0, 6);
+    // Strip heavy vector arrays to save bandwidth before sending to frontend
+    const finalFeed = recommendations.slice(0, 6).map(article => {
+        const { neural_vector, visual_vector, ...cleanArticle } = article;
+        return cleanArticle;
+    });
 
     return new Response(JSON.stringify(finalFeed), { headers: { "Content-Type": "application/json" } });
 

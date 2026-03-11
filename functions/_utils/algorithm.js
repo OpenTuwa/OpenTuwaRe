@@ -32,8 +32,9 @@ export class NeuralEngine {
   static async getVisualEmbedding(env, imageArrayBuffer) {
     if (!imageArrayBuffer) return null; // FIX: Return null instead of zeros
     try {
-      const response = await env.AI.run('@cf/meta/llama-3.2-11b-vision-instruct', { image: [...new Uint8Array(imageArrayBuffer)] });
-      return response.data[0];
+      const response = await env.AI.run('@cf/openai/clip-vit-base-patch32', { image: [...new Uint8Array(imageArrayBuffer)] });
+      // Safely extract the vector array whether it's nested (e.g. data[0]) or flat
+      return Array.isArray(response.data[0]) ? response.data[0] : response.data;
     } catch (e) {
       console.error("[AI ERROR] Visual Embedding failed:", e.message);
       return null; // FIX: Explicit failure
