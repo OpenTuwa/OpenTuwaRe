@@ -182,10 +182,29 @@ export default function ArticleLayout() {
         const vttUrl = box.dataset.vtt;
         const mediaEl = document.getElementById(mediaId);
         
-        if (!mediaEl || !vttUrl) continue;
+// --- ADD THESE DEBUG LOGS ---
+  console.log("Found subtitle box!", { 
+      mediaId, 
+      vttUrl, 
+      foundMediaElementInDOM: !!mediaEl 
+  });
 
-        try {
-          const response = await fetch(vttUrl);
+  if (!mediaId) {
+      console.warn("Skipping: No data-video or data-youtube attribute found.");
+      continue;
+  }
+  if (!vttUrl) {
+      console.warn("Skipping: No data-vtt attribute found.");
+      continue;
+  }
+  if (!mediaEl) {
+      console.warn(`Skipping: Could not find a <video> or <iframe> with id="${mediaId}" in the DOM.`);
+      continue;
+  }
+  // ----------------------------
+
+  try {
+    const response = await fetch(vttUrl);
           if (!response.ok) throw new Error(`VTT missing`);
           const vttText = await response.text();
           
