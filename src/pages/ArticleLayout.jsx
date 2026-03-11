@@ -516,7 +516,7 @@ export default function ArticleLayout() {
 
         <article className="max-w-[720px] mx-auto px-6 py-20 prose prose-invert prose-xl text-tuwa-text" dangerouslySetInnerHTML={{ __html: article.content_html || '<p>No content available.</p>' }} />
 
-        <aside className={`fixed right-4 top-28 w-56 hidden lg:block transition-all duration-500 ${showSidebar ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 pointer-events-none'}`}>
+        <aside className={`fixed right-4 top-28 w-64 hidden lg:block transition-all duration-500 ${showSidebar ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 pointer-events-none'}`}>
           <div className="bg-[rgba(10,10,11,0.75)] border border-white/[0.06] rounded-2xl p-3 backdrop-blur-xl shadow-[0_0_40px_rgba(0,0,0,0.6)]">
             <div className="flex items-center gap-1.5 mb-3 px-1">
               <span className="w-1.5 h-1.5 rounded-full bg-tuwa-accent animate-pulse"></span>
@@ -527,14 +527,21 @@ export default function ArticleLayout() {
                 <a
                   key={a.slug}
                   href={`/articles/${a.slug}?`}
-                  className="group flex items-start gap-2.5 px-2 py-2 rounded-xl hover:bg-white/[0.05] transition-all duration-200"
+                  className="group flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-white/[0.05] transition-all duration-200"
                 >
-                  <span className={`text-[11px] font-black mt-0.5 w-4 shrink-0 tabular-nums ${
+                  <span className={`text-[11px] font-black w-4 shrink-0 tabular-nums ${
                     idx === 0 ? 'text-tuwa-gold' :
                     idx === 1 ? 'text-tuwa-muted/80' :
                     idx === 2 ? 'text-amber-700/80' :
                     'text-tuwa-muted/40'
                   }`}>{idx + 1}</span>
+                  <div className="w-14 h-10 rounded-lg overflow-hidden shrink-0">
+                    <SkeletonImage
+                      src={a.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=200&auto=format&fit=crop'}
+                      alt={a.title}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300 opacity-80 group-hover:opacity-100"
+                    />
+                  </div>
                   <div className="min-w-0">
                     <div className="text-[11px] font-semibold text-white/70 group-hover:text-white leading-snug line-clamp-2 transition-colors duration-200">{a.title}</div>
                     <div className="text-[10px] text-tuwa-muted/50 mt-0.5 group-hover:text-tuwa-muted/80 transition-colors duration-200">{a.read_time_minutes || 5} min</div>
