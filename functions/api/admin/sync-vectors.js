@@ -16,7 +16,7 @@ export async function onRequestGet(context) {
       SELECT slug, title, seo_description, content_html, image_url, neural_vector, visual_vector 
       FROM articles 
       WHERE neural_vector IS NULL OR visual_vector IS NULL 
-      LIMIT 3
+      LIMIT 100
     `).all();
 
     if (!results || results.length === 0) {
