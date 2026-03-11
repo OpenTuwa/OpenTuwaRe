@@ -22,6 +22,7 @@ export default function ArticleLayout() {
   const [readingProgress, setReadingProgress] = useState(0);
   const [headerScrolled, setHeaderScrolled] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [inRecZone, setInRecZone] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const [authorRole, setAuthorRole] = useState(null);
@@ -138,7 +139,10 @@ export default function ArticleLayout() {
     const el = recommendedSectionRef.current;
     if (!el) return;
     const observer = new IntersectionObserver(
-      ([entry]) => { inRecommendedZone.current = entry.isIntersecting; },
+      ([entry]) => {
+        inRecommendedZone.current = entry.isIntersecting;
+        setInRecZone(entry.isIntersecting);
+      },
       { threshold: 0.05 }
     );
     observer.observe(el);
@@ -533,10 +537,10 @@ export default function ArticleLayout() {
 
         <article className="max-w-[720px] mx-auto px-6 py-20 prose prose-invert prose-xl text-tuwa-text" dangerouslySetInnerHTML={{ __html: article.content_html || '<p>No content available.</p>' }} />
 
+        {!inRecZone && (
         <aside className={`fixed right-4 top-28 w-64 hidden lg:block transition-all duration-500 ${showSidebar ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 pointer-events-none'}`}>
           <div className="bg-[rgba(10,10,11,0.75)] border border-white/[0.06] rounded-2xl p-3 backdrop-blur-xl shadow-[0_0_40px_rgba(0,0,0,0.6)]">
-            <div className="flex items-center gap-1.5 mb-3 px-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-tuwa-accent animate-pulse"></span>
+            <div className="mb-3 px-1">
               <span className="text-[10px] tracking-widest font-bold uppercase text-tuwa-muted/70">Trending Now</span>
             </div>
             <div className="space-y-0.5">
@@ -568,6 +572,7 @@ export default function ArticleLayout() {
             </div>
           </div>
         </aside>
+        )}
 
         <RevealSection>
           <section ref={recommendedSectionRef} className="max-w-6xl mx-auto px-6 pb-20">
