@@ -198,8 +198,6 @@ export default function ArticleLayout() {
       };
 
       // ─── VTT time parser ───────────────────────────────────────────────────
-      // Strips trailing cue-setting tokens (align:start position:0% etc.)
-      // before splitting on ':' so position metadata never corrupts the result.
       const parseVttTime = (timeStr) => {
         const clean = timeStr.trim().split(/\s+/)[0].replace(',', '.');
         const parts = clean.split(':');
@@ -211,13 +209,20 @@ export default function ArticleLayout() {
       for (const box of subtitleBoxes) {
         const mediaId = box.dataset.video || box.dataset.youtube;
         const vttUrl  = box.dataset.vtt;
-        const mediaEl = document.getElementById(mediaId);
+        
+        // Robust element lookup: fallback to data-video, name, or just grab the only media on the page
+        let mediaEl = document.getElementById(mediaId);
+        if (!mediaEl) mediaEl = document.querySelector(`[data-video="${mediaId}"], [name="${mediaId}"]`);
+        if (!mediaEl) {
+           const allMedia = document.querySelectorAll('video, audio, iframe');
+           if (allMedia.length === 1) mediaEl = allMedia[0];
+        }
 
         console.log('[SubEngine] subtitle box found', { mediaId, vttUrl, mediaElFound: !!mediaEl });
 
         if (!mediaId) { console.warn('[SubEngine] Skipping: missing data-video / data-youtube'); continue; }
         if (!vttUrl)  { console.warn('[SubEngine] Skipping: missing data-vtt');                   continue; }
-        if (!mediaEl) { console.warn(`[SubEngine] Skipping: no DOM element with id="${mediaId}"`); continue; }
+        if (!mediaEl) { console.warn(`[SubEngine] Skipping: no DOM element found for "${mediaId}"`); continue; }
 
         try {
           const response = await fetch(vttUrl);
@@ -232,28 +237,30 @@ export default function ArticleLayout() {
           for (let line of lines) {
             line = line.trim();
 
-            // Skip header / metadata lines
-            if (!line
-              || line.startsWith('WEBVTT')
-              || line.startsWith('Kind:')
-              || line.startsWith('Language:')
-              || line.startsWith('NOTE')) continue;
+            // End of a cue block
+            if (!line) {
+              if (currentCue && currentCue.textLines.length > 0) {
+                cues.push({ start: currentCue.start, end: currentCue.end, text: currentCue.textLines.join('<br>') });
+              }
+              currentCue = null; // Reset for the next cue
+              continue;
+            }
+
+            if (line.startsWith('WEBVTT') || line.startsWith('Kind:') || line.startsWith('Language:') || line.startsWith('NOTE')) continue;
 
             if (line.includes('-->')) {
-              // Flush previous cue if it has text
+              // Flush previous cue if malformed VTT didn't separate them with an empty line
               if (currentCue && currentCue.textLines.length > 0) {
                 cues.push({ start: currentCue.start, end: currentCue.end, text: currentCue.textLines.join('<br>') });
               }
               const times = line.split('-->');
               currentCue = { start: parseVttTime(times[0]), end: parseVttTime(times[1]), textLines: [] };
             } else if (currentCue) {
-              // Cue text line
               currentCue.textLines.push(line);
             }
-            // Lines with no currentCue (cue identifiers like "1", "2") are
-            // safely ignored by the else branch above.
           }
-          // Flush the last cue
+          
+          // Flush the very last cue
           if (currentCue && currentCue.textLines.length > 0) {
             cues.push({ start: currentCue.start, end: currentCue.end, text: currentCue.textLines.join('<br>') });
           }
@@ -265,8 +272,10 @@ export default function ArticleLayout() {
             box.innerHTML = activeCue ? `<span class="active-text">${activeCue.text}</span>` : '';
           };
 
-          // ─── Native <video> ──────────────────────────────────────────────────
-          if (mediaEl.tagName.toLowerCase() === 'video') {
+          const tag = mediaEl.tagName.toLowerCase();
+
+          // ─── Native <video> and <audio> ──────────────────────────────────────
+          if (tag === 'video' || tag === 'audio') {
             updateSubtitle(mediaEl.currentTime || 0);
 
             const onTimeUpdate = () => updateSubtitle(mediaEl.currentTime);
@@ -283,13 +292,14 @@ export default function ArticleLayout() {
             });
 
           // ─── YouTube <iframe> ────────────────────────────────────────────────
-          } else if (mediaEl.tagName.toLowerCase() === 'iframe') {
+          } else if (tag === 'iframe') {
             needsYouTubeAPI = true;
-            ytPlayersQueue.push({ id: mediaId, render: updateSubtitle, onEnd: handleVideoEnd });
+            // Ensure the iframe has the actual ID so window.YT can bind correctly
+            if (!mediaEl.id) mediaEl.id = mediaId; 
+            ytPlayersQueue.push({ id: mediaEl.id, render: updateSubtitle, onEnd: handleVideoEnd });
           }
 
         } catch (error) {
-          // Log clearly but don't hide the box — leave it empty rather than gone
           console.error('[SubEngine] Error initialising subtitles:', error);
         }
       }
@@ -307,11 +317,9 @@ export default function ArticleLayout() {
                         p.render(event.target.getCurrentTime());
                       }
                     } catch (e) {
-                      // Player was destroyed (e.g. navigation); stop polling
                       clearInterval(interval);
                     }
                   }, 100);
-                  // Register interval for cleanup on unmount
                   cleanupFns.push(() => clearInterval(interval));
                 },
                 onStateChange: (event) => {
@@ -325,17 +333,14 @@ export default function ArticleLayout() {
         };
 
         if (window.YT && window.YT.Player) {
-          // API already loaded — initialise immediately
           initializeYTPlayers();
         } else {
-          // Chain onto any previously registered callback (don't overwrite it)
           const prevCallback = window.onYouTubeIframeAPIReady;
           window.onYouTubeIframeAPIReady = () => {
             if (typeof prevCallback === 'function') prevCallback();
             initializeYTPlayers();
           };
 
-          // Only inject the script tag once
           if (!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
             const tag = document.createElement('script');
             tag.src = "https://www.youtube.com/iframe_api";
@@ -347,7 +352,6 @@ export default function ArticleLayout() {
       }
     };
 
-    // Give dangerouslySetInnerHTML time to commit to the DOM, then init
     initTimer = setTimeout(initHybridSubtitles, 800);
 
     return () => {
