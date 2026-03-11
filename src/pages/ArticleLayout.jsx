@@ -32,6 +32,8 @@ export default function ArticleLayout() {
 
   const canAutoplayRef = useRef(false);
   const recommendedRef = useRef([]);
+  const recommendedSectionRef = useRef(null);
+  const inRecommendedZone = useRef(false);
 
   useEffect(() => {
     recommendedRef.current = recommended;
@@ -131,8 +133,19 @@ export default function ArticleLayout() {
     fetchAuthorRole();
   }, [article]);
 
+  // Hide trending sidebar whenever the Recommended section is visible
   useEffect(() => {
-    let hideTimer = null;
+    const el = recommendedSectionRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { inRecommendedZone.current = entry.isIntersecting; },
+      { threshold: 0.05 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [article]);
+
+
     let rafPending = false;
 
     const handleScroll = () => {
@@ -146,10 +159,12 @@ export default function ArticleLayout() {
       if (!rafPending) {
         rafPending = true;
         requestAnimationFrame(() => {
-          if (window.innerWidth >= 1024) {
+          if (window.innerWidth >= 1024 && !inRecommendedZone.current) {
             setShowSidebar(true);
             if (hideTimer) clearTimeout(hideTimer);
             hideTimer = setTimeout(() => setShowSidebar(false), 2000);
+          } else if (inRecommendedZone.current) {
+            setShowSidebar(false);
           }
           rafPending = false;
         });
@@ -553,7 +568,7 @@ export default function ArticleLayout() {
         </aside>
 
         <RevealSection>
-          <section className="max-w-6xl mx-auto px-6 pb-20">
+          <section ref={recommendedSectionRef} className="max-w-6xl mx-auto px-6 pb-20">
             <h3 className="text-2xl font-bold text-white mb-6">Recommended For You</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-5">
               {recommended.length === 0 ? <div className="text-tuwa-muted col-span-full">No recommendations available.</div> : null}
