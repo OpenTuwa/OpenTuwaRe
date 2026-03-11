@@ -134,20 +134,6 @@ export default function ArticleLayout() {
     fetchAuthorRole();
   }, [article]);
 
-  // Hide trending sidebar whenever the Recommended section is visible
-  useEffect(() => {
-    const el = recommendedSectionRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        inRecommendedZone.current = entry.isIntersecting;
-        setInRecZone(entry.isIntersecting);
-      },
-      { threshold: 0.05 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [article]);
 
 
   useEffect(() => {
@@ -161,6 +147,15 @@ export default function ArticleLayout() {
       const total = Math.max(document.body.scrollHeight - window.innerHeight, 1);
       const pct = Math.min(100, Math.max(0, (window.scrollY / total) * 100));
       setReadingProgress(pct);
+
+      // Check if recommended section is in view using direct DOM measurement
+      const recEl = recommendedSectionRef.current;
+      if (recEl) {
+        const rect = recEl.getBoundingClientRect();
+        const isInZone = rect.top < window.innerHeight && rect.bottom > 0;
+        inRecommendedZone.current = isInZone;
+        setInRecZone(isInZone);
+      }
 
       if (!rafPending) {
         rafPending = true;
@@ -544,18 +539,12 @@ export default function ArticleLayout() {
               <span className="text-[10px] tracking-widest font-bold uppercase text-tuwa-muted/70">Trending Now</span>
             </div>
             <div className="space-y-0.5">
-              {recommended.slice(0, 5).map((a, idx) => (
+              {recommended.slice(0, 5).map((a) => (
                 <a
                   key={a.slug}
                   href={`/articles/${a.slug}?`}
                   className="group flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-white/[0.05] transition-all duration-200"
                 >
-                  <span className={`text-[11px] font-black w-4 shrink-0 tabular-nums ${
-                    idx === 0 ? 'text-tuwa-gold' :
-                    idx === 1 ? 'text-tuwa-muted/80' :
-                    idx === 2 ? 'text-amber-700/80' :
-                    'text-tuwa-muted/40'
-                  }`}>{idx + 1}</span>
                   <div className="w-14 h-10 rounded-lg overflow-hidden shrink-0">
                     <SkeletonImage
                       src={a.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=200&auto=format&fit=crop'}
