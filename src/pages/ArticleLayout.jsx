@@ -164,6 +164,10 @@ export default function ArticleLayout() {
   useEffect(() => {
     if (!article || !article.content_html) return;
 
+    // Collect cleanup functions so we can tear down on unmount / article change
+    const cleanupFns = [];
+    let initTimer = null;
+
     const initHybridSubtitles = async () => {
       const subtitleBoxes = document.querySelectorAll('.tuwa-subtitle-box');
       if (subtitleBoxes.length === 0) return;
@@ -173,103 +177,130 @@ export default function ArticleLayout() {
 
       const handleVideoEnd = () => {
         if (canAutoplayRef.current && recommendedRef.current.length > 0) {
-            navigate(`/articles/${recommendedRef.current[0].slug}`);
+          navigate(`/articles/${recommendedRef.current[0].slug}`);
         }
       };
 
+      // ─── VTT time parser ───────────────────────────────────────────────────
+      // Strips trailing cue-setting tokens (align:start position:0% etc.)
+      // before splitting on ':' so position metadata never corrupts the result.
+      const parseVttTime = (timeStr) => {
+        const clean = timeStr.trim().split(/\s+/)[0].replace(',', '.');
+        const parts = clean.split(':');
+        return parts.length === 3
+          ? parseFloat(parts[0]) * 3600 + parseFloat(parts[1]) * 60 + parseFloat(parts[2])
+          : parseFloat(parts[0]) * 60 + parseFloat(parts[1]);
+      };
+
       for (const box of subtitleBoxes) {
-        const mediaId = box.dataset.video || box.dataset.youtube; 
-        const vttUrl = box.dataset.vtt;
+        const mediaId = box.dataset.video || box.dataset.youtube;
+        const vttUrl  = box.dataset.vtt;
         const mediaEl = document.getElementById(mediaId);
-        
-// --- ADD THESE DEBUG LOGS ---
-  console.log("Found subtitle box!", { 
-      mediaId, 
-      vttUrl, 
-      foundMediaElementInDOM: !!mediaEl 
-  });
 
-  if (!mediaId) {
-      console.warn("Skipping: No data-video or data-youtube attribute found.");
-      continue;
-  }
-  if (!vttUrl) {
-      console.warn("Skipping: No data-vtt attribute found.");
-      continue;
-  }
-  if (!mediaEl) {
-      console.warn(`Skipping: Could not find a <video> or <iframe> with id="${mediaId}" in the DOM.`);
-      continue;
-  }
-  // ----------------------------
+        console.log('[SubEngine] subtitle box found', { mediaId, vttUrl, mediaElFound: !!mediaEl });
 
-  try {
-    const response = await fetch(vttUrl);
-          if (!response.ok) throw new Error(`VTT missing`);
+        if (!mediaId) { console.warn('[SubEngine] Skipping: missing data-video / data-youtube'); continue; }
+        if (!vttUrl)  { console.warn('[SubEngine] Skipping: missing data-vtt');                   continue; }
+        if (!mediaEl) { console.warn(`[SubEngine] Skipping: no DOM element with id="${mediaId}"`); continue; }
+
+        try {
+          const response = await fetch(vttUrl);
+          if (!response.ok) throw new Error(`VTT fetch failed — HTTP ${response.status} for ${vttUrl}`);
           const vttText = await response.text();
-          
+
+          // ─── Parse cues ─────────────────────────────────────────────────────
           const cues = [];
           const lines = vttText.replace(/\r\n/g, '\n').split('\n');
           let currentCue = null;
 
-          const parseVttTime = (timeStr) => {
-            const parts = timeStr.trim().replace(',', '.').split(':');
-            return parts.length === 3 
-              ? parseFloat(parts[0])*3600 + parseFloat(parts[1])*60 + parseFloat(parts[2])
-              : parseFloat(parts[0])*60 + parseFloat(parts[1]);
-          };
-
           for (let line of lines) {
             line = line.trim();
-            if (line.startsWith('WEBVTT') || line.startsWith('Kind:') || line.startsWith('Language:')) continue;
+
+            // Skip header / metadata lines
+            if (!line
+              || line.startsWith('WEBVTT')
+              || line.startsWith('Kind:')
+              || line.startsWith('Language:')
+              || line.startsWith('NOTE')) continue;
 
             if (line.includes('-->')) {
-              if (currentCue && currentCue.textLines.length > 0) cues.push({ start: currentCue.start, end: currentCue.end, text: currentCue.textLines.join('<br>') });
+              // Flush previous cue if it has text
+              if (currentCue && currentCue.textLines.length > 0) {
+                cues.push({ start: currentCue.start, end: currentCue.end, text: currentCue.textLines.join('<br>') });
+              }
               const times = line.split('-->');
               currentCue = { start: parseVttTime(times[0]), end: parseVttTime(times[1]), textLines: [] };
-            } else if (line !== '') {
-              if (currentCue) currentCue.textLines.push(line);
-            } else if (line === '' && currentCue) {
-              if (currentCue.textLines.length > 0) cues.push({ start: currentCue.start, end: currentCue.end, text: currentCue.textLines.join('<br>') });
-              currentCue = null;
+            } else if (currentCue) {
+              // Cue text line
+              currentCue.textLines.push(line);
             }
+            // Lines with no currentCue (cue identifiers like "1", "2") are
+            // safely ignored by the else branch above.
           }
-          if (currentCue && currentCue.textLines.length > 0) cues.push({ start: currentCue.start, end: currentCue.end, text: currentCue.textLines.join('<br>') });
+          // Flush the last cue
+          if (currentCue && currentCue.textLines.length > 0) {
+            cues.push({ start: currentCue.start, end: currentCue.end, text: currentCue.textLines.join('<br>') });
+          }
+
+          console.log(`[SubEngine] Parsed ${cues.length} cues from ${vttUrl}`);
 
           const updateSubtitle = (currentTime) => {
             const activeCue = cues.find(c => currentTime >= c.start && currentTime <= c.end);
             box.innerHTML = activeCue ? `<span class="active-text">${activeCue.text}</span>` : '';
           };
 
+          // ─── Native <video> ──────────────────────────────────────────────────
           if (mediaEl.tagName.toLowerCase() === 'video') {
-            updateSubtitle(0);
-            mediaEl.addEventListener('timeupdate', () => updateSubtitle(mediaEl.currentTime));
-            mediaEl.addEventListener('seeked', () => updateSubtitle(mediaEl.currentTime));
-            mediaEl.addEventListener('ended', handleVideoEnd);
+            updateSubtitle(mediaEl.currentTime || 0);
+
+            const onTimeUpdate = () => updateSubtitle(mediaEl.currentTime);
+            const onSeeked    = () => updateSubtitle(mediaEl.currentTime);
+
+            mediaEl.addEventListener('timeupdate', onTimeUpdate);
+            mediaEl.addEventListener('seeked',     onSeeked);
+            mediaEl.addEventListener('ended',      handleVideoEnd);
+
+            cleanupFns.push(() => {
+              mediaEl.removeEventListener('timeupdate', onTimeUpdate);
+              mediaEl.removeEventListener('seeked',     onSeeked);
+              mediaEl.removeEventListener('ended',      handleVideoEnd);
+            });
+
+          // ─── YouTube <iframe> ────────────────────────────────────────────────
           } else if (mediaEl.tagName.toLowerCase() === 'iframe') {
             needsYouTubeAPI = true;
             ytPlayersQueue.push({ id: mediaId, render: updateSubtitle, onEnd: handleVideoEnd });
           }
 
         } catch (error) {
-          console.error('Subtitle Engine Error:', error);
-          box.style.display = 'none';
+          // Log clearly but don't hide the box — leave it empty rather than gone
+          console.error('[SubEngine] Error initialising subtitles:', error);
         }
       }
 
+      // ─── YouTube IFrame API loader ─────────────────────────────────────────
       if (needsYouTubeAPI) {
         const initializeYTPlayers = () => {
           ytPlayersQueue.forEach(p => {
             new window.YT.Player(p.id, {
               events: {
-                'onReady': (event) => {
-                  setInterval(() => {
-                    if (event.target.getPlayerState() === window.YT.PlayerState.PLAYING) p.render(event.target.getCurrentTime());
+                onReady: (event) => {
+                  const interval = setInterval(() => {
+                    try {
+                      if (event.target.getPlayerState() === window.YT.PlayerState.PLAYING) {
+                        p.render(event.target.getCurrentTime());
+                      }
+                    } catch (e) {
+                      // Player was destroyed (e.g. navigation); stop polling
+                      clearInterval(interval);
+                    }
                   }, 100);
+                  // Register interval for cleanup on unmount
+                  cleanupFns.push(() => clearInterval(interval));
                 },
-                'onStateChange': (event) => {
+                onStateChange: (event) => {
                   if (event.data === window.YT.PlayerState.ENDED && p.onEnd) {
-                      p.onEnd();
+                    p.onEnd();
                   }
                 }
               }
@@ -278,18 +309,35 @@ export default function ArticleLayout() {
         };
 
         if (window.YT && window.YT.Player) {
+          // API already loaded — initialise immediately
           initializeYTPlayers();
         } else {
-          const tag = document.createElement('script');
-          tag.src = "https://www.youtube.com/iframe_api";
-          const firstScriptTag = document.getElementsByTagName('script')[0];
-          firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-          window.onYouTubeIframeAPIReady = () => initializeYTPlayers();
+          // Chain onto any previously registered callback (don't overwrite it)
+          const prevCallback = window.onYouTubeIframeAPIReady;
+          window.onYouTubeIframeAPIReady = () => {
+            if (typeof prevCallback === 'function') prevCallback();
+            initializeYTPlayers();
+          };
+
+          // Only inject the script tag once
+          if (!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
+            const tag = document.createElement('script');
+            tag.src = "https://www.youtube.com/iframe_api";
+            document.getElementsByTagName('script')[0].parentNode.insertBefore(
+              tag, document.getElementsByTagName('script')[0]
+            );
+          }
         }
       }
     };
 
-    setTimeout(initHybridSubtitles, 500);
+    // Give dangerouslySetInnerHTML time to commit to the DOM, then init
+    initTimer = setTimeout(initHybridSubtitles, 800);
+
+    return () => {
+      clearTimeout(initTimer);
+      cleanupFns.forEach(fn => fn());
+    };
   }, [article]);
 
   const handleSearch = (e) => {
