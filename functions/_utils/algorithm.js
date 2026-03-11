@@ -18,25 +18,25 @@ export const SCORING_WEIGHTS = {
 // =================================================================================================
 export class NeuralEngine {
   static async getTextEmbedding(env, text) {
-    if (!text) return new Array(768).fill(0);
+    if (!text) return null; // FIX: Return null instead of zeros to prevent placebo AI
     const cleanText = text.replace(/<[^>]*>?/gm, ' ').substring(0, 3000);
     try {
       const response = await env.AI.run('@cf/baai/bge-base-en-v1.5', { text: cleanText });
       return response.data[0];
     } catch (e) {
-      console.error("Text Embedding failed:", e);
-      return new Array(768).fill(0);
+      console.error("[AI ERROR] Text Embedding failed:", e.message);
+      return null; // FIX: Explicit failure
     }
   }
 
   static async getVisualEmbedding(env, imageArrayBuffer) {
-    if (!imageArrayBuffer) return new Array(512).fill(0);
+    if (!imageArrayBuffer) return null; // FIX: Return null instead of zeros
     try {
       const response = await env.AI.run('@cf/meta/llama-3.2-11b-vision-instruct', { image: [...new Uint8Array(imageArrayBuffer)] });
       return response.data[0];
     } catch (e) {
-      console.error("Visual Embedding failed:", e);
-      return new Array(512).fill(0);
+      console.error("[AI ERROR] Visual Embedding failed:", e.message);
+      return null; // FIX: Explicit failure
     }
   }
 
@@ -183,10 +183,12 @@ export class RecommendationEngine {
   }
 
   getHybridRecommendations(textMatches, visualMatches, limit = 6, currentSlug = null) {
-    const maxWeight = SCORING_WEIGHTS.TIER_1_CONTENT_MATCH +
-                      SCORING_WEIGHTS.TIER_1_VISUAL_TRIGGER +
-                      SCORING_WEIGHTS.TIER_2_SESSION_HABIT +
-                      SCORING_WEIGHTS.TIER_3_WORLDWIDE_VOTE; 
+    // FIX: Verify if AI actually returned any meaningful array of matches
+    const safeTextMatches = textMatches || [];
+    const safeVisualMatches = visualMatches || [];
+    
+    // Flag to prove to the frontend if AI was genuinely used
+    const isAiActive = safeTextMatches.length > 0 || safeVisualMatches.length > 0;
 
     return this.articles
       .map(article => {
@@ -194,42 +196,63 @@ export class RecommendationEngine {
 
         let relevance = 0;
         
-        // Apply Non-Linear Thresholding to Neural Matches
-        const aiTextMatch = textMatches.find(v => v.id === article.slug);
+        // FIX: Track exactly where the score comes from
+        const scoreBreakdown = {
+          text_ai: 0,
+          visual_ai: 0,
+          gravity: 0,
+          emotion: 0,
+          novelty: 0
+        };
+        
+        // Apply Non-Linear Thresholding to Text Matches
+        const aiTextMatch = safeTextMatches.find(v => v.id === article.slug);
         if (aiTextMatch) {
-           // Emphasize high-confidence matches, suppress weak noise
            const activatedScore = NeuralEngine.sigmoid(aiTextMatch.score * 5 - 2.5);
-           relevance += (activatedScore * SCORING_WEIGHTS.TIER_1_CONTENT_MATCH);
+           scoreBreakdown.text_ai = (activatedScore * SCORING_WEIGHTS.TIER_1_CONTENT_MATCH);
+           relevance += scoreBreakdown.text_ai;
         }
 
-        const aiVisualMatch = visualMatches.find(v => v.id === article.slug);
+        // Apply Non-Linear Thresholding to Visual Matches
+        const aiVisualMatch = safeVisualMatches.find(v => v.id === article.slug);
         if (aiVisualMatch) {
            const activatedScore = NeuralEngine.sigmoid(aiVisualMatch.score * 5 - 2.5);
-           relevance += (activatedScore * SCORING_WEIGHTS.TIER_1_VISUAL_TRIGGER);
+           scoreBreakdown.visual_ai = (activatedScore * SCORING_WEIGHTS.TIER_1_VISUAL_TRIGGER);
+           relevance += scoreBreakdown.visual_ai;
         }
 
+        // Apply Temporal Gravity (Traditional Fallback/Addition)
         if (article.engagement_score) {
           const hoursOld = Math.max(0, (Date.now() - new Date(article.published_at || Date.now())) / 3600000);
           const gravityScore = TemporalGravity.hackerNewsGravity(article.engagement_score, hoursOld, 1.85);
           const normalizedGravity = Math.min(1, Math.log10(gravityScore + 1.5) / 2);
-          relevance += (normalizedGravity * SCORING_WEIGHTS.TIER_3_WORLDWIDE_VOTE); 
+          scoreBreakdown.gravity = (normalizedGravity * SCORING_WEIGHTS.TIER_3_WORLDWIDE_VOTE); 
+          relevance += scoreBreakdown.gravity;
         }
 
         // Explicitly measure and weight emotional intensity of content
         const sentiment = ContentIQ.analyzeSentiment(article.content_html || article.seo_description || article.title || '');
-        relevance += (sentiment.intensity * SCORING_WEIGHTS.EMOTIONAL_RESONANCE);
+        scoreBreakdown.emotion = (sentiment.intensity * SCORING_WEIGHTS.EMOTIONAL_RESONANCE);
+        relevance += scoreBreakdown.emotion;
 
+        // Novelty / Dopamine Reward
         if (currentSlug) {
           let novelty = 1.0;
           if (aiTextMatch) {
              novelty = Math.max(0, 1 - aiTextMatch.score); 
           }
-          // Inverted-U function to novelty: moderately different (around 30% novel) is boosted
           const invertedU = Math.exp(-Math.pow(novelty - 0.3, 2) / 0.05);
-          relevance += invertedU * SCORING_WEIGHTS.NOVELTY_BONUS;
+          scoreBreakdown.novelty = invertedU * SCORING_WEIGHTS.NOVELTY_BONUS;
+          relevance += scoreBreakdown.novelty;
         }
 
-        return { ...article, _relevance: relevance };
+        // FIX: Expose transparent telemetry variables
+        return { 
+          ...article, 
+          _relevance: relevance,
+          _ai_active: isAiActive,
+          _scoring_breakdown: scoreBreakdown
+        };
       })
       .filter(article => article !== null) 
       .sort((a, b) => b._relevance - a._relevance)
