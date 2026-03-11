@@ -545,7 +545,7 @@ export default function ArticleLayout() {
                   href={`/articles/${a.slug}?`}
                   className="group flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-white/[0.05] transition-all duration-200"
                 >
-                  <div className="w-14 h-10 rounded-lg overflow-hidden shrink-0">
+                  <div className="relative w-14 h-10 rounded-lg overflow-hidden shrink-0 bg-white/5">
                     <SkeletonImage
                       src={a.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=200&auto=format&fit=crop'}
                       alt={a.title}
