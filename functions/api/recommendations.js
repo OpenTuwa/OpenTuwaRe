@@ -31,6 +31,25 @@ export async function onRequestGet(context) {
       }
     }
 
+    // Fallback to the current article's vectors if the user session has no AI data yet
+    if (currentSlug && (!userBrainVector || !userVisualVector)) {
+        const articleData = await env.DB.prepare(`SELECT neural_vector, visual_vector FROM articles WHERE slug = ?`).bind(currentSlug).first();
+        if (articleData) {
+            if (!userBrainVector && articleData.neural_vector) {
+                try {
+                    const parsed = typeof articleData.neural_vector === 'string' ? JSON.parse(articleData.neural_vector) : articleData.neural_vector;
+                    if (Array.isArray(parsed) && parsed.length === 768) userBrainVector = parsed;
+                } catch(e) {}
+            }
+            if (!userVisualVector && articleData.visual_vector) {
+                try {
+                    const parsed = typeof articleData.visual_vector === 'string' ? JSON.parse(articleData.visual_vector) : articleData.visual_vector;
+                    if (Array.isArray(parsed) && parsed.length === 512) userVisualVector = parsed;
+                } catch(e) {}
+            }
+        }
+    }
+
     let aiTextMatches = [];
     let aiVisualMatches = [];
 
