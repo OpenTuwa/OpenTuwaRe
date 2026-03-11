@@ -1,4 +1,3 @@
---- START OF FILE ArticleLayout.jsx ---
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
@@ -734,4 +733,3 @@ export default function ArticleLayout() {
     </div>
   );
 }
---- END OF FILE ArticleLayout.jsx ---
