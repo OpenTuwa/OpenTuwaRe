@@ -516,16 +516,28 @@ export default function ArticleLayout() {
 
         <article className="max-w-[720px] mx-auto px-6 py-20 prose prose-invert prose-xl text-tuwa-text" dangerouslySetInnerHTML={{ __html: article.content_html || '<p>No content available.</p>' }} />
 
-        <aside className={`fixed right-6 top-32 w-80 hidden lg:block transition-opacity duration-300 ${showSidebar ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-          <div className="bg-tuwa-gray/60 border border-white/5 rounded-xl p-4 sticky top-32 backdrop-blur-md">
-            <h4 className="text-white font-bold mb-3">Trending</h4>
-            <div className="space-y-3 text-sm">
-              {recommended.slice(0, 5).map(a => (
-                <a key={a.slug} href={`/articles/${a.slug}?`} className="flex items-start gap-3 hover:underline">
-                  <SkeletonImage src={a.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=400&auto=format&fit=crop'} className="w-12 h-8 object-cover rounded-md flex-shrink-0" alt={a.title} />
-                  <div>
-                    <div className="text-sm text-white font-semibold line-clamp-2">{a.title}</div>
-                    <div className="text-xs text-tuwa-muted">{a.read_time_minutes || 5} min</div>
+        <aside className={`fixed right-4 top-28 w-56 hidden lg:block transition-all duration-500 ${showSidebar ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 pointer-events-none'}`}>
+          <div className="bg-[rgba(10,10,11,0.75)] border border-white/[0.06] rounded-2xl p-3 backdrop-blur-xl shadow-[0_0_40px_rgba(0,0,0,0.6)]">
+            <div className="flex items-center gap-1.5 mb-3 px-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-tuwa-accent animate-pulse"></span>
+              <span className="text-[10px] tracking-widest font-bold uppercase text-tuwa-muted/70">Trending Now</span>
+            </div>
+            <div className="space-y-0.5">
+              {recommended.slice(0, 5).map((a, idx) => (
+                <a
+                  key={a.slug}
+                  href={`/articles/${a.slug}?`}
+                  className="group flex items-start gap-2.5 px-2 py-2 rounded-xl hover:bg-white/[0.05] transition-all duration-200"
+                >
+                  <span className={`text-[11px] font-black mt-0.5 w-4 shrink-0 tabular-nums ${
+                    idx === 0 ? 'text-tuwa-gold' :
+                    idx === 1 ? 'text-tuwa-muted/80' :
+                    idx === 2 ? 'text-amber-700/80' :
+                    'text-tuwa-muted/40'
+                  }`}>{idx + 1}</span>
+                  <div className="min-w-0">
+                    <div className="text-[11px] font-semibold text-white/70 group-hover:text-white leading-snug line-clamp-2 transition-colors duration-200">{a.title}</div>
+                    <div className="text-[10px] text-tuwa-muted/50 mt-0.5 group-hover:text-tuwa-muted/80 transition-colors duration-200">{a.read_time_minutes || 5} min</div>
                   </div>
                 </a>
               ))}
@@ -534,18 +546,20 @@ export default function ArticleLayout() {
         </aside>
 
         <RevealSection>
-          <section className="max-w-4xl mx-auto px-6 pb-20">
+          <section className="max-w-6xl mx-auto px-6 pb-20">
             <h3 className="text-2xl font-bold text-white mb-6">Recommended For You</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {recommended.length === 0 ? <div className="text-tuwa-muted">No recommendations available.</div> : null}
-              {recommended.map(a => (
-                <a key={a.slug} href={`/articles/${a.slug}?`} className="block rounded-xl overflow-hidden bg-tuwa-gray border border-white/5 p-4 hover:bg-white/5 transition-colors">
-                  <div className="w-full h-40 mb-3 overflow-hidden rounded-md">
-                    <SkeletonImage src={a.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop'} alt={a.title} className="w-full h-full object-cover" />
+            <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-5">
+              {recommended.length === 0 ? <div className="text-tuwa-muted col-span-full">No recommendations available.</div> : null}
+              {recommended.slice(0, 24).map(a => (
+                <a key={a.slug} href={`/articles/${a.slug}?`} className="group block rounded-xl overflow-hidden bg-tuwa-gray border border-white/5 hover:border-white/10 hover:bg-white/5 transition-all duration-200">
+                  <div className="w-full h-36 overflow-hidden">
+                    <SkeletonImage src={a.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop'} alt={a.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                   </div>
-                  <h4 className="text-lg font-bold text-white mb-1 line-clamp-2">{a.title}</h4>
-                  <div className="text-xs text-tuwa-muted">
-                    {a.published_at ? new Date(a.published_at).toLocaleDateString() : ''} • {a.read_time_minutes || 5} min
+                  <div className="p-3">
+                    <h4 className="text-sm font-bold text-white mb-1 line-clamp-2 leading-snug">{a.title}</h4>
+                    <div className="text-[10px] text-tuwa-muted/70">
+                      {a.published_at ? new Date(a.published_at).toLocaleDateString() : ''} · {a.read_time_minutes || 5} min
+                    </div>
                   </div>
                 </a>
               ))}

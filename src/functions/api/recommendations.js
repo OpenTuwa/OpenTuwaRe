@@ -5,6 +5,7 @@ export async function onRequestGet(context) {
   const url = new URL(context.request.url);
   const currentSlug = url.searchParams.get('slug');
   const sessionId = url.searchParams.get('session_id');
+  const videoOnly = url.searchParams.get('video_only') === 'true'; // <-- NEW
 
   if (!currentSlug) return new Response(JSON.stringify({ error: "Slug is required" }), { status: 400 });
 
@@ -30,6 +31,25 @@ export async function onRequestGet(context) {
       }
     }
 
+    // Fallback to the current article's vectors if the user session has no AI data yet
+    if (currentSlug && (!userBrainVector || !userVisualVector)) {
+        const articleData = await env.DB.prepare(`SELECT neural_vector, visual_vector FROM articles WHERE slug = ?`).bind(currentSlug).first();
+        if (articleData) {
+            if (!userBrainVector && articleData.neural_vector) {
+                try {
+                    const parsed = typeof articleData.neural_vector === 'string' ? JSON.parse(articleData.neural_vector) : articleData.neural_vector;
+                    if (Array.isArray(parsed) && parsed.length === 768) userBrainVector = parsed;
+                } catch(e) {}
+            }
+            if (!userVisualVector && articleData.visual_vector) {
+                try {
+                    const parsed = typeof articleData.visual_vector === 'string' ? JSON.parse(articleData.visual_vector) : articleData.visual_vector;
+                    if (Array.isArray(parsed) && parsed.length === 512) userVisualVector = parsed;
+                } catch(e) {}
+            }
+        }
+    }
+
     let aiTextMatches = [];
     let aiVisualMatches = [];
 
@@ -52,16 +72,22 @@ export async function onRequestGet(context) {
 
     const candidates = await fetchCandidates(env, 100, null);
     const engine = new RecommendationEngine(candidates);
-    
-    // The feed is now a blend of logical interest and raw visual stimuli
-    const recommendations = engine.getHybridRecommendations(aiTextMatches, aiVisualMatches, 12, currentSlug);
 
-    const finalFeed = recommendations.slice(0, 6);
+    // <-- UPDATED: Route to the new algorithm set if requested
+    const recommendations = videoOnly 
+        ? engine.getHybridVideoRecommendations(aiTextMatches, aiVisualMatches, 24, currentSlug)
+        : engine.getHybridRecommendations(aiTextMatches, aiVisualMatches, 24, currentSlug);
+
+    // Strip heavy vector arrays to save bandwidth before sending to frontend
+    const finalFeed = recommendations.slice(0, 24).map(article => {
+        const { neural_vector, visual_vector, ...cleanArticle } = article;
+        return cleanArticle;
+    });
 
     return new Response(JSON.stringify(finalFeed), { headers: { "Content-Type": "application/json" } });
 
   } catch (err) {
     console.error("Recs API Error:", err);
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: "Internal Server Error" }), { status: 500 });
   }
 }

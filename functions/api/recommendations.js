@@ -75,11 +75,11 @@ export async function onRequestGet(context) {
 
     // <-- UPDATED: Route to the new algorithm set if requested
     const recommendations = videoOnly 
-        ? engine.getHybridVideoRecommendations(aiTextMatches, aiVisualMatches, 12, currentSlug)
-        : engine.getHybridRecommendations(aiTextMatches, aiVisualMatches, 12, currentSlug);
+        ? engine.getHybridVideoRecommendations(aiTextMatches, aiVisualMatches, 24, currentSlug)
+        : engine.getHybridRecommendations(aiTextMatches, aiVisualMatches, 24, currentSlug);
 
     // Strip heavy vector arrays to save bandwidth before sending to frontend
-    const finalFeed = recommendations.slice(0, 6).map(article => {
+    const finalFeed = recommendations.slice(0, 24).map(article => {
         const { neural_vector, visual_vector, ...cleanArticle } = article;
         return cleanArticle;
     });
