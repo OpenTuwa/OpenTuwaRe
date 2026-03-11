@@ -146,6 +146,8 @@ export default function ArticleLayout() {
   }, [article]);
 
 
+  useEffect(() => {
+    let hideTimer = null;
     let rafPending = false;
 
     const handleScroll = () => {
