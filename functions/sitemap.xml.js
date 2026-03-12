@@ -35,7 +35,7 @@ export async function onRequestGet(context) {
     <priority>0.8</priority>
     ${a.image_url ? `
     <image:image>
-      <image:loc>${esc(a.image_url)}</image:loc>
+      <image:loc>${esc(a.image_url.startsWith('http') ? a.image_url : origin + a.image_url)}</image:loc>
       <image:title>${esc(a.title || '')}</image:title>
     </image:image>` : ''}
   </url>`;
