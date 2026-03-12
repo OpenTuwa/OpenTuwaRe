@@ -24,6 +24,21 @@ export async function onRequestGet(context) {
     } catch (e2) { articles = []; }
   }
 
+  // --- NEW FIX: Prevent empty sitemap ---
+  // If no articles were published in the last 48 hours, the sitemap is empty.
+  // The XML schema requires at least one <url> tag, so we fetch the most recent article as a fallback.
+  if (articles.length === 0) {
+    try {
+      const { results } = await env.DB.prepare(
+        "SELECT slug, title, published_at, created_at, date_published, image_url FROM articles ORDER BY COALESCE(published_at, created_at, date_published) DESC LIMIT 1"
+      ).all();
+      articles = results || [];
+    } catch (e3) { 
+      // Failsafe in case DB is completely empty
+    }
+  }
+  // --------------------------------------
+
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:news="http://www.google.com/schemas/sitemap-news/0.9"
@@ -33,6 +48,7 @@ export async function onRequestGet(context) {
     const pubDate = a.published_at || a.created_at || a.date_published;
     const isoDate = toISO(pubDate);
     if (!isoDate) continue;
+    
     xml += `
   <url>
     <loc>${esc(origin + '/articles/' + a.slug)}</loc>
@@ -49,6 +65,15 @@ export async function onRequestGet(context) {
       <image:loc>${esc(a.image_url)}</image:loc>
       <image:title>${esc(a.title || '')}</image:title>
     </image:image>` : ''}
+  </url>`;
+  }
+
+  // Final failsafe: If the database is completely empty and no URL was added,
+  // insert a dummy URL so it doesn't crash GSC.
+  if (!xml.includes('<url>')) {
+    xml += `
+  <url>
+    <loc>${esc(origin)}</loc>
   </url>`;
   }
 
