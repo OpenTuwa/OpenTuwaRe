@@ -2,6 +2,8 @@
   "version": 1,
   "include":[
     "/",
+    "/about",
+    "/archive",
     "/articles/*",
     "/player/*",
     "/api/*",
