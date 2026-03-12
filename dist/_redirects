@@ -1,5 +1,0 @@
-# 1. Force everything to index.html for React Router
-/* /index.html   200
-
-# 2. Optional: If you ever move old paths, put them ABOVE the catch-all
-# /old-article-path  /articles/new-slug  301
