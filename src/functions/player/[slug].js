@@ -80,10 +80,3 @@ function esc(s) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
-```
-
----
-
-### `_redirects` — CONFIRMED CORRECT, NO CHANGE NEEDED
-```
-/* /index.html   200
