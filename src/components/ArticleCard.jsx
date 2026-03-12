@@ -7,19 +7,21 @@ export default function ArticleCard({ article, index = 0 }) {
   const date = article.published_at
     ? new Date(article.published_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : '';
+  // FIX: Strict null check to prevent .split of undefined/null
   const tag = article.tags ? article.tags.split(',')[0].trim() : null;
 
   return (
     <a
       ref={ref}
-      href={`/articles/${article.slug}?`}
+      // FIX: Removed trailing '?' in href
+      href={`/articles/${article.slug}`}
       className="reveal group block"
       style={{ transitionDelay: `${index * 80}ms` }}
     >
       <div className="w-full h-64 rounded-xl overflow-hidden mb-5 relative bg-tuwa-gray border border-white/5">
         <SkeletonImage
           src={article.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop'}
-          alt={article.title}
+          alt={article.title || 'Article thumbnail'}
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
           loading="lazy"
         />

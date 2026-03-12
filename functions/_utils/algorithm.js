@@ -287,16 +287,22 @@ export async function fetchCandidates(env, limit = 100, searchQuery = null) {
     FROM articles a
   `;
 
-  if (searchQuery) {
-    const q = searchQuery.trim();
-    const wildcard = `%${q.replace(/%/g, '\\%').replace(/_/g, '\\_')}%`;
-    const sql = `${selectClause} WHERE (a.title LIKE ? ESCAPE '\\' OR a.subtitle LIKE ? ESCAPE '\\' OR a.seo_description LIKE ? ESCAPE '\\') ORDER BY a.published_at DESC LIMIT ?`;
-    const { results: raw } = await env.DB.prepare(sql).bind(wildcard, wildcard, wildcard, limit).all();
-    results = raw;
-  } else {
-    const sql = `${selectClause} ORDER BY a.engagement_score DESC, a.published_at DESC LIMIT ?`;
-    const { results: raw } = await env.DB.prepare(sql).bind(limit).all();
-    results = raw;
+  try {
+    if (searchQuery) {
+      const q = searchQuery.trim();
+      const wildcard = `%${q.replace(/%/g, '\\%').replace(/_/g, '\\_')}%`;
+      const sql = `${selectClause} WHERE (a.title LIKE ? ESCAPE '\\' OR a.subtitle LIKE ? ESCAPE '\\' OR a.seo_description LIKE ? ESCAPE '\\') ORDER BY a.published_at DESC LIMIT ?`;
+      const { results: raw } = await env.DB.prepare(sql).bind(wildcard, wildcard, wildcard, limit).all();
+      results = raw || [];
+    } else {
+      const sql = `${selectClause} ORDER BY a.engagement_score DESC, a.published_at DESC LIMIT ?`;
+      const { results: raw } = await env.DB.prepare(sql).bind(limit).all();
+      results = raw || [];
+    }
+  } catch (err) {
+    console.error("[DB ERROR] fetchCandidates failed:", err.message);
+    // Return empty array to allow graceful degradation (e.g. show "No articles found" instead of crash)
+    return [];
   }
   return results;
 }

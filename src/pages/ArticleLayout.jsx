@@ -67,7 +67,7 @@ export default function ArticleLayout() {
         if (!res.ok) throw new Error('Article could not be found.');
         
         const articleData = await res.json();
-        setArticle(articleData);
+        if (!signal.aborted) setArticle(articleData);
 
         let sessionId = sessionStorage.getItem('tuwa_session_id');
         if (!sessionId) {
@@ -111,17 +111,24 @@ export default function ArticleLayout() {
 
         // Fetch Neural Recommendations
         const isVideoArticle = articleData.content_html && (articleData.content_html.includes('<video') || articleData.content_html.includes('iframe'));
-        const recRes = await fetch(`/api/recommendations?slug=${slug}&session_id=${sessionId}${isVideoArticle ? '&video_only=true' : ''}`, { signal });
+        // FIX: Construct URL properly
+        let recUrl = `/api/recommendations?slug=${slug}&session_id=${sessionId}`;
+        if (isVideoArticle) recUrl += '&video_only=true';
+
+        const recRes = await fetch(recUrl, { signal });
         
         if (recRes.ok) {
           const recommendations = await recRes.json();
-          setRecommended(recommendations);
+          // FIX: Strict null check and abort check
+          if (!signal.aborted && Array.isArray(recommendations)) {
+            setRecommended(recommendations);
+          }
         }
 
       } catch (err) {
         if (err.name !== 'AbortError') setError(err.message);
       } finally {
-        setLoading(false);
+        if (!signal.aborted) setLoading(false);
       }
     };
 
@@ -143,8 +150,10 @@ export default function ArticleLayout() {
         const res = await fetch(`/api/authors_1?name=${encodeURIComponent(article.author)}`, { signal: abortController.signal });
         if (res.ok) {
           const data = await res.json();
-          setAuthorRole(data.role || null);
-          setAuthorAvatar(data.avatar || data.avatar_url || null);
+          if (!abortController.signal.aborted) {
+            setAuthorRole(data.role || null);
+            setAuthorAvatar(data.avatar || data.avatar_url || null);
+          }
         }
       } catch (e) {
         // Ignore fetch errors for author

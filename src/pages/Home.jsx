@@ -94,40 +94,61 @@ export default function Home() {
   }
 
   useEffect(() => {
+    const abortController = new AbortController();
+    const signal = abortController.signal;
+
     const fetchData = async () => {
       try {
         setLoading(true);
-        const resArticles = await fetch('/api/article');
+        setError(null);
+
+        // OPTIMIZATION: Pass search query to backend to ensure we search full DB, not just top 100
+        let apiUrl = '/api/article';
+        if (queryParam) apiUrl += `?q=${encodeURIComponent(queryParam)}`;
+
+        const resArticles = await fetch(apiUrl, { signal });
+        if (!resArticles.ok) throw new Error('Failed to load articles');
+        
         let data = await resArticles.json();
+        // Strict null check to prevent crashes
+        if (!Array.isArray(data)) data = [];
 
         if (authorParam) {
           try {
-            const resAuthor = await fetch(`/api/authors_1?name=${encodeURIComponent(authorParam)}`);
+            const resAuthor = await fetch(`/api/authors_1?name=${encodeURIComponent(authorParam)}`, { signal });
             if (resAuthor.ok) {
               const auth = await resAuthor.json();
-              setAuthorData(auth);
+              if (!signal.aborted) setAuthorData(auth);
             }
-          } catch (e) { console.error("Author fetch failed", e); }
+          } catch (e) { 
+            if (e.name !== 'AbortError') console.error("Author fetch failed", e); 
+          }
         } else {
-          setAuthorData(null);
+          if (!signal.aborted) setAuthorData(null);
         }
 
+        // Client-side filtering for Author/Tag (Backend doesn't support these yet)
         if (authorParam) data = data.filter(a => a.author === authorParam);
         if (tagParam) data = data.filter(a => a.tags && a.tags.toLowerCase().includes(tagParam.toLowerCase()));
-        if (queryParam) {
-          const q = queryParam.toLowerCase();
-          data = data.filter(a => a.title.toLowerCase().includes(q) || (a.subtitle && a.subtitle.toLowerCase().includes(q)));
+        
+        // Redundant client-side filter removed since backend handles 'q' now (more accurate)
+        
+        if (!signal.aborted) {
+          setArticles(data);
+          setLoading(false);
         }
-
-        setArticles(data);
-        setLoading(false);
       } catch (err) {
-        setError(err.message);
-        setLoading(false);
+        if (err.name !== 'AbortError') {
+          console.error("Home Fetch Error:", err);
+          setError(err.message);
+          setLoading(false);
+        }
       }
     };
 
     fetchData();
+
+    return () => abortController.abort();
   }, [authorParam, tagParam, queryParam]);
 
   return (

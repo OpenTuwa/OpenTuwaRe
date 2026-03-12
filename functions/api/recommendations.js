@@ -56,30 +56,51 @@ export async function onRequestGet(context) {
     // Execute neural searches concurrently to prevent latency drop-off
     const vectorTasks = [];
     
-    if (userBrainVector) {
+    if (userBrainVector && env.VECTORIZE_TEXT) {
         vectorTasks.push(env.VECTORIZE_TEXT.query(userBrainVector, { topK: 20 })
             .then(res => aiTextMatches = res.matches || [])
-            .catch(err => console.error("Text vectorize failed:", err)));
+            .catch(err => {
+                console.error("Text vectorize failed:", err);
+                return []; // Return empty matches on failure
+            }));
     }
     
-    if (userVisualVector) {
+    if (userVisualVector && env.VECTORIZE_VISION) {
         vectorTasks.push(env.VECTORIZE_VISION.query(userVisualVector, { topK: 20 })
             .then(res => aiVisualMatches = res.matches || [])
-            .catch(err => console.error("Visual vectorize failed:", err)));
+            .catch(err => {
+                console.error("Visual vectorize failed:", err);
+                return [];
+            }));
     }
 
     await Promise.all(vectorTasks);
 
+    // Fetch candidates (now robust against DB errors, returns [] on failure)
     const candidates = await fetchCandidates(env, 100, null);
+    
+    // Fallback: If no candidates found (DB down?), return empty array gracefully
+    if (!candidates || candidates.length === 0) {
+        return new Response(JSON.stringify([]), { headers: { "Content-Type": "application/json" } });
+    }
+
     const engine = new RecommendationEngine(candidates);
 
     // <-- UPDATED: Route to the new algorithm set if requested
-    const recommendations = videoOnly 
-        ? engine.getHybridVideoRecommendations(aiTextMatches, aiVisualMatches, 24, currentSlug)
-        : engine.getHybridRecommendations(aiTextMatches, aiVisualMatches, 24, currentSlug);
+    let recommendations = [];
+    try {
+        recommendations = videoOnly 
+            ? engine.getHybridVideoRecommendations(aiTextMatches, aiVisualMatches, 24, currentSlug)
+            : engine.getHybridRecommendations(aiTextMatches, aiVisualMatches, 24, currentSlug);
+    } catch (engineError) {
+        console.error("Recommendation Engine Logic Error:", engineError);
+        // Fallback to raw candidates sorted by date if engine fails
+        recommendations = candidates.sort((a, b) => new Date(b.published_at) - new Date(a.published_at)).slice(0, 24);
+    }
 
     // Strip heavy vector arrays to save bandwidth before sending to frontend
     const finalFeed = recommendations.slice(0, 24).map(article => {
+        // eslint-disable-next-line no-unused-vars
         const { neural_vector, visual_vector, ...cleanArticle } = article;
         return cleanArticle;
     });
@@ -87,7 +108,8 @@ export async function onRequestGet(context) {
     return new Response(JSON.stringify(finalFeed), { headers: { "Content-Type": "application/json" } });
 
   } catch (err) {
-    console.error("Recs API Error:", err);
-    return new Response(JSON.stringify({ error: "Internal Server Error" }), { status: 500 });
+    console.error("Recs API Critical Error:", err);
+    // Ultimate Fallback: Return empty list instead of 500 to prevent frontend crash
+    return new Response(JSON.stringify([]), { headers: { "Content-Type": "application/json" } });
   }
 }
