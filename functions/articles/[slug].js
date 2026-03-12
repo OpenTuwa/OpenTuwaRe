@@ -1,11 +1,13 @@
+import { isBot } from '../_utils/bot-detector.js';
+
 export async function onRequestGet(context) {
   const { env, request, params } = context;
   const slug = params.slug;
 
-  const ua = request.headers.get('user-agent') || '';
-  const isBot = /(googlebot|bingbot|facebookexternalhit|twitterbot|linkedinbot|slackbot|telegrambot|whatsapp|duckduckbot|applebot)/i.test(ua);
-
-  if (!isBot) return context.next();
+  // 1. Check if it's a bot using the new utility
+  if (!isBot(request)) {
+    return context.next();
+  }
 
   let article = null;
   try {
@@ -15,8 +17,13 @@ export async function onRequestGet(context) {
        FROM articles WHERE slug = ? LIMIT 1`
     ).bind(slug).all();
     article = results?.[0] || null;
-  } catch (e) {}
+  } catch (e) {
+    console.error('Article DB Query failed:', e);
+    // Fallback gracefully
+    return context.next();
+  }
 
+  // If article not found, fall back to next handler (e.g. 404 page or React app handling 404)
   if (!article) return context.next();
 
   const origin = new URL(request.url).origin;

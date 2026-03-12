@@ -6,8 +6,8 @@ DIRECTORY_TO_SEARCH = '.'
 
 # The exact strings to hunt down and their replacements
 REPLACEMENTS = {
-    "opentuwa.com": "opentuwa.com",
-    "opentuwa.com": "opentuwa.com"
+    "./assets/ui/web.ico": "./assets/ui/web.ico",
+    "./assets/ui/web.png": "./assets/ui/web.png"
 }
 
 # Folders to skip so we don't break Git, dependencies, or compiled code

@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "include":[
+    "/",
+    "/articles/*",
+    "/player/*",
+    "/api/*",
+    "/feed.xml",
+    "/sitemap.xml",
+    "/news-sitemap.xml",
+    "/robots.txt"
+  ],
+  "exclude":[
+    "/assets/*",
+    "/img/*",
+    "/vid/*",
+    "/vtt/*"
+  ]
+}
