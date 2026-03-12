@@ -22,7 +22,7 @@ export async function onRequestGet(context) {
     <lastBuildDate>${esc(now)}</lastBuildDate>
     <atom:link href="${esc(origin + '/feed.xml')}" rel="self" type="application/rss+xml"/>
     <image>
-      <url>https://raw.githubusercontent.com/Quran-lite-pages-dev/Quran-lite.pages.dev/refs/heads/master/assets/ui/web.png</url>
+      <url>https://raw.githubusercontent.com/Quran-lite-pages-dev/opentuwa.com/refs/heads/master/assets/ui/web.png</url>
       <title>OpenTuwa</title>
       <link>${esc(origin)}</link>
     </image>`;
