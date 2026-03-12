@@ -15,14 +15,19 @@ function ArchiveYearSection({ yearGroup }) {
       </h2>
       <div className="space-y-6">
         {yearGroup.articles.map((article, index) => {
-          const date = new Date(article.published_at || Date.now());
+          const date = article.published_at 
+            ? new Date(article.published_at) 
+            : new Date();
           const monthDay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-          const tag = article.tags ? article.tags.split(',')[0].trim() : 'Article';
+          // Strict null check for tags
+          const tag = article.tags && typeof article.tags === 'string' 
+            ? article.tags.split(',')[0].trim() 
+            : 'Article';
 
           return (
             <a
               key={index}
-              href={`/articles/${article.slug}?`}
+              href={`/articles/${article.slug}`}
               className="group flex flex-col md:flex-row md:items-center justify-between gap-2 md:gap-8 hover:bg-white/[0.02] p-4 -mx-4 rounded-xl transition-colors"
             >
               <div className="flex items-center gap-6 flex-1">
@@ -60,19 +65,29 @@ export default function Archive() {
   };
 
   useEffect(() => {
+    const abortController = new AbortController();
+    const signal = abortController.signal;
+
     const fetchArchive = async () => {
       try {
-        const response = await fetch('/api/article');
+        const response = await fetch('/api/article', { signal });
+        if (!response.ok) throw new Error('Failed to fetch archive');
+        
         const articles = await response.json();
 
-        if (articles.length === 0) {
-          setArchiveData([]);
-          setLoading(false);
+        // Strict array check
+        if (!Array.isArray(articles) || articles.length === 0) {
+          if (!signal.aborted) {
+            setArchiveData([]);
+            setLoading(false);
+          }
           return;
         }
 
         const grouped = articles.reduce((acc, article) => {
-          const date = new Date(article.published_at || Date.now());
+          const date = article.published_at 
+            ? new Date(article.published_at) 
+            : new Date();
           const year = date.getFullYear();
           if (!acc[year]) acc[year] = [];
           acc[year].push(article);
@@ -83,15 +98,23 @@ export default function Archive() {
           .sort((a, b) => b - a)
           .map(year => ({ year, articles: grouped[year] }));
 
-        setArchiveData(sortedArchive);
-        setLoading(false);
+        if (!signal.aborted) {
+          setArchiveData(sortedArchive);
+          setLoading(false);
+        }
       } catch (err) {
-        setError(err.message);
-        setLoading(false);
+        if (err.name !== 'AbortError') {
+          if (!signal.aborted) {
+            setError(err.message);
+            setLoading(false);
+          }
+        }
       }
     };
 
     fetchArchive();
+
+    return () => abortController.abort();
   }, []);
 
   return (

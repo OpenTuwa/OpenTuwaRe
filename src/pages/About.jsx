@@ -38,20 +38,30 @@ export default function About() {
   };
 
   useEffect(() => {
+    const abortController = new AbortController();
+    const signal = abortController.signal;
+
     const fetchAuthors = async () => {
       try {
-        const response = await fetch('/api/authors_1');
+        const response = await fetch('/api/authors_1', { signal });
         if (!response.ok) throw new Error('Failed to fetch authors');
         const data = await response.json();
-        setAuthors(data || []);
+        
+        if (!signal.aborted) {
+          setAuthors(Array.isArray(data) ? data : []);
+        }
       } catch (error) {
-        console.error(error);
-        setAuthorError('Could not load contributor list.');
+        if (error.name !== 'AbortError') {
+          console.error(error);
+          if (!signal.aborted) setAuthorError('Could not load contributor list.');
+        }
       } finally {
-        setLoadingAuthors(false);
+        if (!signal.aborted) setLoadingAuthors(false);
       }
     };
     fetchAuthors();
+
+    return () => abortController.abort();
   }, []);
 
   const handleSubscribe = async (e) => {

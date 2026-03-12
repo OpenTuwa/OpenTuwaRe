@@ -1,13 +1,8 @@
 import { isBot } from '../_utils/bot-detector.js';
 
-export async function onRequestGet(context) {
+async function handleBotRequest(context) {
   const { env, request, params } = context;
   const slug = params.slug;
-
-  // 1. Check if it's a bot using the new utility
-  if (!isBot(request)) {
-    return context.next();
-  }
 
   let article = null;
   try {
@@ -19,12 +14,20 @@ export async function onRequestGet(context) {
     article = results?.[0] || null;
   } catch (e) {
     console.error('Article DB Query failed:', e);
-    // Fallback gracefully
-    return context.next();
+    // Return 503 Service Unavailable for bots if DB fails, so they retry later
+    return new Response("<h1>Service Unavailable</h1><p>Our systems are currently under heavy load. Please try again later.</p>", {
+      status: 503,
+      headers: { 'content-type': 'text/html; charset=utf-8', 'Retry-After': '60' }
+    });
   }
 
-  // If article not found, fall back to next handler (e.g. 404 page or React app handling 404)
-  if (!article) return context.next();
+  // If article not found, return 404 explicitly for bots (don't fallback to SPA)
+  if (!article) {
+    return new Response("<h1>404 - Article Not Found</h1><p>The article you are looking for does not exist.</p>", {
+      status: 404,
+      headers: { 'content-type': 'text/html; charset=utf-8' }
+    });
+  }
 
   const origin = new URL(request.url).origin;
   const url = `${origin}/articles/${slug}`;
@@ -33,6 +36,8 @@ export async function onRequestGet(context) {
   const image = article.image_url || '';
   const author = article.author || 'OpenTuwa';
   const pubDate = article.published_at || '';
+  // Ensure content_html is a string
+  const content = typeof article.content_html === 'string' ? article.content_html : '';
 
   const schema = {
     '@context': 'https://schema.org',
@@ -76,7 +81,8 @@ export async function onRequestGet(context) {
     <h1>${esc(title)}</h1>
     <p><strong>${esc(author)}</strong>${pubDate ? ` · ${new Date(pubDate).toDateString()}` : ''}</p>
     <p>${esc(desc)}</p>
-    ${article.content_html ? `<div>${article.content_html}</div>` : ''}
+    <hr>
+    ${content ? `<div>${content}</div>` : '<p><em>Content is currently unavailable.</em></p>'}
   </article>
 </body>
 </html>`;
@@ -84,6 +90,16 @@ export async function onRequestGet(context) {
   return new Response(html, {
     headers: { 'content-type': 'text/html; charset=utf-8' }
   });
+}
+
+export async function onRequest(context) {
+  const { request } = context;
+  // 1. Check if it's a bot using the new utility
+  if (isBot(request)) {
+    return handleBotRequest(context);
+  }
+  // 2. If not a bot, let the request fall through to the SPA (Static Assets)
+  return context.next();
 }
 
 function esc(s) {
