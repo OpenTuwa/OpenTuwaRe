@@ -7,9 +7,9 @@ export async function onRequestGet(context) {
 
   let articles = [];
   try {
-    const { results } = await env.DB.prepare(
-      "SELECT slug, title, published_at, created_at, date_published, image_url FROM articles WHERE COALESCE(published_at, created_at, date_published) >= ? ORDER BY COALESCE(published_at, created_at, date_published) DESC LIMIT 1000"
-    ).bind(cutoff).all();
+const { results } = await env.DB.prepare(
+  "SELECT slug, title, published_at, image_url FROM articles WHERE published_at >= ? ORDER BY published_at DESC LIMIT 1000"
+).bind(cutoff).all();
     articles = results || [];
   } catch (e) {
     // Fallback: get recent articles without date filter and filter in JS

@@ -5,7 +5,7 @@ export async function onRequestGet(context) {
   let articles = [];
   try {
     const { results } = await env.DB.prepare(
-      "SELECT slug, updated_at, modified_at, date_updated, published_at, created_at, date_published, image_url, title FROM articles ORDER BY COALESCE(published_at, created_at, date_published) DESC"
+      "SELECT slug, published_at, image_url, title FROM articles ORDER BY published_at DESC"
     ).bind().all();
     articles = results || [];
   } catch (e) { articles = []; }
@@ -26,7 +26,7 @@ export async function onRequestGet(context) {
   }
 
   for (const a of articles) {
-    const lastmod = toISO(a.updated_at || a.modified_at || a.date_updated || a.published_at || a.created_at || a.date_published);
+    const lastmod = toISO(a.published_at);
     xml += `
   <url>
     <loc>${esc(origin + '/articles/' + a.slug)}</loc>${lastmod ? `
