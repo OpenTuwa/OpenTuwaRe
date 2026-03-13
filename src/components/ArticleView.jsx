@@ -132,37 +132,53 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
     return () => window.removeEventListener('scroll', handleScroll);
   }, [article]);
 
+  const articleRef = useRef(null);
+
   useEffect(() => {
     if (!article || !article.content_html) return;
 
     const cleanupFns = [];
+    const processedElements = new WeakSet();
     
-    // Using IntersectionObserver to detect when videos enter viewport instead of a fixed timer
-    // This solves the race condition where videos aren't ready after 800ms
-    const observer = new IntersectionObserver((entries) => {
+    // Using IntersectionObserver to detect when videos enter viewport
+    const intersectionObserver = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
           const element = entry.target;
-          // Stop observing once we've processed it
-          observer.unobserve(element);
-          
-          // Initialize subtitle logic for this specific element
+          intersectionObserver.unobserve(element);
           initSingleSubtitle(element);
         }
       });
-    }, { rootMargin: '200px' }); // Load ahead of scroll
+    }, { rootMargin: '200px' });
 
     // Function to attach subtitle logic to a single media element
     const initSingleSubtitle = async (mediaEl) => {
-      // Find the parent box or data attributes
-      // In the HTML, the video/iframe is usually inside a container with class 'tuwa-subtitle-box'
-      // OR the element itself has the data attributes.
-      // Let's look up to find the container if needed.
-      const box = mediaEl.closest('.tuwa-subtitle-box') || mediaEl.parentElement;
-      if (!box) return;
+      if (processedElements.has(mediaEl)) return;
+      processedElements.add(mediaEl);
 
-      const mediaId = box.dataset.video || box.dataset.youtube;
-      const vttUrl = box.dataset.vtt;
+      // Check element itself first for data attributes
+      let mediaId = mediaEl.dataset.video || mediaEl.dataset.youtube;
+      let vttUrl = mediaEl.dataset.vtt;
+      let container = mediaEl.parentElement;
+
+      // If not found on element, check closest subtitle box
+      if (!mediaId || !vttUrl) {
+         const box = mediaEl.closest('.tuwa-subtitle-box');
+         if (box) {
+             mediaId = mediaId || box.dataset.video || box.dataset.youtube;
+             vttUrl = vttUrl || box.dataset.vtt;
+             container = box;
+         }
+      }
+
+      // If still not found, check direct parent (legacy fallback)
+      if (!mediaId || !vttUrl) {
+          const parent = mediaEl.parentElement;
+          if (parent) {
+             mediaId = mediaId || parent.dataset.video || parent.dataset.youtube;
+             vttUrl = vttUrl || parent.dataset.vtt;
+          }
+      }
 
       if (!mediaId || !vttUrl) return;
 
@@ -217,44 +233,26 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
           cues.push({ start: currentCue.start, end: currentCue.end, text: currentCue.textLines.join('<br>') });
         }
 
+        // Create overlay container if needed
+        let overlay = container.querySelector('.tuwa-subtitle-overlay');
+        if (!overlay) {
+            // Ensure container is positioned
+            const computedStyle = window.getComputedStyle(container);
+            if (computedStyle.position === 'static') {
+                container.style.position = 'relative';
+            }
+            
+            overlay = document.createElement('div');
+            overlay.className = 'tuwa-subtitle-overlay';
+            container.appendChild(overlay);
+        }
+
         const updateSubtitle = (currentTime) => {
           const activeCue = cues.find(c => currentTime >= c.start && currentTime <= c.end);
-          // Only update DOM if content changed to prevent layout thrashing
           const newContent = activeCue ? `<span class="active-text">${activeCue.text}</span>` : '';
-          if (box.innerHTML !== newContent && !box.querySelector('video, iframe')) {
-             // CAREFUL: box.innerHTML replacement kills the video if it's inside the box!
-             // We need a specific subtitle container.
-             // If the box IS the container, we should append a subtitle div or find it.
-             let subDiv = box.querySelector('.tuwa-subtitle-overlay');
-             if (!subDiv) {
-                subDiv = document.createElement('div');
-                subDiv.className = 'tuwa-subtitle-overlay';
-                box.appendChild(subDiv);
-             }
-             subDiv.innerHTML = newContent;
-          } else if (box.querySelector('.tuwa-subtitle-overlay')) {
-             box.querySelector('.tuwa-subtitle-overlay').innerHTML = newContent;
-          } else {
-             // Fallback for legacy structure where box IS the subtitle container (risky)
-             // But we checked !box.querySelector('video') above.
-             // If the structure is: <div class="box" data-vtt="..."> <video> ... </video> </div>
-             // We shouldn't overwrite innerHTML.
-             // Let's assume there's a target container or create one.
-             let subDiv = box.querySelector('.tuwa-subtitle-overlay');
-             if (!subDiv) {
-                subDiv = document.createElement('div');
-                subDiv.className = 'tuwa-subtitle-overlay';
-                // Make sure it's positioned correctly
-                subDiv.style.position = 'absolute';
-                subDiv.style.bottom = '20px';
-                subDiv.style.left = '0';
-                subDiv.style.width = '100%';
-                subDiv.style.textAlign = 'center';
-                subDiv.style.pointerEvents = 'none';
-                box.style.position = 'relative'; // Ensure parent is relative
-                box.appendChild(subDiv);
-             }
-             subDiv.innerHTML = newContent;
+          
+          if (overlay.innerHTML !== newContent) {
+             overlay.innerHTML = newContent;
           }
         };
 
@@ -271,7 +269,6 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
           });
 
         } else if (tag === 'iframe') {
-          // YouTube logic
           if (!mediaEl.id) mediaEl.id = `yt-${mediaId}-${Math.random().toString(36).substr(2, 9)}`; 
           
           const onYTReady = (event) => {
@@ -292,7 +289,6 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
                 events: { onReady: onYTReady }
              });
           } else {
-             // Queue it if API not ready
              if (!window.ytQueue) window.ytQueue = [];
              window.ytQueue.push({ id: mediaEl.id, onReady: onYTReady });
           }
@@ -303,9 +299,33 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
       }
     };
 
-    // Scan for all potential media elements
-    const mediaElements = document.querySelectorAll('video, audio, iframe');
-    mediaElements.forEach(el => observer.observe(el));
+    // MutationObserver to catch dynamically added media elements
+    const mutationObserver = new MutationObserver((mutations) => {
+      let shouldScan = false;
+      for (const mutation of mutations) {
+        if (mutation.addedNodes.length > 0) {
+          shouldScan = true;
+          break;
+        }
+      }
+      if (shouldScan && articleRef.current) {
+         const newMedia = articleRef.current.querySelectorAll('video, audio, iframe');
+         newMedia.forEach(el => {
+             if (!processedElements.has(el)) {
+                 intersectionObserver.observe(el);
+             }
+         });
+      }
+    });
+
+    if (articleRef.current) {
+        // Initial scan
+        const mediaElements = articleRef.current.querySelectorAll('video, audio, iframe');
+        mediaElements.forEach(el => intersectionObserver.observe(el));
+        
+        // Start observing mutations
+        mutationObserver.observe(articleRef.current, { childList: true, subtree: true });
+    }
     
     // Global YouTube API Ready handler
     if (!window.onYouTubeIframeAPIReady) {
@@ -321,7 +341,6 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
         };
     }
     
-    // Inject YT script if needed and missing
     if (document.querySelector('iframe') && !document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
         const tag = document.createElement('script');
         tag.src = "https://www.youtube.com/iframe_api";
@@ -329,7 +348,8 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
     }
 
     return () => {
-      observer.disconnect();
+      intersectionObserver.disconnect();
+      mutationObserver.disconnect();
       cleanupFns.forEach(fn => fn());
     };
   }, [article, router]);
@@ -469,7 +489,7 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
           </div>
         </section>
 
-        <article className="max-w-[720px] mx-auto px-6 py-20 prose prose-invert prose-xl text-tuwa-text prose-a:text-tuwa-accent hover:prose-a:text-blue-400 prose-img:rounded-xl">
+        <article ref={articleRef} className="max-w-[720px] mx-auto px-6 py-20 prose prose-invert prose-xl text-tuwa-text prose-a:text-tuwa-accent hover:prose-a:text-blue-400 prose-img:rounded-xl">
           <ArticleContent html={article.content_html} />
         </article>
 

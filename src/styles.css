@@ -50,8 +50,38 @@
 .tuwa-upgrade .tag-hover:hover { border-color: #3b82f6; color: #3b82f6; }
 .tuwa-upgrade #right-sidebar { opacity: 0; transform: translateX(8px); transition: opacity 260ms cubic-bezier(.2,.9,.2,1), transform 260ms cubic-bezier(.2,.9,.2,1); pointer-events: none; }
 .tuwa-upgrade #right-sidebar.show-sidebar { opacity: 1; transform: none; pointer-events: auto; }
-.tuwa-upgrade .tuwa-subtitle-box { display:flex; align-items:center; justify-content:center; min-height:4rem; margin-top:-1rem; margin-bottom:2rem; padding:1rem 1.5rem; background-color:#161618; border:1px solid rgba(255,255,255,0.05); border-radius:0.75rem; opacity:0.8; text-align:center; font-family:'Plus Jakarta Sans',sans-serif; font-size:1.125rem; font-weight:600; color:#a1a1aa; transition:all 0.3s ease; }
-.tuwa-upgrade .tuwa-subtitle-box .active-text { color:#FFFFFF; animation: fadeIn 0.2s ease-in; }
+.tuwa-upgrade .tuwa-subtitle-box { position: relative; display:flex; align-items:center; justify-content:center; min-height:4rem; margin-top:-1rem; margin-bottom:2rem; padding:1rem 1.5rem; background-color:#161618; border:1px solid rgba(255,255,255,0.05); border-radius:0.75rem; opacity:0.8; text-align:center; font-family:'Plus Jakarta Sans',sans-serif; font-size:1.125rem; font-weight:600; color:#a1a1aa; transition:all 0.3s ease; }
+.tuwa-upgrade .tuwa-subtitle-box .active-text { color:#FFFFFF; animation: fadeIn 0.2s ease-in; text-shadow: 0 2px 4px rgba(0,0,0,0.8); background: rgba(0,0,0,0.4); padding: 2px 8px; border-radius: 4px; }
+.tuwa-subtitle-overlay {
+  position: absolute;
+  bottom: 10%;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  pointer-events: none;
+  z-index: 50;
+  display: flex;
+  justify-content: center;
+  padding: 0 20px;
+}
+.tuwa-subtitle-overlay .active-text {
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  line-height: 1.4;
+  font-weight: 500;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  max-width: 90%;
+  animation: slideUpFade 0.2s ease-out;
+}
+@keyframes slideUpFade {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 @keyframes fadeIn { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: translateY(0); } }
 
 /* cms.html: variables and layout (scoped) */
