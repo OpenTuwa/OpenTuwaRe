@@ -1,6 +1,6 @@
 name = "opentuware"
 compatibility_date = "2025-01-01"
-pages_build_output_dir = "dist"
+pages_build_output_dir = ".vercel/output/static"
 
 [ai]
 binding = "AI"
