@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "cf-build": "next build && npx @cloudflare/next-on-pages --skip-build",
+    "cf-build": "next build && npx @cloudflare/next-on-pages",
     "start": "next start",
     "pages:build": "npx @cloudflare/next-on-pages",
     "preview": "npm run pages:build && wrangler pages dev .vercel/output/static",
