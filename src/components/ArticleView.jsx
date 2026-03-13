@@ -177,10 +177,12 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
           if (parent) {
              mediaId = mediaId || parent.dataset.video || parent.dataset.youtube;
              vttUrl = vttUrl || parent.dataset.vtt;
+             container = parent;
           }
       }
 
-      if (!mediaId || !vttUrl) return;
+      // We ONLY strictly need the VTT URL to display subtitles. Media ID is optional.
+      if (!vttUrl) return;
 
       try {
         const response = await fetch(vttUrl);
@@ -225,7 +227,10 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
             const times = line.split('-->');
             currentCue = { start: parseVttTime(times[0]), end: parseVttTime(times[1]), textLines: [] };
           } else if (currentCue) {
-            currentCue.textLines.push(line);
+            // Ignore single numeric cue identifiers that might be trapped
+            if (!line.match(/^\d+$/) || currentCue.textLines.length > 0) {
+                currentCue.textLines.push(line);
+            }
           }
         }
         
@@ -233,7 +238,7 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
           cues.push({ start: currentCue.start, end: currentCue.end, text: currentCue.textLines.join('<br>') });
         }
 
-        // Create overlay container if needed
+        // Create overlay container with guaranteed inline styles
         let overlay = container.querySelector('.tuwa-subtitle-overlay');
         if (!overlay) {
             // Ensure container is positioned
@@ -244,12 +249,24 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
             
             overlay = document.createElement('div');
             overlay.className = 'tuwa-subtitle-overlay';
+            // Added hardcoded fallback inline styles to ensure visibility
+            overlay.style.position = 'absolute';
+            overlay.style.bottom = '8%';
+            overlay.style.left = '0';
+            overlay.style.width = '100%';
+            overlay.style.textAlign = 'center';
+            overlay.style.pointerEvents = 'none';
+            overlay.style.zIndex = '9999';
+            overlay.style.padding = '0 20px';
+            overlay.style.boxSizing = 'border-box';
+            
             container.appendChild(overlay);
         }
 
         const updateSubtitle = (currentTime) => {
           const activeCue = cues.find(c => currentTime >= c.start && currentTime <= c.end);
-          const newContent = activeCue ? `<span class="active-text">${activeCue.text}</span>` : '';
+          // Applied reliable inline styling directly to the active text
+          const newContent = activeCue ? `<span class="active-text" style="background: rgba(0,0,0,0.8); color: #fff; padding: 4px 12px; border-radius: 6px; font-size: 1.1rem; line-height: 1.5; display: inline-block; text-shadow: 1px 1px 2px #000; font-family: sans-serif;">${activeCue.text}</span>` : '';
           
           if (overlay.innerHTML !== newContent) {
              overlay.innerHTML = newContent;
@@ -269,16 +286,35 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
           });
 
         } else if (tag === 'iframe') {
-          if (!mediaEl.id) mediaEl.id = `yt-${mediaId}-${Math.random().toString(36).substr(2, 9)}`; 
+          if (!mediaEl.id) mediaEl.id = `yt-${mediaId || 'video'}-${Math.random().toString(36).substr(2, 9)}`; 
           
+          // CRITICAL FIX: Ensure enablejsapi=1 is present so the API can bind to the iframe
+          if (mediaEl.src && (mediaEl.src.includes('youtube.com') || mediaEl.src.includes('youtu.be'))) {
+              try {
+                  const url = new URL(mediaEl.src);
+                  if (!url.searchParams.has('enablejsapi')) {
+                      url.searchParams.set('enablejsapi', '1');
+                      mediaEl.src = url.toString();
+                  }
+              } catch(e) {
+                  // Fallback for relative URLs
+                  if (!mediaEl.src.includes('enablejsapi=1')) {
+                      mediaEl.src += (mediaEl.src.includes('?') ? '&' : '?') + 'enablejsapi=1';
+                  }
+              }
+          }
+
           const onYTReady = (event) => {
              const interval = setInterval(() => {
                 try {
-                  if (event.target.getPlayerState && event.target.getPlayerState() === window.YT.PlayerState.PLAYING) {
-                    updateSubtitle(event.target.getCurrentTime());
+                  if (event.target && typeof event.target.getPlayerState === 'function') {
+                      const state = event.target.getPlayerState();
+                      if (state === window.YT.PlayerState.PLAYING || state === window.YT.PlayerState.PAUSED) {
+                          updateSubtitle(event.target.getCurrentTime());
+                      }
                   }
                 } catch (e) {
-                  clearInterval(interval);
+                  // Fail silently to prevent console spam
                 }
              }, 100);
              cleanupFns.push(() => clearInterval(interval));
@@ -341,6 +377,7 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
         };
     }
     
+    // Safely inject YT iframe API script if an iframe exists
     if (document.querySelector('iframe') && !document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
         const tag = document.createElement('script');
         tag.src = "https://www.youtube.com/iframe_api";
