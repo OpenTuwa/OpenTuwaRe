@@ -12,7 +12,6 @@ export async function onRequestGet(context) {
 
   try {
     if (author && author.trim() !== '') {
-      // Author Page Logic
       let a = null;
       try {
         const { results } = await env.DB.prepare("SELECT * FROM authors WHERE LOWER(name) = LOWER(?)").bind(author).all();
@@ -29,17 +28,18 @@ export async function onRequestGet(context) {
       articles = results || [];
 
       innerHtml = `
-        <main style="max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem;">
-          <h1>${escapeHtml(name)}</h1>
-          <p class="lead">${escapeHtml(pageDesc)}</p>
-          <hr style="border: 0; border-top: 1px solid #222; margin: 2rem 0;">
-          <h2>Latest Stories</h2>
-          ${renderArticleList(articles)}
-        </main>
+        <div class="pt-32 pb-12 max-w-7xl mx-auto px-6">
+          <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight font-heading text-white mb-4">${escapeHtml(name)}</h1>
+          <p class="text-lg text-tuwa-muted max-w-2xl mb-12">${escapeHtml(pageDesc)}</p>
+          <div class="border-t border-white/5 my-12"></div>
+          <h2 class="text-2xl font-bold text-white mb-8">Latest Stories</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            ${renderArticleList(articles)}
+          </div>
+        </div>
       `;
 
     } else if (tag && tag.trim() !== '') {
-      // Tag Page Logic
       pageTitle = `${tag} - Topic | OpenTuwa`;
       pageDesc = `Latest stories, documentaries and articles about ${tag}.`;
       
@@ -50,52 +50,90 @@ export async function onRequestGet(context) {
       articles = results || [];
 
       innerHtml = `
-        <main style="max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem;">
-          <h1>Topic: ${escapeHtml(tag)}</h1>
-          <p class="lead">${escapeHtml(pageDesc)}</p>
-          <hr style="border: 0; border-top: 1px solid #222; margin: 2rem 0;">
-          <h2>Latest Stories</h2>
-          ${renderArticleList(articles)}
-        </main>
+        <div class="pt-32 pb-12 max-w-7xl mx-auto px-6">
+          <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight font-heading text-white mb-4">Topic: ${escapeHtml(tag)}</h1>
+          <p class="text-lg text-tuwa-muted max-w-2xl mb-12">${escapeHtml(pageDesc)}</p>
+          <div class="border-t border-white/5 my-12"></div>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            ${renderArticleList(articles)}
+          </div>
+        </div>
       `;
 
     } else if (url.pathname === '/' || url.pathname === '') {
-      // Home Page Logic
       const { results } = await env.DB.prepare(
         "SELECT title, slug, subtitle, published_at FROM articles ORDER BY published_at DESC LIMIT 20"
       ).all();
       articles = results || [];
 
       innerHtml = `
-        <main style="max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem;">
-          <h1>Latest Stories</h1>
-          <p class="lead">${escapeHtml(pageDesc)}</p>
-          <hr style="border: 0; border-top: 1px solid #222; margin: 2rem 0;">
-          ${renderArticleList(articles)}
-        </main>
+        <div class="pt-32 pb-12 max-w-7xl mx-auto px-6">
+          <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight font-heading text-white mb-4">Latest Stories</h1>
+          <p class="text-lg text-tuwa-muted max-w-2xl mb-12">${escapeHtml(pageDesc)}</p>
+          <div class="border-t border-white/5 my-12"></div>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            ${renderArticleList(articles)}
+          </div>
+        </div>
       `;
     } else {
-      // Unknown route (e.g. static asset that wasn't caught?)
       return context.next();
     }
 
   } catch (err) {
-    console.error('DB Error:', err);
-    // Fallback to static shell if DB fails
     return context.next();
   }
 
-  // 2. Fetch the SPA Shell (index.html)
+  // 2. Fetch the SPA Shell
   const response = await context.next();
 
-  // If the next handler didn't return HTML (e.g. 404 or something else), return our own
   if (!response.headers.get('content-type')?.includes('text/html')) {
-    return new Response(makeFallbackHtml(pageTitle, pageDesc, innerHtml), {
-      headers: { 'content-type': 'text/html; charset=utf-8' }
-    });
+    // If not HTML, we can't hydrate. Return purely static.
+    // (This shouldn't happen for valid routes if _redirects is correct)
+    return new Response(`<!doctype html><html><body>${innerHtml}</body></html>`, { headers: { 'content-type': 'text/html' } });
   }
 
-  // 3. Inject Content (Hydration)
+  // 3. Construct the Full Layout (Navbar + Content + Footer)
+  // We reconstruct the Navbar HTML manually to match Navbar.jsx
+  const navbarHtml = `
+    <header class="fixed top-0 w-full z-50 backdrop-blur-md bg-[rgba(10,10,11,0.8)] border-b border-white/5">
+      <nav class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+        <div class="flex items-center space-x-8">
+          <a class="text-2xl font-extrabold tracking-tighter font-heading text-white" href="/">OpenTuwa</a>
+          <div class="hidden md:flex items-center space-x-6 text-sm font-medium text-tuwa-muted">
+            <a href="/" class="hover:text-white transition-colors text-white">Stories</a>
+            <a href="/archive" class="hover:text-white transition-colors">Archive</a>
+            <a href="/about" class="hover:text-white transition-colors">About</a>
+          </div>
+        </div>
+      </nav>
+    </header>
+  `;
+
+  const footerHtml = `
+    <footer class="py-12 px-6 border-t border-white/5 mt-auto">
+      <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
+        <div class="text-2xl font-extrabold tracking-tighter font-heading text-white">OpenTuwa</div>
+        <div class="flex flex-wrap justify-center md:justify-end space-x-8 text-xs font-bold tracking-widest uppercase text-tuwa-muted">
+          <a class="hover:text-white transition-colors" href="/legal">Terms & Privacy</a>
+          <a class="hover:text-white transition-colors" href="/about">About OpenTuwa</a>
+        </div>
+        <div class="text-xs text-tuwa-muted">© 2026 OpenTuwa Media. All rights reserved.</div>
+      </div>
+    </footer>
+  `;
+
+  const fullHtml = `
+    <div class="min-h-screen bg-[#0a0a0b] text-[#e1e1e1] font-sans antialiased selection:bg-tuwa-accent selection:text-white flex flex-col">
+      ${navbarHtml}
+      <main class="flex-grow">
+        ${innerHtml}
+      </main>
+      ${footerHtml}
+    </div>
+  `;
+
+  // 4. Inject Content (Hydration)
   return new HTMLRewriter()
     .on('title', {
       element(e) { e.setInnerContent(pageTitle); }
@@ -111,7 +149,7 @@ export async function onRequestGet(context) {
     })
     .on('div#root', {
       element(e) {
-        e.setInnerContent(innerHtml, { html: true });
+        e.setInnerContent(fullHtml, { html: true });
       }
     })
     .transform(response);
@@ -120,30 +158,20 @@ export async function onRequestGet(context) {
 function renderArticleList(articles) {
   if (!articles || articles.length === 0) return '<p>No stories found.</p>';
   return articles.map(article => `
-    <article style="margin-bottom: 2.5rem; padding-bottom: 2.5rem; border-bottom: 1px solid #222;">
-      <h2 style="margin-bottom: 0.75rem; font-size: 1.75rem;">
-        <a href="/articles/${escapeHtml(article.slug)}" style="text-decoration: none; color: #fff;">${escapeHtml(article.title)}</a>
+    <article class="flex flex-col h-full p-6 rounded-2xl bg-white/5 border border-white/5 hover:border-white/10 transition-all duration-300 group">
+      <div class="mb-4">
+        <span class="text-xs font-bold tracking-widest uppercase text-tuwa-accent">Article</span>
+      </div>
+      <h2 class="text-xl font-bold text-white mb-3 group-hover:text-tuwa-accent transition-colors line-clamp-2">
+        <a href="/articles/${escapeHtml(article.slug)}">${escapeHtml(article.title)}</a>
       </h2>
-      ${article.subtitle ? `<p style="font-size: 1.15rem; color: #aaa; margin: 0.5rem 0;">${escapeHtml(article.subtitle)}</p>` : ''}
-      <div style="font-size: 0.9rem; color: #888; margin-top: 0.75rem;">
-        ${article.published_at ? `<span>${new Date(article.published_at).toLocaleDateString()}</span>` : ''}
-         &bull; <a href="/articles/${escapeHtml(article.slug)}" style="color: #3b82f6;">Read full story</a>
+      ${article.subtitle ? `<p class="text-sm text-tuwa-muted mb-4 line-clamp-3 flex-grow">${escapeHtml(article.subtitle)}</p>` : '<div class="flex-grow"></div>'}
+      <div class="flex items-center justify-between text-xs text-tuwa-muted mt-4 pt-4 border-t border-white/5">
+        <span>${article.published_at ? new Date(article.published_at).toLocaleDateString() : ''}</span>
+        <a href="/articles/${escapeHtml(article.slug)}" class="font-medium text-white group-hover:text-tuwa-accent transition-colors">Read Story &rarr;</a>
       </div>
     </article>
   `).join('');
-}
-
-function makeFallbackHtml(title, desc, content) {
-  return `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${escapeHtml(title)}</title>
-<meta name="description" content="${escapeHtml(desc)}">
-<style>body{background:#0a0a0b;color:#e1e1e1;font-family:sans-serif}</style>
-</head>
-<body><div id="root">${content}</div></body></html>`;
 }
 
 function escapeHtml(str) {
