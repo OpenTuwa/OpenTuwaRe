@@ -12,6 +12,10 @@ function RevealSection({ children, className = '' }) {
   return <div ref={ref} className={`reveal ${className}`}>{children}</div>;
 }
 
+const ArticleContent = React.memo(({ html }) => {
+  return <div dangerouslySetInnerHTML={{ __html: html || '<p>No content available.</p>' }} />;
+});
+
 export default function ArticleView({ article, recommended = [], authorInfo = {} }) {
   const router = useRouter();
   const slug = article.slug;
@@ -431,7 +435,7 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
         </section>
 
         <article className="max-w-[720px] mx-auto px-6 py-20 prose prose-invert prose-xl text-tuwa-text prose-a:text-tuwa-accent hover:prose-a:text-blue-400 prose-img:rounded-xl">
-          <div dangerouslySetInnerHTML={{ __html: article.content_html || '<p>No content available.</p>' }} />
+          <ArticleContent html={article.content_html} />
         </article>
 
         {!inRecZone && (

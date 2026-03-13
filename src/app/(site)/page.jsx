@@ -10,13 +10,14 @@ export const metadata = {
 };
 
 export default async function HomePage({ searchParams }) {
-  const { q } = await searchParams;
+  const { q, author, tag } = await searchParams;
   let articles = [];
 
   try {
     const { env } = getRequestContext();
     
-    const rawResults = await fetchCandidates(env, 100, q);
+    // Pass author and tag to fetchCandidates
+    const rawResults = await fetchCandidates(env, 100, q, author, tag);
     const engine = new RecommendationEngine(rawResults);
     articles = engine.getTrending(100);
 
