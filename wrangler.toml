@@ -5,20 +5,17 @@ pages_build_output_dir = ".vercel/output/static"
 
 [ai]
 binding = "AI"
-remote = true
 
 [[vectorize]]
 binding = "VECTORIZE_TEXT"
 index_name = "tuwa-brain"
-remote = true
 
 [[vectorize]]
 binding = "VECTORIZE_VISION"
 index_name = "tuwa-vision"
-remote = true
 
 [[d1_databases]]
 binding = "DB"
 database_name = "articles"
 database_id = "5494913d-dde9-48ae-82a4-5774ed2b11a6"
-remote = true
+preview_database_id = "5494913d-dde9-48ae-82a4-5774ed2b11a6" # <--- THIS IS CRITICAL
