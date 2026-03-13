@@ -1,0 +1,37 @@
+import { getRequestContext } from '@cloudflare/next-on-pages';
+import AboutPageContent from '../../../components/AboutPageContent';
+
+export const runtime = 'edge';
+
+export const metadata = {
+  title: 'About OpenTuwa | Independent Journalism',
+  description: 'OpenTuwa is an independent platform for long-form articles, research, and media exploring foundational ideas. Built for deep thought, not fast cycles.',
+  openGraph: {
+    title: 'About OpenTuwa',
+    description: 'OpenTuwa is an independent platform for long-form articles, research, and media exploring foundational ideas.',
+    type: 'website',
+  }
+};
+
+async function getAuthors() {
+  try {
+    const { env } = getRequestContext();
+    const { results } = await env.DB.prepare("SELECT * FROM authors ORDER BY id ASC").all();
+    
+    return (results || []).map(a => {
+      a.avatar = a.avatar_url;
+      if (a.avatar && a.avatar.includes('jsdelivr')) {
+        a.avatar = a.avatar.replace('https://cdn.jsdelivr.net/gh/OpenTuwa/OpenTuwaRe@main/', '/');
+      }
+      return a;
+    });
+  } catch (e) {
+    console.error('Error fetching authors:', e);
+    return [];
+  }
+}
+
+export default async function AboutPage() {
+  const authors = await getAuthors();
+  return <AboutPageContent authors={authors} />;
+}

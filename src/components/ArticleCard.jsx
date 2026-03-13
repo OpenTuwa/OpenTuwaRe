@@ -1,4 +1,7 @@
+'use client';
+
 import React from 'react';
+import Link from 'next/link';
 import useScrollReveal from '../hooks/useScrollReveal';
 import SkeletonImage from './SkeletonImage';
 
@@ -11,7 +14,7 @@ export default function ArticleCard({ article, index = 0 }) {
   const tag = article.tags ? article.tags.split(',')[0].trim() : null;
 
   return (
-    <a
+    <Link
       ref={ref}
       // FIX: Removed trailing '?' in href
       href={`/articles/${article.slug}`}
@@ -44,6 +47,6 @@ export default function ArticleCard({ article, index = 0 }) {
           )}
         </div>
       </div>
-    </a>
+    </Link>
   );
 }

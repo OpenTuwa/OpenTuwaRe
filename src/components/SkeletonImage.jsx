@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 
 const SkeletonImage = ({ src, alt, className, ...props }) => {
