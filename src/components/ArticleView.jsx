@@ -139,19 +139,7 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
 
     const cleanupFns = [];
     const processedElements = new WeakSet();
-    
-    // Notice we added .tuwa-subtitle-box to the elements we search for
     const querySelectorStr = 'video, audio, iframe, .tuwa-subtitle-box';
-
-    const intersectionObserver = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const element = entry.target;
-          intersectionObserver.unobserve(element);
-          initSingleSubtitle(element);
-        }
-      });
-    }, { rootMargin: '200px' });
 
     const initSingleSubtitle = async (targetEl) => {
       if (processedElements.has(targetEl)) return;
@@ -159,21 +147,18 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
 
       let mediaEl, container, mediaId, vttUrl;
 
-      // Scenario 1: The element is the standalone subtitle box (your specific issue)
+      // Handle standalone tuwa-subtitle-box
       if (targetEl.classList.contains('tuwa-subtitle-box')) {
           container = targetEl;
           mediaId = targetEl.dataset.video || targetEl.dataset.youtube;
           vttUrl = targetEl.dataset.vtt;
           
-          // First try to find a media element inside it
           mediaEl = targetEl.querySelector('video, audio, iframe');
-          
-          // If empty, search the whole page for the associated media ID/SRC
           if (!mediaEl && mediaId) {
               mediaEl = document.getElementById(mediaId) || document.querySelector(`[src*="${mediaId}"]`);
           }
       } 
-      // Scenario 2: The element is the media tag itself
+      // Handle native media tags
       else {
           mediaEl = targetEl;
           mediaId = mediaEl.dataset.video || mediaEl.dataset.youtube;
@@ -190,12 +175,14 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
           }
       }
 
-      // If we don't have BOTH a VTT URL and the actual video to bind to, abort.
       if (!vttUrl || !mediaEl) return;
 
       try {
         const response = await fetch(vttUrl);
-        if (!response.ok) throw new Error(`VTT fetch failed for ${vttUrl}`);
+        if (!response.ok) {
+           console.error(`[SubEngine] VTT Fetch failed (${response.status}) for: ${vttUrl}`);
+           return;
+        }
         const vttText = await response.text();
 
         const cues = [];
@@ -251,16 +238,15 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
             overlay = document.createElement('div');
             overlay.className = 'tuwa-subtitle-overlay';
             
-            // Critical layout fix for empty tuwa-subtitle-box
             if (container.classList.contains('tuwa-subtitle-box') && container.children.length === 0) {
-                // Take up natural space inside the empty box
                 overlay.style.position = 'relative';
                 overlay.style.width = '100%';
                 overlay.style.textAlign = 'center';
-                overlay.style.marginTop = '10px'; 
-                overlay.style.minHeight = '40px'; // Prevent layout jumps
+                overlay.style.marginTop = '16px'; 
+                overlay.style.minHeight = '32px'; 
+                // Add a ghost element so it forces layout height instantly
+                overlay.innerHTML = '<span style="opacity:0; pointer-events:none;">&nbsp;</span>'; 
             } else {
-                // Classic overlay behavior inside a wrapped container
                 const computedStyle = window.getComputedStyle(container);
                 if (computedStyle.position === 'static') {
                     container.style.position = 'relative';
@@ -282,7 +268,9 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
 
         const updateSubtitle = (currentTime) => {
           const activeCue = cues.find(c => currentTime >= c.start && currentTime <= c.end);
-          const newContent = activeCue ? `<span class="active-text" style="background: rgba(0,0,0,0.8); color: #fff; padding: 4px 12px; border-radius: 6px; font-size: 1.1rem; line-height: 1.5; display: inline-block; text-shadow: 1px 1px 2px #000; font-family: sans-serif;">${activeCue.text}</span>` : '';
+          const newContent = activeCue 
+            ? `<span class="active-text" style="background: rgba(0,0,0,0.8); color: #fff; padding: 4px 12px; border-radius: 6px; font-size: 1.1rem; line-height: 1.5; display: inline-block; text-shadow: 1px 1px 2px #000; font-family: sans-serif; transition: all 0.2s ease;">${activeCue.text}</span>` 
+            : '<span style="opacity:0; pointer-events:none;">&nbsp;</span>'; // Preserve ghost space
           
           if (overlay.innerHTML !== newContent) {
              overlay.innerHTML = newContent;
@@ -296,10 +284,7 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
           const onTimeUpdate = () => updateSubtitle(mediaEl.currentTime);
           
           mediaEl.addEventListener('timeupdate', onTimeUpdate);
-          
-          cleanupFns.push(() => {
-            mediaEl.removeEventListener('timeupdate', onTimeUpdate);
-          });
+          cleanupFns.push(() => mediaEl.removeEventListener('timeupdate', onTimeUpdate));
 
         } else if (tag === 'iframe') {
           if (!mediaEl.id) mediaEl.id = `yt-${mediaId || 'video'}-${Math.random().toString(36).substr(2, 9)}`; 
@@ -318,35 +303,57 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
               }
           }
 
-          const onYTReady = (event) => {
+          const startYTPolling = (ytPlayer) => {
              const interval = setInterval(() => {
                 try {
-                  if (event.target && typeof event.target.getPlayerState === 'function') {
-                      const state = event.target.getPlayerState();
-                      if (state === window.YT.PlayerState.PLAYING || state === window.YT.PlayerState.PAUSED) {
-                          updateSubtitle(event.target.getCurrentTime());
-                      }
+                  if (ytPlayer && typeof ytPlayer.getCurrentTime === 'function') {
+                      updateSubtitle(ytPlayer.getCurrentTime());
                   }
                 } catch (e) { }
              }, 100);
              cleanupFns.push(() => clearInterval(interval));
           };
 
-          if (window.YT && window.YT.Player) {
-             new window.YT.Player(mediaEl.id, {
-                events: { onReady: onYTReady }
+          const setupYT = () => {
+             const ytPlayer = new window.YT.Player(mediaEl.id, {
+                events: {
+                   onReady: (event) => startYTPolling(event.target)
+                }
              });
+
+             // Fallback: If iframe is already fully loaded, onReady might skip. Force polling anyway.
+             setTimeout(() => {
+                 if (ytPlayer && typeof ytPlayer.getCurrentTime === 'function') {
+                     startYTPolling(ytPlayer);
+                 }
+             }, 2000);
+          };
+
+          if (window.YT && window.YT.Player) {
+             setupYT();
           } else {
              if (!window.ytQueue) window.ytQueue = [];
-             window.ytQueue.push({ id: mediaEl.id, onReady: onYTReady });
+             window.ytQueue.push(setupYT);
           }
         }
 
       } catch (error) {
-        console.error('[SubEngine] Error processing subtitles:', error);
+        console.error('[SubEngine] Critical Error:', error);
       }
     };
 
+    // Scan function instead of Observer
+    const scanAndInit = () => {
+       if (articleRef.current) {
+           const elements = articleRef.current.querySelectorAll(querySelectorStr);
+           elements.forEach(el => initSingleSubtitle(el));
+       }
+    };
+
+    // Run immediately
+    scanAndInit();
+
+    // Still use MutationObserver for elements injected dynamically AFTER mount
     const mutationObserver = new MutationObserver((mutations) => {
       let shouldScan = false;
       for (const mutation of mutations) {
@@ -355,35 +362,24 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
           break;
         }
       }
-      if (shouldScan && articleRef.current) {
-         const newElements = articleRef.current.querySelectorAll(querySelectorStr);
-         newElements.forEach(el => {
-             if (!processedElements.has(el)) {
-                 intersectionObserver.observe(el);
-             }
-         });
-      }
+      if (shouldScan) scanAndInit();
     });
 
     if (articleRef.current) {
-        const elementsToObserve = articleRef.current.querySelectorAll(querySelectorStr);
-        elementsToObserve.forEach(el => intersectionObserver.observe(el));
         mutationObserver.observe(articleRef.current, { childList: true, subtree: true });
     }
     
+    // YouTube API Global Ready
     if (!window.onYouTubeIframeAPIReady) {
         window.onYouTubeIframeAPIReady = () => {
             if (window.ytQueue) {
-                window.ytQueue.forEach(item => {
-                    new window.YT.Player(item.id, {
-                        events: { onReady: item.onReady }
-                    });
-                });
+                window.ytQueue.forEach(setupFn => setupFn());
                 window.ytQueue = [];
             }
         };
     }
     
+    // Inject YT script
     if (document.querySelector('iframe') && !document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
         const tag = document.createElement('script');
         tag.src = "https://www.youtube.com/iframe_api";
@@ -391,7 +387,6 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
     }
 
     return () => {
-      intersectionObserver.disconnect();
       mutationObserver.disconnect();
       cleanupFns.forEach(fn => fn());
     };
