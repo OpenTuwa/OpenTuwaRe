@@ -1,7 +1,14 @@
-async function handleRequest(context) {
+import { isBot } from '../_utils/bot-detector.js';
+
+export async function onRequest(context) {
   const { env, request, params } = context;
   const slug = params.slug;
 
+  if (!isBot(request)) {
+    return context.next();
+  }
+
+  // ... same logic as above ...
   let article = null;
   try {
     const { results } = await env.DB.prepare(
@@ -11,13 +18,10 @@ async function handleRequest(context) {
     ).bind(slug).all();
     article = results?.[0] || null;
   } catch (e) {
-    console.error('Article DB Query failed:', e);
-    // Continue to next (likely SPA 404 or shell)
     return context.next();
   }
 
   if (!article) {
-    // Let the SPA handle the 404
     return context.next();
   }
 
@@ -30,17 +34,11 @@ async function handleRequest(context) {
     ? article.content_html 
     : `<p class="lead text-lg text-tuwa-muted">${esc(desc)}</p>`;
 
-  // 1. Construct Navbar/Footer HTML (Shared Layout)
   const navbarHtml = `
     <header class="fixed top-0 w-full z-50 backdrop-blur-md bg-[rgba(10,10,11,0.8)] border-b border-white/5">
       <nav class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
         <div class="flex items-center space-x-8">
           <a class="text-2xl font-extrabold tracking-tighter font-heading text-white" href="/">OpenTuwa</a>
-          <div class="hidden md:flex items-center space-x-6 text-sm font-medium text-tuwa-muted">
-            <a href="/" class="hover:text-white transition-colors">Stories</a>
-            <a href="/archive" class="hover:text-white transition-colors">Archive</a>
-            <a href="/about" class="hover:text-white transition-colors">About</a>
-          </div>
         </div>
       </nav>
     </header>
@@ -50,16 +48,11 @@ async function handleRequest(context) {
     <footer class="py-12 px-6 border-t border-white/5 mt-auto">
       <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
         <div class="text-2xl font-extrabold tracking-tighter font-heading text-white">OpenTuwa</div>
-        <div class="flex flex-wrap justify-center md:justify-end space-x-8 text-xs font-bold tracking-widest uppercase text-tuwa-muted">
-          <a class="hover:text-white transition-colors" href="/legal">Terms & Privacy</a>
-          <a class="hover:text-white transition-colors" href="/about">About OpenTuwa</a>
-        </div>
         <div class="text-xs text-tuwa-muted">© 2026 OpenTuwa Media. All rights reserved.</div>
       </div>
     </footer>
   `;
 
-  // 2. Construct Article Content (Matches ArticleLayout.jsx classes)
   const innerHtml = `
     <div class="pt-32 pb-12 max-w-3xl mx-auto px-6">
       <article>
@@ -91,49 +84,46 @@ async function handleRequest(context) {
     </div>
   `;
 
-  const fullHtml = `
-    <div class="min-h-screen bg-[#0a0a0b] text-[#e1e1e1] font-sans antialiased selection:bg-tuwa-accent selection:text-white flex flex-col">
-      ${navbarHtml}
-      <main class="flex-grow">
-        ${innerHtml}
-      </main>
-      ${footerHtml}
-    </div>
-  `;
-
-  // Fetch the SPA Shell
-  const response = await context.next();
-
-  if (!response.headers.get('content-type')?.includes('text/html')) {
-    return new Response(fullHtml, { headers: { 'content-type': 'text/html' } });
-  }
-
-  // Inject Content (Hydration)
-  return new HTMLRewriter()
-    .on('title', {
-      element(e) { e.setInnerContent(title + " | OpenTuwa"); }
-    })
-    .on('meta[name="description"]', {
-      element(e) { e.setAttribute('content', desc); }
-    })
-    .on('head', {
-      element(e) {
-        e.append(`<meta property="og:title" content="${esc(title)}">`, { html: true });
-        e.append(`<meta property="og:description" content="${esc(desc)}">`, { html: true });
-        if (image) e.append(`<meta property="og:image" content="${esc(image)}">`, { html: true });
-        e.append(`<meta property="article:published_time" content="${esc(pubDate)}">`, { html: true });
+  const fullHtml = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>${esc(title)} | OpenTuwa</title>
+  <meta name="description" content="${esc(desc)}">
+  <meta property="og:title" content="${esc(title)}">
+  <meta property="og:description" content="${esc(desc)}">
+  ${image ? `<meta property="og:image" content="${esc(image)}">` : ''}
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'tuwa-muted': '#a1a1aa',
+            'tuwa-accent': '#3b82f6',
+            'tuwa-text': '#e1e1e1',
+          },
+          fontFamily: {
+            heading: ['Plus Jakarta Sans', 'sans-serif'],
+          }
+        }
       }
-    })
-    .on('div#root', {
-      element(e) {
-        e.setInnerContent(fullHtml, { html: true });
-      }
-    })
-    .transform(response);
-}
+    }
+  </script>
+</head>
+<body class="bg-[#0a0a0b] text-[#e1e1e1] font-sans antialiased">
+  <div class="min-h-screen flex flex-col">
+    ${navbarHtml}
+    <main class="flex-grow">
+      ${innerHtml}
+    </main>
+    ${footerHtml}
+  </div>
+</body>
+</html>`;
 
-export async function onRequest(context) {
-  return handleRequest(context);
+  return new Response(fullHtml, { headers: { 'content-type': 'text/html; charset=utf-8' } });
 }
 
 function esc(s) {
