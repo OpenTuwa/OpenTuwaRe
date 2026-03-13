@@ -141,249 +141,279 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
     const processedElements = new WeakSet();
     const querySelectorStr = 'video, audio, iframe, .tuwa-subtitle-box';
 
+    // --- helpers ---
+
+    const parseVttTime = (timeStr) => {
+      if (!timeStr) return 0;
+      const clean = timeStr.trim().split(/\s+/)[0].replace(',', '.');
+      const parts = clean.split(':');
+      let seconds = 0;
+      if (parts.length === 3) {
+        seconds = parseFloat(parts[0]) * 3600 + parseFloat(parts[1]) * 60 + parseFloat(parts[2]);
+      } else if (parts.length === 2) {
+        seconds = parseFloat(parts[0]) * 60 + parseFloat(parts[1]);
+      } else {
+        seconds = parseFloat(parts[0]);
+      }
+      return seconds || 0;
+    };
+
+    const parseVtt = (vttText) => {
+      const cues = [];
+      const lines = vttText.replace(/\r\n/g, '\n').split('\n');
+      let currentCue = null;
+      for (let line of lines) {
+        line = line.trim();
+        if (!line) {
+          if (currentCue && currentCue.textLines.length > 0) {
+            cues.push({ start: currentCue.start, end: currentCue.end, text: currentCue.textLines.join('<br>') });
+          }
+          currentCue = null;
+          continue;
+        }
+        if (line.startsWith('WEBVTT') || line.startsWith('Kind:') || line.startsWith('Language:') || line.startsWith('NOTE')) continue;
+        if (line.includes('-->')) {
+          if (currentCue && currentCue.textLines.length > 0) {
+            cues.push({ start: currentCue.start, end: currentCue.end, text: currentCue.textLines.join('<br>') });
+          }
+          const times = line.split('-->');
+          currentCue = { start: parseVttTime(times[0]), end: parseVttTime(times[1]), textLines: [] };
+        } else if (currentCue) {
+          if (!line.match(/^\d+$/) || currentCue.textLines.length > 0) {
+            currentCue.textLines.push(line);
+          }
+        }
+      }
+      if (currentCue && currentCue.textLines.length > 0) {
+        cues.push({ start: currentCue.start, end: currentCue.end, text: currentCue.textLines.join('<br>') });
+      }
+      return cues;
+    };
+
+    // BUG FIX #4: Ensure overlay has real dimensions and is always
+    // styled as a block-level element, whether standalone or overlaid.
+    const createOverlay = (container, isStandaloneBox) => {
+      const existing = container.querySelector('.tuwa-subtitle-overlay');
+      if (existing) return existing;
+
+      const overlay = document.createElement('div');
+      overlay.className = 'tuwa-subtitle-overlay';
+      overlay.style.zIndex = '9999';
+      overlay.style.padding = '0 20px';
+      overlay.style.boxSizing = 'border-box';
+      overlay.style.minHeight = '44px';    // always reserve space — fixes zero-height collapse
+      overlay.style.display = 'block';
+      overlay.style.width = '100%';
+      overlay.style.textAlign = 'center';
+
+      if (isStandaloneBox) {
+        // Standalone box: flow below the video, not absolutely positioned
+        overlay.style.position = 'relative';
+        overlay.style.marginTop = '10px';
+      } else {
+        // Overlaid on a media container
+        const computedStyle = window.getComputedStyle(container);
+        if (computedStyle.position === 'static') container.style.position = 'relative';
+        overlay.style.position = 'absolute';
+        overlay.style.bottom = '8%';
+        overlay.style.left = '0';
+        overlay.style.pointerEvents = 'none';
+      }
+
+      container.appendChild(overlay);
+      return overlay;
+    };
+
+    // BUG FIX #2: Track active cue text with a variable instead of
+    // comparing innerHTML — browser serialisation is not stable.
+    const attachSubtitleUpdater = (overlay, cues, mediaEl, cleanupFns) => {
+      let lastCueText = null;
+
+      const updateSubtitle = (currentTime) => {
+        const activeCue = cues.find(c => currentTime >= c.start && currentTime <= c.end);
+        const newText = activeCue ? activeCue.text : null;
+        if (newText === lastCueText) return;
+        lastCueText = newText;
+
+        if (newText) {
+          overlay.innerHTML = `<span style="background:rgba(0,0,0,0.82);color:#fff;padding:5px 14px;border-radius:6px;font-size:1.05rem;line-height:1.6;display:inline-block;text-shadow:1px 1px 2px #000;font-family:sans-serif;">${newText}</span>`;
+        } else {
+          overlay.innerHTML = '';
+        }
+      };
+
+      const tag = mediaEl.tagName.toLowerCase();
+
+      if (tag === 'video' || tag === 'audio') {
+        updateSubtitle(mediaEl.currentTime || 0);
+        const onTimeUpdate = () => updateSubtitle(mediaEl.currentTime);
+        mediaEl.addEventListener('timeupdate', onTimeUpdate);
+        cleanupFns.push(() => mediaEl.removeEventListener('timeupdate', onTimeUpdate));
+
+      } else if (tag === 'iframe') {
+        if (!mediaEl.id) mediaEl.id = `yt-iframe-${Math.random().toString(36).substr(2, 9)}`;
+
+        if (mediaEl.src && (mediaEl.src.includes('youtube.com') || mediaEl.src.includes('youtu.be'))) {
+          try {
+            const url = new URL(mediaEl.src);
+            if (!url.searchParams.has('enablejsapi')) {
+              url.searchParams.set('enablejsapi', '1');
+              mediaEl.src = url.toString();
+            }
+          } catch (e) {
+            if (!mediaEl.src.includes('enablejsapi=1')) {
+              mediaEl.src += (mediaEl.src.includes('?') ? '&' : '?') + 'enablejsapi=1';
+            }
+          }
+        }
+
+        const startYTPolling = (ytPlayer) => {
+          const interval = setInterval(() => {
+            try {
+              if (ytPlayer && typeof ytPlayer.getCurrentTime === 'function') {
+                updateSubtitle(ytPlayer.getCurrentTime());
+              }
+            } catch (e) { }
+          }, 100);
+          cleanupFns.push(() => clearInterval(interval));
+        };
+
+        const setupYT = () => {
+          const ytPlayer = new window.YT.Player(mediaEl.id, {
+            events: { onReady: (e) => startYTPolling(e.target) }
+          });
+          setTimeout(() => {
+            if (ytPlayer && typeof ytPlayer.getCurrentTime === 'function') startYTPolling(ytPlayer);
+          }, 2000);
+        };
+
+        if (window.YT && window.YT.Player) {
+          setupYT();
+        } else {
+          if (!window.ytQueue) window.ytQueue = [];
+          window.ytQueue.push(setupYT);
+        }
+      }
+    };
+
+    // --- main per-element init ---
+
     const initSingleSubtitle = async (targetEl) => {
       if (processedElements.has(targetEl)) return;
       processedElements.add(targetEl);
 
-      let mediaEl, container, mediaId, vttUrl;
+      let mediaEl = null;
+      let container = null;
+      let mediaId = null;
+      let vttUrl = null;
+      let isStandaloneBox = false;
 
-      // Handle standalone tuwa-subtitle-box
       if (targetEl.classList.contains('tuwa-subtitle-box')) {
-          container = targetEl;
-          mediaId = targetEl.dataset.video || targetEl.dataset.youtube;
-          vttUrl = targetEl.dataset.vtt;
-          
-          mediaEl = targetEl.querySelector('video, audio, iframe');
-          if (!mediaEl && mediaId) {
-              mediaEl = document.getElementById(mediaId) || document.querySelector(`[src*="${mediaId}"]`);
-          }
-      } 
-      // Handle native media tags
-      else {
-          mediaEl = targetEl;
-          mediaId = mediaEl.dataset.video || mediaEl.dataset.youtube;
-          vttUrl = mediaEl.dataset.vtt;
-          container = mediaEl.parentElement;
+        isStandaloneBox = true;
+        container = targetEl;
+        mediaId  = targetEl.dataset.video || targetEl.dataset.youtube || null;
+        vttUrl   = targetEl.dataset.vtt   || null;
 
-          if (!mediaId || !vttUrl) {
-             const box = mediaEl.closest('.tuwa-subtitle-box');
-             if (box) {
-                 mediaId = mediaId || box.dataset.video || box.dataset.youtube;
-                 vttUrl = vttUrl || box.dataset.vtt;
-                 container = box;
-             }
+        // 1) Check inside the box first
+        mediaEl = targetEl.querySelector('video, audio, iframe');
+
+        // BUG FIX #3: If not found, retry up to ~1.5 s to handle late hydration.
+        if (!mediaEl && mediaId) {
+          for (let attempt = 0; attempt < 3 && !mediaEl; attempt++) {
+            if (attempt > 0) await new Promise(r => setTimeout(r, 500));
+            mediaEl = (articleRef.current ? articleRef.current.querySelector(`#${CSS.escape(mediaId)}`) : null)
+                   || document.getElementById(mediaId)
+                   || document.querySelector(`[data-media-id="${CSS.escape(mediaId)}"]`);
           }
+        }
+
+      } else {
+        // Native media tag — only handle if it carries its own data-vtt
+        mediaEl   = targetEl;
+        mediaId   = targetEl.id || targetEl.dataset.mediaId || null;
+        vttUrl    = targetEl.dataset.vtt || null;
+        container = targetEl.parentElement;
+
+        if (!vttUrl) {
+          const box = targetEl.closest('.tuwa-subtitle-box');
+          if (box) {
+            mediaId   = mediaId || box.dataset.video || box.dataset.youtube || null;
+            vttUrl    = box.dataset.vtt || null;
+            container = box;
+            isStandaloneBox = true;
+          }
+        }
       }
 
-      if (!vttUrl || !mediaEl) return;
+      if (!vttUrl) {
+        // Not every media element needs a subtitle — not an error
+        return;
+      }
+      if (!mediaEl) {
+        console.warn(`[SubEngine] Could not find media element for id="${mediaId}" — check that the element exists in the DOM.`);
+        return;
+      }
+      if (!container) {
+        container = mediaEl.parentElement;
+      }
 
       try {
         const response = await fetch(vttUrl);
         if (!response.ok) {
-           console.error(`[SubEngine] VTT Fetch failed (${response.status}) for: ${vttUrl}`);
-           return;
+          console.error(`[SubEngine] VTT fetch failed (HTTP ${response.status}) → ${vttUrl}`);
+          return;
         }
         const vttText = await response.text();
+        const cues = parseVtt(vttText);
 
-        const cues = [];
-        const lines = vttText.replace(/\r\n/g, '\n').split('\n');
-        let currentCue = null;
-
-        const parseVttTime = (timeStr) => {
-            if (!timeStr) return 0;
-            const clean = timeStr.trim().split(/\s+/)[0].replace(',', '.');
-            const parts = clean.split(':');
-            let seconds = 0;
-            if (parts.length === 3) {
-              seconds = parseFloat(parts[0]) * 3600 + parseFloat(parts[1]) * 60 + parseFloat(parts[2]);
-            } else if (parts.length === 2) {
-              seconds = parseFloat(parts[0]) * 60 + parseFloat(parts[1]);
-            } else {
-              seconds = parseFloat(parts[0]);
-            }
-            return seconds || 0;
-        };
-
-        for (let line of lines) {
-          line = line.trim();
-          if (!line) {
-            if (currentCue && currentCue.textLines.length > 0) {
-              cues.push({ start: currentCue.start, end: currentCue.end, text: currentCue.textLines.join('<br>') });
-            }
-            currentCue = null;
-            continue;
-          }
-
-          if (line.startsWith('WEBVTT') || line.startsWith('Kind:') || line.startsWith('Language:') || line.startsWith('NOTE')) continue;
-
-          if (line.includes('-->')) {
-            if (currentCue && currentCue.textLines.length > 0) {
-              cues.push({ start: currentCue.start, end: currentCue.end, text: currentCue.textLines.join('<br>') });
-            }
-            const times = line.split('-->');
-            currentCue = { start: parseVttTime(times[0]), end: parseVttTime(times[1]), textLines: [] };
-          } else if (currentCue) {
-            if (!line.match(/^\d+$/) || currentCue.textLines.length > 0) {
-                currentCue.textLines.push(line);
-            }
-          }
-        }
-        
-        if (currentCue && currentCue.textLines.length > 0) {
-          cues.push({ start: currentCue.start, end: currentCue.end, text: currentCue.textLines.join('<br>') });
+        if (cues.length === 0) {
+          console.warn(`[SubEngine] VTT parsed 0 cues from ${vttUrl} — check file format.`);
+          return;
         }
 
-        let overlay = container.querySelector('.tuwa-subtitle-overlay');
-        if (!overlay) {
-            overlay = document.createElement('div');
-            overlay.className = 'tuwa-subtitle-overlay';
-            
-            if (container.classList.contains('tuwa-subtitle-box') && container.children.length === 0) {
-                overlay.style.position = 'relative';
-                overlay.style.width = '100%';
-                overlay.style.textAlign = 'center';
-                overlay.style.marginTop = '16px'; 
-                overlay.style.minHeight = '32px'; 
-                // Add a ghost element so it forces layout height instantly
-                overlay.innerHTML = '<span style="opacity:0; pointer-events:none;">&nbsp;</span>'; 
-            } else {
-                const computedStyle = window.getComputedStyle(container);
-                if (computedStyle.position === 'static') {
-                    container.style.position = 'relative';
-                }
-                overlay.style.position = 'absolute';
-                overlay.style.bottom = '8%';
-                overlay.style.left = '0';
-                overlay.style.width = '100%';
-                overlay.style.textAlign = 'center';
-                overlay.style.pointerEvents = 'none';
-            }
-            
-            overlay.style.zIndex = '9999';
-            overlay.style.padding = '0 20px';
-            overlay.style.boxSizing = 'border-box';
-            
-            container.appendChild(overlay);
-        }
-
-        const updateSubtitle = (currentTime) => {
-          const activeCue = cues.find(c => currentTime >= c.start && currentTime <= c.end);
-          const newContent = activeCue 
-            ? `<span class="active-text" style="background: rgba(0,0,0,0.8); color: #fff; padding: 4px 12px; border-radius: 6px; font-size: 1.1rem; line-height: 1.5; display: inline-block; text-shadow: 1px 1px 2px #000; font-family: sans-serif; transition: all 0.2s ease;">${activeCue.text}</span>` 
-            : '<span style="opacity:0; pointer-events:none;">&nbsp;</span>'; // Preserve ghost space
-          
-          if (overlay.innerHTML !== newContent) {
-             overlay.innerHTML = newContent;
-          }
-        };
-
-        const tag = mediaEl.tagName.toLowerCase();
-
-        if (tag === 'video' || tag === 'audio') {
-          updateSubtitle(mediaEl.currentTime || 0);
-          const onTimeUpdate = () => updateSubtitle(mediaEl.currentTime);
-          
-          mediaEl.addEventListener('timeupdate', onTimeUpdate);
-          cleanupFns.push(() => mediaEl.removeEventListener('timeupdate', onTimeUpdate));
-
-        } else if (tag === 'iframe') {
-          if (!mediaEl.id) mediaEl.id = `yt-${mediaId || 'video'}-${Math.random().toString(36).substr(2, 9)}`; 
-          
-          if (mediaEl.src && (mediaEl.src.includes('youtube.com') || mediaEl.src.includes('youtu.be'))) {
-              try {
-                  const url = new URL(mediaEl.src);
-                  if (!url.searchParams.has('enablejsapi')) {
-                      url.searchParams.set('enablejsapi', '1');
-                      mediaEl.src = url.toString();
-                  }
-              } catch(e) {
-                  if (!mediaEl.src.includes('enablejsapi=1')) {
-                      mediaEl.src += (mediaEl.src.includes('?') ? '&' : '?') + 'enablejsapi=1';
-                  }
-              }
-          }
-
-          const startYTPolling = (ytPlayer) => {
-             const interval = setInterval(() => {
-                try {
-                  if (ytPlayer && typeof ytPlayer.getCurrentTime === 'function') {
-                      updateSubtitle(ytPlayer.getCurrentTime());
-                  }
-                } catch (e) { }
-             }, 100);
-             cleanupFns.push(() => clearInterval(interval));
-          };
-
-          const setupYT = () => {
-             const ytPlayer = new window.YT.Player(mediaEl.id, {
-                events: {
-                   onReady: (event) => startYTPolling(event.target)
-                }
-             });
-
-             // Fallback: If iframe is already fully loaded, onReady might skip. Force polling anyway.
-             setTimeout(() => {
-                 if (ytPlayer && typeof ytPlayer.getCurrentTime === 'function') {
-                     startYTPolling(ytPlayer);
-                 }
-             }, 2000);
-          };
-
-          if (window.YT && window.YT.Player) {
-             setupYT();
-          } else {
-             if (!window.ytQueue) window.ytQueue = [];
-             window.ytQueue.push(setupYT);
-          }
-        }
+        const overlay = createOverlay(container, isStandaloneBox);
+        attachSubtitleUpdater(overlay, cues, mediaEl, cleanupFns);
 
       } catch (error) {
         console.error('[SubEngine] Critical Error:', error);
       }
     };
 
-    // Scan function instead of Observer
+    // --- scan ---
+
     const scanAndInit = () => {
-       if (articleRef.current) {
-           const elements = articleRef.current.querySelectorAll(querySelectorStr);
-           elements.forEach(el => initSingleSubtitle(el));
-       }
+      if (!articleRef.current) return;
+      const elements = articleRef.current.querySelectorAll(querySelectorStr);
+      elements.forEach(el => initSingleSubtitle(el));
     };
 
-    // Run immediately
-    scanAndInit();
+    // BUG FIX #1: Defer the first scan by one rAF so React has fully
+    // committed all dangerouslySetInnerHTML children to the DOM.
+    const rafId = requestAnimationFrame(() => scanAndInit());
+    cleanupFns.push(() => cancelAnimationFrame(rafId));
 
-    // Still use MutationObserver for elements injected dynamically AFTER mount
+    // Watch for dynamically injected elements (e.g. lazy-loaded content)
     const mutationObserver = new MutationObserver((mutations) => {
-      let shouldScan = false;
-      for (const mutation of mutations) {
-        if (mutation.addedNodes.length > 0) {
-          shouldScan = true;
-          break;
-        }
-      }
-      if (shouldScan) scanAndInit();
+      const hasNewNodes = mutations.some(m => m.addedNodes.length > 0);
+      if (hasNewNodes) scanAndInit();
     });
 
     if (articleRef.current) {
-        mutationObserver.observe(articleRef.current, { childList: true, subtree: true });
+      mutationObserver.observe(articleRef.current, { childList: true, subtree: true });
     }
-    
-    // YouTube API Global Ready
+
+    // YouTube IFrame API
     if (!window.onYouTubeIframeAPIReady) {
-        window.onYouTubeIframeAPIReady = () => {
-            if (window.ytQueue) {
-                window.ytQueue.forEach(setupFn => setupFn());
-                window.ytQueue = [];
-            }
-        };
+      window.onYouTubeIframeAPIReady = () => {
+        (window.ytQueue || []).forEach(fn => fn());
+        window.ytQueue = [];
+      };
     }
-    
-    // Inject YT script
-    if (document.querySelector('iframe') && !document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
-        const tag = document.createElement('script');
-        tag.src = "https://www.youtube.com/iframe_api";
-        document.head.appendChild(tag);
+    if (articleRef.current && articleRef.current.querySelector('iframe') &&
+        !document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
+      const s = document.createElement('script');
+      s.src = 'https://www.youtube.com/iframe_api';
+      document.head.appendChild(s);
     }
 
     return () => {
