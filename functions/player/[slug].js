@@ -1,11 +1,12 @@
+import { isBot } from '../_utils/bot-detector.js';
+
 export async function onRequestGet(context) {
   const { env, request, params } = context;
   const slug = params.slug;
 
-  const ua = request.headers.get('user-agent') || '';
-  const isBot = /(googlebot|bingbot|facebookexternalhit|twitterbot|linkedinbot|slackbot|telegrambot|whatsapp|duckduckbot|applebot)/i.test(ua);
-
-  if (!isBot) return context.next();
+  if (!isBot(request)) {
+    return context.next();
+  }
 
   let article = null;
   try {
@@ -15,7 +16,11 @@ export async function onRequestGet(context) {
        FROM articles WHERE slug = ? LIMIT 1`
     ).bind(slug).all();
     article = results?.[0] || null;
-  } catch (e) {}
+  } catch (e) {
+    console.error('Player DB Query failed:', e);
+    // Graceful fallback
+    return context.next();
+  }
 
   if (!article) return context.next();
 
@@ -60,13 +65,48 @@ export async function onRequestGet(context) {
   ${image ? `<meta name="twitter:image" content="${esc(image)}">` : ''}
   <link rel="canonical" href="${esc(url)}">
   <script type="application/ld+json">${JSON.stringify(schema)}</script>
+  <style>
+    body { font-family: Georgia, serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background: #f9f9f9; }
+    header, footer { background: #111; color: #fff; padding: 1rem; text-align: center; }
+    header a, footer a { color: #fff; text-decoration: none; margin: 0 0.5rem; }
+    main { max-width: 800px; margin: 2rem auto; padding: 2rem; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    h1 { font-family: sans-serif; color: #111; margin-bottom: 0.5rem; }
+    .meta { font-family: sans-serif; color: #666; margin-bottom: 2rem; border-bottom: 1px solid #eee; padding-bottom: 1rem; }
+    img { max-width: 100%; height: auto; border-radius: 4px; margin: 1rem 0; }
+  </style>
 </head>
 <body>
-  <article style="font-family:Georgia,serif;max-width:800px;margin:4rem auto;padding:1rem;">
-    <h1>${esc(title)}</h1>
-    <p><strong>${esc(author)}</strong>${pubDate ? ` · ${new Date(pubDate).toDateString()}` : ''}</p>
-    <p>${esc(desc)}</p>
-  </article>
+  <header>
+    <nav>
+      <a href="/"><strong>OpenTuwa</strong></a>
+      <a href="/archive">Archive</a>
+      <a href="/about">About</a>
+      <a href="/legal">Legal</a>
+    </nav>
+  </header>
+  <main>
+    <article>
+      <h1>${esc(title)}</h1>
+      <div class="meta">
+        <strong>${esc(author)}</strong>
+        ${pubDate ? ` · ${new Date(pubDate).toDateString()}` : ''}
+      </div>
+      
+      ${image ? `<img src="${esc(image)}" alt="${esc(title)}">` : ''}
+      
+      <p><strong>${esc(desc)}</strong></p>
+      
+      <p><em>This video content is available on the full OpenTuwa experience. <a href="${esc(url)}">Click here to watch.</a></em></p>
+    </article>
+  </main>
+  <footer>
+    <p>&copy; ${new Date().getFullYear()} OpenTuwa. All rights reserved.</p>
+    <p>
+      <a href="/">Home</a> | 
+      <a href="/about">About</a> | 
+      <a href="/legal">Legal</a>
+    </p>
+  </footer>
 </body>
 </html>`;
 

@@ -4,6 +4,8 @@ export async function onRequestGet(context) {
   
   const robotsTxt = `User-agent: *
 Allow: /
+Disallow: /search
+Disallow: /api/
 
 Sitemap: ${origin}/sitemap.xml
 Sitemap: ${origin}/news-sitemap.xml
