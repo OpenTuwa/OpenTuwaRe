@@ -136,165 +136,200 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
     if (!article || !article.content_html) return;
 
     const cleanupFns = [];
-    let initTimer = null;
-
-    const initHybridSubtitles = async () => {
-      const subtitleBoxes = document.querySelectorAll('.tuwa-subtitle-box');
-      if (subtitleBoxes.length === 0) return;
-
-      let needsYouTubeAPI = false;
-      const ytPlayersQueue = [];
-
-      const handleVideoEnd = () => {
-        if (canAutoplayRef.current && recommendedRef.current.length > 0) {
-          router.push(`/articles/${recommendedRef.current[0].slug}`);
-        }
-      };
-
-      const parseVttTime = (timeStr) => {
-        if (!timeStr) return 0;
-        const clean = timeStr.trim().split(/\s+/)[0].replace(',', '.');
-        const parts = clean.split(':');
-        let seconds = 0;
-        if (parts.length === 3) {
-          seconds = parseFloat(parts[0]) * 3600 + parseFloat(parts[1]) * 60 + parseFloat(parts[2]);
-        } else if (parts.length === 2) {
-          seconds = parseFloat(parts[0]) * 60 + parseFloat(parts[1]);
-        } else {
-          seconds = parseFloat(parts[0]);
-        }
-        return seconds || 0;
-      };
-
-      for (const box of subtitleBoxes) {
-        const mediaId = box.dataset.video || box.dataset.youtube;
-        const vttUrl  = box.dataset.vtt;
-        
-        let mediaEl = document.getElementById(mediaId);
-        if (!mediaEl) mediaEl = document.querySelector(`[data-video="${mediaId}"], [name="${mediaId}"]`);
-        if (!mediaEl) {
-           const allMedia = document.querySelectorAll('video, audio, iframe');
-           if (allMedia.length === 1) mediaEl = allMedia[0];
-        }
-
-        if (!mediaId || !vttUrl || !mediaEl) continue;
-
-        try {
-          const response = await fetch(vttUrl);
-          if (!response.ok) throw new Error(`VTT fetch failed`);
-          const vttText = await response.text();
-
-          const cues = [];
-          const lines = vttText.replace(/\r\n/g, '\n').split('\n');
-          let currentCue = null;
-
-          for (let line of lines) {
-            line = line.trim();
-            if (!line) {
-              if (currentCue && currentCue.textLines.length > 0) {
-                cues.push({ start: currentCue.start, end: currentCue.end, text: currentCue.textLines.join('<br>') });
-              }
-              currentCue = null;
-              continue;
-            }
-
-            if (line.startsWith('WEBVTT') || line.startsWith('Kind:') || line.startsWith('Language:') || line.startsWith('NOTE')) continue;
-
-            if (line.includes('-->')) {
-              if (currentCue && currentCue.textLines.length > 0) {
-                cues.push({ start: currentCue.start, end: currentCue.end, text: currentCue.textLines.join('<br>') });
-              }
-              const times = line.split('-->');
-              currentCue = { start: parseVttTime(times[0]), end: parseVttTime(times[1]), textLines: [] };
-            } else if (currentCue) {
-              currentCue.textLines.push(line);
-            }
-          }
+    
+    // Using IntersectionObserver to detect when videos enter viewport instead of a fixed timer
+    // This solves the race condition where videos aren't ready after 800ms
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const element = entry.target;
+          // Stop observing once we've processed it
+          observer.unobserve(element);
           
-          if (currentCue && currentCue.textLines.length > 0) {
-            cues.push({ start: currentCue.start, end: currentCue.end, text: currentCue.textLines.join('<br>') });
-          }
-
-          const updateSubtitle = (currentTime) => {
-            const activeCue = cues.find(c => currentTime >= c.start && currentTime <= c.end);
-            box.innerHTML = activeCue ? `<span class="active-text">${activeCue.text}</span>` : '';
-          };
-
-          const tag = mediaEl.tagName.toLowerCase();
-
-          if (tag === 'video' || tag === 'audio') {
-            updateSubtitle(mediaEl.currentTime || 0);
-            const onTimeUpdate = () => updateSubtitle(mediaEl.currentTime);
-            const onSeeked = () => updateSubtitle(mediaEl.currentTime);
-
-            mediaEl.addEventListener('timeupdate', onTimeUpdate);
-            mediaEl.addEventListener('seeked', onSeeked);
-            mediaEl.addEventListener('ended', handleVideoEnd);
-
-            cleanupFns.push(() => {
-              mediaEl.removeEventListener('timeupdate', onTimeUpdate);
-              mediaEl.removeEventListener('seeked', onSeeked);
-              mediaEl.removeEventListener('ended', handleVideoEnd);
-            });
-
-          } else if (tag === 'iframe') {
-            needsYouTubeAPI = true;
-            if (!mediaEl.id) mediaEl.id = `yt-${mediaId}-${Math.random().toString(36).substr(2, 9)}`; 
-            ytPlayersQueue.push({ id: mediaEl.id, render: updateSubtitle, onEnd: handleVideoEnd });
-          }
-
-        } catch (error) {
-          console.error('[SubEngine] Error processing subtitles:', error);
+          // Initialize subtitle logic for this specific element
+          initSingleSubtitle(element);
         }
-      }
+      });
+    }, { rootMargin: '200px' }); // Load ahead of scroll
 
-      if (needsYouTubeAPI) {
-        const initializeYTPlayers = () => {
-          ytPlayersQueue.forEach(p => {
-            new window.YT.Player(p.id, {
-              events: {
-                onReady: (event) => {
-                  const interval = setInterval(() => {
-                    try {
-                      if (event.target.getPlayerState() === window.YT.PlayerState.PLAYING) {
-                        p.render(event.target.getCurrentTime());
-                      }
-                    } catch (e) {
-                      clearInterval(interval);
-                    }
-                  }, 100);
-                  cleanupFns.push(() => clearInterval(interval));
-                },
-                onStateChange: (event) => {
-                  if (event.data === window.YT.PlayerState.ENDED && p.onEnd) p.onEnd();
-                }
-              }
-            });
-          });
+    // Function to attach subtitle logic to a single media element
+    const initSingleSubtitle = async (mediaEl) => {
+      // Find the parent box or data attributes
+      // In the HTML, the video/iframe is usually inside a container with class 'tuwa-subtitle-box'
+      // OR the element itself has the data attributes.
+      // Let's look up to find the container if needed.
+      const box = mediaEl.closest('.tuwa-subtitle-box') || mediaEl.parentElement;
+      if (!box) return;
+
+      const mediaId = box.dataset.video || box.dataset.youtube;
+      const vttUrl = box.dataset.vtt;
+
+      if (!mediaId || !vttUrl) return;
+
+      try {
+        const response = await fetch(vttUrl);
+        if (!response.ok) throw new Error(`VTT fetch failed for ${vttUrl}`);
+        const vttText = await response.text();
+
+        const cues = [];
+        const lines = vttText.replace(/\r\n/g, '\n').split('\n');
+        let currentCue = null;
+
+        const parseVttTime = (timeStr) => {
+            if (!timeStr) return 0;
+            const clean = timeStr.trim().split(/\s+/)[0].replace(',', '.');
+            const parts = clean.split(':');
+            let seconds = 0;
+            if (parts.length === 3) {
+              seconds = parseFloat(parts[0]) * 3600 + parseFloat(parts[1]) * 60 + parseFloat(parts[2]);
+            } else if (parts.length === 2) {
+              seconds = parseFloat(parts[0]) * 60 + parseFloat(parts[1]);
+            } else {
+              seconds = parseFloat(parts[0]);
+            }
+            return seconds || 0;
         };
 
-        if (window.YT && window.YT.Player) {
-          initializeYTPlayers();
-        } else {
-          const prevCallback = window.onYouTubeIframeAPIReady;
-          window.onYouTubeIframeAPIReady = () => {
-            if (typeof prevCallback === 'function') prevCallback();
-            initializeYTPlayers();
-          };
+        for (let line of lines) {
+          line = line.trim();
+          if (!line) {
+            if (currentCue && currentCue.textLines.length > 0) {
+              cues.push({ start: currentCue.start, end: currentCue.end, text: currentCue.textLines.join('<br>') });
+            }
+            currentCue = null;
+            continue;
+          }
 
-          if (!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
-            const tag = document.createElement('script');
-            tag.src = "https://www.youtube.com/iframe_api";
-            document.head.appendChild(tag);
+          if (line.startsWith('WEBVTT') || line.startsWith('Kind:') || line.startsWith('Language:') || line.startsWith('NOTE')) continue;
+
+          if (line.includes('-->')) {
+            if (currentCue && currentCue.textLines.length > 0) {
+              cues.push({ start: currentCue.start, end: currentCue.end, text: currentCue.textLines.join('<br>') });
+            }
+            const times = line.split('-->');
+            currentCue = { start: parseVttTime(times[0]), end: parseVttTime(times[1]), textLines: [] };
+          } else if (currentCue) {
+            currentCue.textLines.push(line);
           }
         }
+        
+        if (currentCue && currentCue.textLines.length > 0) {
+          cues.push({ start: currentCue.start, end: currentCue.end, text: currentCue.textLines.join('<br>') });
+        }
+
+        const updateSubtitle = (currentTime) => {
+          const activeCue = cues.find(c => currentTime >= c.start && currentTime <= c.end);
+          // Only update DOM if content changed to prevent layout thrashing
+          const newContent = activeCue ? `<span class="active-text">${activeCue.text}</span>` : '';
+          if (box.innerHTML !== newContent && !box.querySelector('video, iframe')) {
+             // CAREFUL: box.innerHTML replacement kills the video if it's inside the box!
+             // We need a specific subtitle container.
+             // If the box IS the container, we should append a subtitle div or find it.
+             let subDiv = box.querySelector('.tuwa-subtitle-overlay');
+             if (!subDiv) {
+                subDiv = document.createElement('div');
+                subDiv.className = 'tuwa-subtitle-overlay';
+                box.appendChild(subDiv);
+             }
+             subDiv.innerHTML = newContent;
+          } else if (box.querySelector('.tuwa-subtitle-overlay')) {
+             box.querySelector('.tuwa-subtitle-overlay').innerHTML = newContent;
+          } else {
+             // Fallback for legacy structure where box IS the subtitle container (risky)
+             // But we checked !box.querySelector('video') above.
+             // If the structure is: <div class="box" data-vtt="..."> <video> ... </video> </div>
+             // We shouldn't overwrite innerHTML.
+             // Let's assume there's a target container or create one.
+             let subDiv = box.querySelector('.tuwa-subtitle-overlay');
+             if (!subDiv) {
+                subDiv = document.createElement('div');
+                subDiv.className = 'tuwa-subtitle-overlay';
+                // Make sure it's positioned correctly
+                subDiv.style.position = 'absolute';
+                subDiv.style.bottom = '20px';
+                subDiv.style.left = '0';
+                subDiv.style.width = '100%';
+                subDiv.style.textAlign = 'center';
+                subDiv.style.pointerEvents = 'none';
+                box.style.position = 'relative'; // Ensure parent is relative
+                box.appendChild(subDiv);
+             }
+             subDiv.innerHTML = newContent;
+          }
+        };
+
+        const tag = mediaEl.tagName.toLowerCase();
+
+        if (tag === 'video' || tag === 'audio') {
+          updateSubtitle(mediaEl.currentTime || 0);
+          const onTimeUpdate = () => updateSubtitle(mediaEl.currentTime);
+          
+          mediaEl.addEventListener('timeupdate', onTimeUpdate);
+          
+          cleanupFns.push(() => {
+            mediaEl.removeEventListener('timeupdate', onTimeUpdate);
+          });
+
+        } else if (tag === 'iframe') {
+          // YouTube logic
+          if (!mediaEl.id) mediaEl.id = `yt-${mediaId}-${Math.random().toString(36).substr(2, 9)}`; 
+          
+          const onYTReady = (event) => {
+             const interval = setInterval(() => {
+                try {
+                  if (event.target.getPlayerState && event.target.getPlayerState() === window.YT.PlayerState.PLAYING) {
+                    updateSubtitle(event.target.getCurrentTime());
+                  }
+                } catch (e) {
+                  clearInterval(interval);
+                }
+             }, 100);
+             cleanupFns.push(() => clearInterval(interval));
+          };
+
+          if (window.YT && window.YT.Player) {
+             new window.YT.Player(mediaEl.id, {
+                events: { onReady: onYTReady }
+             });
+          } else {
+             // Queue it if API not ready
+             if (!window.ytQueue) window.ytQueue = [];
+             window.ytQueue.push({ id: mediaEl.id, onReady: onYTReady });
+          }
+        }
+
+      } catch (error) {
+        console.error('[SubEngine] Error processing subtitles:', error);
       }
     };
 
-    initTimer = setTimeout(initHybridSubtitles, 800);
+    // Scan for all potential media elements
+    const mediaElements = document.querySelectorAll('video, audio, iframe');
+    mediaElements.forEach(el => observer.observe(el));
+    
+    // Global YouTube API Ready handler
+    if (!window.onYouTubeIframeAPIReady) {
+        window.onYouTubeIframeAPIReady = () => {
+            if (window.ytQueue) {
+                window.ytQueue.forEach(item => {
+                    new window.YT.Player(item.id, {
+                        events: { onReady: item.onReady }
+                    });
+                });
+                window.ytQueue = [];
+            }
+        };
+    }
+    
+    // Inject YT script if needed and missing
+    if (document.querySelector('iframe') && !document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
+        const tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        document.head.appendChild(tag);
+    }
 
     return () => {
-      clearTimeout(initTimer);
+      observer.disconnect();
       cleanupFns.forEach(fn => fn());
     };
   }, [article, router]);
