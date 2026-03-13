@@ -1,11 +1,11 @@
 {
   "/_not-found/page": "app/_not-found/page.js",
   "/legal/page": "app/legal/page.js",
-  "/api/subscribe_contribute/route": "app/api/subscribe_contribute/route.js",
   "/api/subscribe/route": "app/api/subscribe/route.js",
+  "/api/subscribe_contribute/route": "app/api/subscribe_contribute/route.js",
   "/api/track-interaction/route": "app/api/track-interaction/route.js",
   "/articles/[slug]/page": "app/articles/[slug]/page.js",
-  "/(site)/archive/page": "app/(site)/archive/page.js",
   "/(site)/page": "app/(site)/page.js",
+  "/(site)/archive/page": "app/(site)/archive/page.js",
   "/(site)/about/page": "app/(site)/about/page.js"
 }

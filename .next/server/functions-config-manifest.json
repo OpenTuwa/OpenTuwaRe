@@ -5,8 +5,8 @@
     "/api/subscribe_contribute": {},
     "/api/track-interaction": {},
     "/articles/[slug]": {},
+    "/": {},
     "/archive": {},
-    "/about": {},
-    "/": {}
+    "/about": {}
   }
 }
