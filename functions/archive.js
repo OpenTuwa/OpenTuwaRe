@@ -14,18 +14,15 @@ export async function onRequestGet(context) {
 
   let articles = [];
   try {
-    // Get all articles for the archive, sorted by date
     const { results } = await env.DB.prepare(
       "SELECT title, slug, published_at FROM articles ORDER BY published_at DESC"
     ).all();
     articles = results || [];
   } catch (err) {
     console.error('DB Query failed:', err);
-    // Graceful fallback
     return context.next();
   }
 
-  // Group by Year for display
   const grouped = articles.reduce((acc, article) => {
     const date = new Date(article.published_at || Date.now());
     const year = date.getFullYear();
@@ -57,9 +54,31 @@ export async function onRequestGet(context) {
   <meta property="og:type" content="website">
   <link rel="canonical" href="${escapeHtml(siteUrl)}/archive">
   <script type="application/ld+json">${JSON.stringify(schema)}</script>
+  <style>
+    body { font-family: Georgia, serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background: #f9f9f9; }
+    header, footer { background: #111; color: #fff; padding: 1rem; text-align: center; }
+    header a, footer a { color: #fff; text-decoration: none; margin: 0 0.5rem; }
+    main { max-width: 800px; margin: 2rem auto; padding: 2rem; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    h1, h2 { font-family: sans-serif; color: #111; }
+    h1 { border-bottom: 1px solid #eee; padding-bottom: 1rem; }
+    section { margin-bottom: 2rem; }
+    ul { list-style: none; padding: 0; }
+    li { padding: 0.5rem 0; border-bottom: 1px solid #f0f0f0; }
+    a { text-decoration: none; color: #111; }
+    a:hover { color: #0056b3; text-decoration: underline; }
+    small { color: #666; margin-left: 0.5rem; }
+  </style>
 </head>
 <body>
-  <main style="font-family:Georgia,serif;max-width:800px;margin:4rem auto;padding:1rem;">
+  <header>
+    <nav>
+      <a href="/"><strong>OpenTuwa</strong></a>
+      <a href="/archive">Archive</a>
+      <a href="/about">About</a>
+      <a href="/legal">Legal</a>
+    </nav>
+  </header>
+  <main>
     <h1>Archive</h1>
     <p>${escapeHtml(description)}</p>
     
@@ -72,16 +91,22 @@ export async function onRequestGet(context) {
               <a href="/articles/${escapeHtml(article.slug)}">
                 ${escapeHtml(article.title)}
               </a>
-              <small> - ${new Date(article.published_at).toLocaleDateString()}</small>
+              <small>${new Date(article.published_at).toLocaleDateString()}</small>
             </li>
           `).join('')}
         </ul>
       </section>
     `).join('')}
 
-    <hr>
-    <p><a href="/">Back to Home</a></p>
   </main>
+  <footer>
+    <p>&copy; ${new Date().getFullYear()} OpenTuwa. All rights reserved.</p>
+    <p>
+      <a href="/">Home</a> | 
+      <a href="/about">About</a> | 
+      <a href="/legal">Legal</a>
+    </p>
+  </footer>
 </body>
 </html>`;
 

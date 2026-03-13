@@ -14,14 +14,12 @@ async function handleBotRequest(context) {
     article = results?.[0] || null;
   } catch (e) {
     console.error('Article DB Query failed:', e);
-    // Return 503 Service Unavailable for bots if DB fails, so they retry later
     return new Response("<h1>Service Unavailable</h1><p>Our systems are currently under heavy load. Please try again later.</p>", {
       status: 503,
       headers: { 'content-type': 'text/html; charset=utf-8', 'Retry-After': '60' }
     });
   }
 
-  // If article not found, return 404 explicitly for bots (don't fallback to SPA)
   if (!article) {
     return new Response("<h1>404 - Article Not Found</h1><p>The article you are looking for does not exist.</p>", {
       status: 404,
@@ -36,8 +34,10 @@ async function handleBotRequest(context) {
   const image = article.image_url || '';
   const author = article.author || 'OpenTuwa';
   const pubDate = article.published_at || '';
-  // Ensure content_html is a string
-  const content = typeof article.content_html === 'string' ? article.content_html : '';
+  // Ensure content_html is a string and handle empty/null cases
+  const content = (typeof article.content_html === 'string' && article.content_html.trim().length > 0) 
+    ? article.content_html 
+    : `<p class="lead">${esc(desc)}</p><p><em>Read the full story on OpenTuwa.</em></p>`;
 
   const schema = {
     '@context': 'https://schema.org',
@@ -75,15 +75,49 @@ async function handleBotRequest(context) {
   ${image ? `<meta name="twitter:image" content="${esc(image)}">` : ''}
   <link rel="canonical" href="${esc(url)}">
   <script type="application/ld+json">${JSON.stringify(schema)}</script>
+  <style>
+    body { font-family: Georgia, serif; line-height: 1.8; color: #222; margin: 0; padding: 0; background: #f9f9f9; }
+    header, footer { background: #111; color: #fff; padding: 1rem; text-align: center; }
+    header a, footer a { color: #fff; text-decoration: none; margin: 0 0.5rem; }
+    main { max-width: 800px; margin: 2rem auto; padding: 2rem; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    h1 { font-family: sans-serif; font-size: 2.5rem; margin-bottom: 0.5rem; line-height: 1.2; }
+    .meta { font-family: sans-serif; color: #666; margin-bottom: 2rem; border-bottom: 1px solid #eee; padding-bottom: 1rem; }
+    .lead { font-size: 1.25rem; font-style: italic; color: #444; margin-bottom: 2rem; }
+    img { max-width: 100%; height: auto; border-radius: 4px; margin: 1rem 0; }
+    blockquote { border-left: 4px solid #111; padding-left: 1rem; margin-left: 0; font-style: italic; color: #555; }
+    p { margin-bottom: 1.5rem; }
+  </style>
 </head>
 <body>
-  <article style="font-family:Georgia,serif;max-width:800px;margin:4rem auto;padding:1rem;">
-    <h1>${esc(title)}</h1>
-    <p><strong>${esc(author)}</strong>${pubDate ? ` · ${new Date(pubDate).toDateString()}` : ''}</p>
-    <p>${esc(desc)}</p>
-    <hr>
-    ${content ? `<div>${content}</div>` : '<p><em>Content is currently unavailable.</em></p>'}
-  </article>
+  <header>
+    <nav>
+      <a href="/"><strong>OpenTuwa</strong></a>
+      <a href="/archive">Archive</a>
+      <a href="/about">About</a>
+      <a href="/legal">Legal</a>
+    </nav>
+  </header>
+  <main>
+    <article>
+      <h1>${esc(title)}</h1>
+      <div class="meta">
+        <strong>${esc(author)}</strong>
+        ${pubDate ? ` · <time datetime="${pubDate}">${new Date(pubDate).toDateString()}</time>` : ''}
+      </div>
+      ${image ? `<img src="${esc(image)}" alt="${esc(title)}">` : ''}
+      
+      ${content}
+      
+    </article>
+  </main>
+  <footer>
+    <p>&copy; ${new Date().getFullYear()} OpenTuwa. All rights reserved.</p>
+    <p>
+      <a href="/">Home</a> | 
+      <a href="/about">About</a> | 
+      <a href="/legal">Legal</a>
+    </p>
+  </footer>
 </body>
 </html>`;
 
@@ -94,11 +128,9 @@ async function handleBotRequest(context) {
 
 export async function onRequest(context) {
   const { request } = context;
-  // 1. Check if it's a bot using the new utility
   if (isBot(request)) {
     return handleBotRequest(context);
   }
-  // 2. If not a bot, let the request fall through to the SPA (Static Assets)
   return context.next();
 }
 
