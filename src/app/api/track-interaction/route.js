@@ -1,5 +1,5 @@
 import { getRequestContext } from '@cloudflare/next-on-pages';
-import { NeuralEngine } from '../../../../functions/_utils/algorithm';
+import { NeuralEngine } from '../../../utils/algorithm';
 
 export const runtime = 'edge';
 

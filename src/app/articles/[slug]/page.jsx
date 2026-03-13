@@ -1,7 +1,7 @@
 import { getRequestContext } from '@cloudflare/next-on-pages';
 import { notFound } from 'next/navigation';
 import ArticleView from '../../../components/ArticleView';
-import { fetchCandidates, RecommendationEngine } from '../../../../functions/_utils/algorithm';
+import { fetchCandidates, RecommendationEngine } from '../../../utils/algorithm';
 
 export const runtime = 'edge';
 

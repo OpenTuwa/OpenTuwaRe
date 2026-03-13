@@ -1,6 +1,6 @@
 import { getRequestContext } from '@cloudflare/next-on-pages';
 import ArticleCard from '../../components/ArticleCard';
-import { fetchCandidates, RecommendationEngine } from '../../../../functions/_utils/algorithm';
+import { fetchCandidates, RecommendationEngine } from '../../utils/algorithm';
 
 export const runtime = 'edge';
 

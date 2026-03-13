@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "pages:build": "npx @cloudflare/next-on-pages",
+    "preview": "npm run pages:build && wrangler pages dev .vercel/output/static",
     "lint": "next lint"
   },
   "dependencies": {

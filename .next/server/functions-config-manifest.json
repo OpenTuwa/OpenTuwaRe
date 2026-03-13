@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "functions": {
+    "/api/subscribe": {},
+    "/api/subscribe_contribute": {},
+    "/api/track-interaction": {},
+    "/articles/[slug]": {},
+    "/about": {},
+    "/archive": {},
+    "/": {}
+  }
+}
