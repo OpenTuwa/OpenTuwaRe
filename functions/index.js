@@ -82,6 +82,7 @@ export async function onRequestGet(context) {
     // 3. Handle Author Page for Bots
     if (author && author.trim() !== '') {
       let a = null;
+      let articles = [];
       try {
         const { results } = await env.DB.prepare("SELECT * FROM authors WHERE LOWER(name) = LOWER(?)").bind(author).all();
         a = (results && results[0]) || null;
@@ -93,6 +94,16 @@ export async function onRequestGet(context) {
       const bio = a?.bio || `Articles by ${name}`;
       const avatar = a?.avatar_url || a?.avatar || a?.image_url || '';
       const social = a?.social_link || '';
+
+      // Fetch articles for this author to make the page meaningful for bots
+      try {
+        const { results } = await env.DB.prepare(
+          "SELECT title, slug, subtitle, published_at FROM articles WHERE author = ? ORDER BY published_at DESC LIMIT 20"
+        ).bind(name).all();
+        articles = results || [];
+      } catch (e) {
+        console.error('Author Articles Query failed:', e);
+      }
 
       const orgSchema = {
         '@context': 'https://schema.org',
@@ -133,7 +144,20 @@ export async function onRequestGet(context) {
         <main style="font-family:Georgia,serif;max-width:800px;margin:4rem auto;padding:1rem;">
           <h1>${escapeHtml(name)}</h1>
           <p>${escapeHtml(bio)}</p>
-          <p><a href="${escapeHtml(url.toString())}">View stories by ${escapeHtml(name)}</a></p>
+          <hr>
+          <h2>Latest Stories</h2>
+          <ul>
+            ${articles.map(article => `
+              <li>
+                <a href="/articles/${escapeHtml(article.slug)}">
+                  <strong>${escapeHtml(article.title)}</strong>
+                </a>
+                ${article.subtitle ? `<br><small>${escapeHtml(article.subtitle)}</small>` : ''}
+                ${article.published_at ? `<br><small>${new Date(article.published_at).toLocaleDateString()}</small>` : ''}
+              </li>
+            `).join('')}
+          </ul>
+          ${articles.length === 0 ? '<p>No stories found.</p>' : ''}
         </main>
       </body></html>`;
 
@@ -145,6 +169,18 @@ export async function onRequestGet(context) {
       const title = `${tag} - Topic | OpenTuwa`;
       const desc = `Latest stories, documentaries and articles about ${tag}`;
       const urlStr = url.toString();
+      let articles = [];
+
+      // Fetch articles for this tag
+      try {
+        const wildcard = `%${tag}%`;
+        const { results } = await env.DB.prepare(
+          "SELECT title, slug, subtitle, published_at FROM articles WHERE tags LIKE ? ORDER BY published_at DESC LIMIT 20"
+        ).bind(wildcard).all();
+        articles = results || [];
+      } catch (e) {
+        console.error('Tag Articles Query failed:', e);
+      }
       
       const collectionSchema = {
         '@context': 'https://schema.org',
@@ -171,7 +207,20 @@ export async function onRequestGet(context) {
         <main style="font-family:Georgia,serif;max-width:800px;margin:4rem auto;padding:1rem;">
           <h1>Topic: ${escapeHtml(tag)}</h1>
           <p>${escapeHtml(desc)}</p>
-          <p><a href="${escapeHtml(urlStr)}">View stories tagged ${escapeHtml(tag)}</a></p>
+          <hr>
+          <h2>Latest Stories</h2>
+          <ul>
+            ${articles.map(article => `
+              <li>
+                <a href="/articles/${escapeHtml(article.slug)}">
+                  <strong>${escapeHtml(article.title)}</strong>
+                </a>
+                ${article.subtitle ? `<br><small>${escapeHtml(article.subtitle)}</small>` : ''}
+                ${article.published_at ? `<br><small>${new Date(article.published_at).toLocaleDateString()}</small>` : ''}
+              </li>
+            `).join('')}
+          </ul>
+          ${articles.length === 0 ? '<p>No stories found.</p>' : ''}
         </main>
       </body></html>`;
 

@@ -108,9 +108,35 @@ export default function About() {
           <h1 className="text-4xl md:text-5xl font-heading font-extrabold text-white tracking-tight mb-6">
             About OpenTuwa
           </h1>
-          <p className="text-lg text-tuwa-muted max-w-3xl leading-relaxed">
-            An independent platform built for long-form articles, research, and media exploring foundational ideas.
-          </p>
+          <div className="prose prose-invert prose-lg max-w-none text-tuwa-muted">
+            <p className="lead text-xl text-white font-medium mb-6">
+              OpenTuwa is an independent platform for long-form articles, research, and media exploring foundational ideas. 
+              We are built for deep thought, not fast cycles.
+            </p>
+            <p className="mb-6">
+              In an era of algorithmic echo chambers and 15-second attention spans, OpenTuwa stands as a sanctuary for 
+              substantive journalism and rigorous intellectual inquiry. Our mission is to surface stories that challenge assumptions, 
+              expand worldviews, and provide the context often missing from the daily news cycle.
+            </p>
+            <p className="mb-6">
+              Our "Neural Gravity" recommendation engine is designed to break filter bubbles, balancing popularity with intellectual density. 
+              We prioritize content that demonstrates depth, nuance, and factual integrity over sensationalism.
+            </p>
+            <h3 className="text-2xl font-heading font-bold text-white mt-8 mb-4">Our Core Values</h3>
+            <ul className="list-disc pl-6 space-y-2 mb-8">
+              <li><strong>Independence:</strong> We are reader-supported and free from corporate influence.</li>
+              <li><strong>Depth:</strong> We value comprehensive analysis over hot takes.</li>
+              <li><strong>Transparency:</strong> Our algorithms and editorial processes are open and accountable.</li>
+              <li><strong>Global Perspective:</strong> We seek voices from across the globe, not just the usual power centers.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="mb-12">
+          <h2 className="text-2xl font-bold font-heading text-white mb-8 flex items-center gap-3">
+            <span className="w-8 h-[2px] bg-tuwa-accent"></span>
+            Contributors & Editors
+          </h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-12 mt-16">
