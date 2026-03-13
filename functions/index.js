@@ -1,13 +1,6 @@
-import { isBot } from './_utils/bot-detector.js';
-
 export async function onRequestGet(context) {
   const { request, env } = context;
   
-  // 1. Check if it's a bot using the new utility
-  if (!isBot(request)) {
-    return context.next();
-  }
-
   try {
     const url = new URL(request.url);
     const author = url.searchParams.get('author');
@@ -31,18 +24,23 @@ export async function onRequestGet(context) {
   ${metaExtra}
   <script type="application/ld+json">${JSON.stringify(schema)}</script>
   <style>
-    body { font-family: Georgia, serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background: #f9f9f9; }
-    header, footer { background: #111; color: #fff; padding: 1rem; text-align: center; }
-    header a, footer a { color: #fff; text-decoration: none; margin: 0 0.5rem; }
-    main { max-width: 800px; margin: 2rem auto; padding: 2rem; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-    h1, h2, h3 { font-family: sans-serif; color: #111; }
-    h1 { border-bottom: 1px solid #eee; padding-bottom: 1rem; }
-    article { margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid #eee; }
-    article h2 { margin-bottom: 0.5rem; font-size: 1.5rem; }
-    article a { text-decoration: none; color: #111; }
-    article a:hover { color: #0056b3; }
-    .meta { font-size: 0.9rem; color: #666; margin-top: 0.5rem; }
-    .subtitle { font-size: 1.1rem; color: #444; margin: 0.5rem 0; }
+    body { font-family: Inter, system-ui, sans-serif; line-height: 1.6; color: #e1e1e1; margin: 0; padding: 0; background: #0a0a0b; }
+    header, footer { background: #000; color: #fff; padding: 1.5rem; text-align: center; border-bottom: 1px solid #222; }
+    footer { border-top: 1px solid #222; border-bottom: none; margin-top: 3rem; }
+    header a, footer a { color: #fff; text-decoration: none; margin: 0 0.75rem; font-weight: 500; }
+    main { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; min-height: 80vh; }
+    h1, h2, h3 { font-family: 'Plus Jakarta Sans', sans-serif; color: #fff; margin-top: 0; }
+    h1 { border-bottom: 1px solid #222; padding-bottom: 1.5rem; margin-bottom: 2rem; font-size: 2.5rem; letter-spacing: -0.02em; }
+    article { margin-bottom: 2.5rem; padding-bottom: 2.5rem; border-bottom: 1px solid #222; }
+    article:last-child { border-bottom: none; }
+    article h2 { margin-bottom: 0.75rem; font-size: 1.75rem; }
+    article a { text-decoration: none; color: #fff; transition: color 0.2s; }
+    article a:hover { color: #3b82f6; }
+    .meta { font-size: 0.9rem; color: #888; margin-top: 0.75rem; display: flex; align-items: center; gap: 0.5rem; }
+    .subtitle { font-size: 1.15rem; color: #aaa; margin: 0.5rem 0; line-height: 1.5; }
+    .lead { font-size: 1.25rem; color: #ccc; margin-bottom: 2rem; }
+    hr { border: 0; border-top: 1px solid #222; margin: 2rem 0; }
+    a.read-more { color: #3b82f6; font-weight: 500; }
   </style>
 </head>
 <body>
@@ -78,13 +76,13 @@ export async function onRequestGet(context) {
           ${article.subtitle ? `<p class="subtitle">${escapeHtml(article.subtitle)}</p>` : ''}
           <div class="meta">
             ${article.published_at ? `<span>${new Date(article.published_at).toLocaleDateString()}</span>` : ''}
-             &bull; <a href="/articles/${escapeHtml(article.slug)}">Read full story</a>
+             &bull; <a href="/articles/${escapeHtml(article.slug)}" class="read-more">Read full story</a>
           </div>
         </article>
       `).join('');
     };
 
-    // 2. Handle Homepage (Root /) for Bots
+    // 2. Handle Homepage (Root /) - DEFAULT for ALL USERS
     if (!author && !tag && (url.pathname === '/' || url.pathname === '')) {
       let articles = [];
       try {
@@ -94,6 +92,7 @@ export async function onRequestGet(context) {
         articles = results || [];
       } catch (err) {
         console.error('DB Query failed:', err);
+        // If DB fails, fallback to next (static assets)
         return context.next();
       }
 
@@ -124,7 +123,7 @@ export async function onRequestGet(context) {
       });
     }
 
-    // 3. Handle Author Page for Bots
+    // 3. Handle Author Page - DEFAULT for ALL USERS
     if (author && author.trim() !== '') {
       let a = null;
       let articles = [];
@@ -171,7 +170,7 @@ export async function onRequestGet(context) {
 
       const content = `
         <h1>${escapeHtml(name)}</h1>
-        <p>${escapeHtml(bio)}</p>
+        <p class="lead">${escapeHtml(bio)}</p>
         <hr>
         <h2>Latest Stories</h2>
         ${renderArticleList(articles)}
@@ -182,7 +181,7 @@ export async function onRequestGet(context) {
       });
     }
 
-    // 4. Handle Tag Page for Bots
+    // 4. Handle Tag Page - DEFAULT for ALL USERS
     if (tag && tag.trim() !== '') {
       const title = `${tag} - Topic | OpenTuwa`;
       const desc = `Latest stories, documentaries and articles about ${tag}. Insights and perspectives from the network.`;
@@ -215,7 +214,7 @@ export async function onRequestGet(context) {
 
       const content = `
         <h1>Topic: ${escapeHtml(tag)}</h1>
-        <p>${escapeHtml(desc)}</p>
+        <p class="lead">${escapeHtml(desc)}</p>
         <hr>
         <h2>Latest Stories</h2>
         ${renderArticleList(articles)}
@@ -226,7 +225,7 @@ export async function onRequestGet(context) {
       });
     }
 
-    // If no match (and somehow passed through), just proceed.
+    // If no match (e.g. static assets, other routes), just proceed.
     return context.next();
 
   } catch (err) {

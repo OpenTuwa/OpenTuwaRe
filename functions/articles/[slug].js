@@ -1,6 +1,4 @@
-import { isBot } from '../_utils/bot-detector.js';
-
-async function handleBotRequest(context) {
+async function handleRequest(context) {
   const { env, request, params } = context;
   const slug = params.slug;
 
@@ -14,6 +12,7 @@ async function handleBotRequest(context) {
     article = results?.[0] || null;
   } catch (e) {
     console.error('Article DB Query failed:', e);
+    // Even if DB fails, try to return something or error out gracefully for the user
     return new Response("<h1>Service Unavailable</h1><p>Our systems are currently under heavy load. Please try again later.</p>", {
       status: 503,
       headers: { 'content-type': 'text/html; charset=utf-8', 'Retry-After': '60' }
@@ -76,16 +75,23 @@ async function handleBotRequest(context) {
   <link rel="canonical" href="${esc(url)}">
   <script type="application/ld+json">${JSON.stringify(schema)}</script>
   <style>
-    body { font-family: Georgia, serif; line-height: 1.8; color: #222; margin: 0; padding: 0; background: #f9f9f9; }
-    header, footer { background: #111; color: #fff; padding: 1rem; text-align: center; }
-    header a, footer a { color: #fff; text-decoration: none; margin: 0 0.5rem; }
-    main { max-width: 800px; margin: 2rem auto; padding: 2rem; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-    h1 { font-family: sans-serif; font-size: 2.5rem; margin-bottom: 0.5rem; line-height: 1.2; }
-    .meta { font-family: sans-serif; color: #666; margin-bottom: 2rem; border-bottom: 1px solid #eee; padding-bottom: 1rem; }
-    .lead { font-size: 1.25rem; font-style: italic; color: #444; margin-bottom: 2rem; }
-    img { max-width: 100%; height: auto; border-radius: 4px; margin: 1rem 0; }
-    blockquote { border-left: 4px solid #111; padding-left: 1rem; margin-left: 0; font-style: italic; color: #555; }
-    p { margin-bottom: 1.5rem; }
+    body { font-family: Inter, system-ui, sans-serif; line-height: 1.8; color: #e1e1e1; margin: 0; padding: 0; background: #0a0a0b; }
+    header, footer { background: #000; color: #fff; padding: 1.5rem; text-align: center; border-bottom: 1px solid #222; }
+    footer { border-top: 1px solid #222; border-bottom: none; margin-top: 3rem; }
+    header a, footer a { color: #fff; text-decoration: none; margin: 0 0.75rem; font-weight: 500; }
+    main { max-width: 800px; margin: 0 auto; padding: 2rem 1.5rem; min-height: 80vh; }
+    h1 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 2.75rem; margin-bottom: 1rem; line-height: 1.2; color: #fff; }
+    .meta { font-family: Inter, sans-serif; color: #888; margin-bottom: 2rem; border-bottom: 1px solid #222; padding-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; }
+    .meta strong { color: #fff; }
+    .lead { font-size: 1.35rem; font-style: italic; color: #ccc; margin-bottom: 2.5rem; line-height: 1.6; }
+    img { max-width: 100%; height: auto; border-radius: 8px; margin: 1.5rem 0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5); }
+    blockquote { border-left: 4px solid #3b82f6; padding-left: 1.5rem; margin-left: 0; font-style: italic; color: #ddd; background: #111; padding: 1rem 1.5rem; border-radius: 0 4px 4px 0; }
+    p { margin-bottom: 1.5rem; font-size: 1.15rem; }
+    a { color: #3b82f6; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    /* Content specific overrides for dark mode */
+    main div { color: #e1e1e1; }
+    h2, h3, h4 { color: #f0f0f0; margin-top: 2rem; }
   </style>
 </head>
 <body>
@@ -127,11 +133,8 @@ async function handleBotRequest(context) {
 }
 
 export async function onRequest(context) {
-  const { request } = context;
-  if (isBot(request)) {
-    return handleBotRequest(context);
-  }
-  return context.next();
+  // Always handle request with SSR, no bot check
+  return handleRequest(context);
 }
 
 function esc(s) {

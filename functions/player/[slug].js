@@ -1,12 +1,6 @@
-import { isBot } from '../_utils/bot-detector.js';
-
 export async function onRequestGet(context) {
   const { env, request, params } = context;
   const slug = params.slug;
-
-  if (!isBot(request)) {
-    return context.next();
-  }
 
   let article = null;
   try {
@@ -18,7 +12,7 @@ export async function onRequestGet(context) {
     article = results?.[0] || null;
   } catch (e) {
     console.error('Player DB Query failed:', e);
-    // Graceful fallback
+    // Graceful fallback to next if DB fails
     return context.next();
   }
 
@@ -66,13 +60,17 @@ export async function onRequestGet(context) {
   <link rel="canonical" href="${esc(url)}">
   <script type="application/ld+json">${JSON.stringify(schema)}</script>
   <style>
-    body { font-family: Georgia, serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background: #f9f9f9; }
-    header, footer { background: #111; color: #fff; padding: 1rem; text-align: center; }
-    header a, footer a { color: #fff; text-decoration: none; margin: 0 0.5rem; }
-    main { max-width: 800px; margin: 2rem auto; padding: 2rem; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-    h1 { font-family: sans-serif; color: #111; margin-bottom: 0.5rem; }
-    .meta { font-family: sans-serif; color: #666; margin-bottom: 2rem; border-bottom: 1px solid #eee; padding-bottom: 1rem; }
-    img { max-width: 100%; height: auto; border-radius: 4px; margin: 1rem 0; }
+    body { font-family: Inter, system-ui, sans-serif; line-height: 1.6; color: #e1e1e1; margin: 0; padding: 0; background: #0a0a0b; }
+    header, footer { background: #000; color: #fff; padding: 1.5rem; text-align: center; border-bottom: 1px solid #222; }
+    footer { border-top: 1px solid #222; border-bottom: none; margin-top: 3rem; }
+    header a, footer a { color: #fff; text-decoration: none; margin: 0 0.75rem; font-weight: 500; }
+    main { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; min-height: 80vh; }
+    h1 { font-family: 'Plus Jakarta Sans', sans-serif; color: #fff; margin-bottom: 1rem; font-size: 2.25rem; }
+    .meta { font-family: Inter, sans-serif; color: #888; margin-bottom: 2rem; border-bottom: 1px solid #222; padding-bottom: 1rem; }
+    img { max-width: 100%; height: auto; border-radius: 8px; margin: 1.5rem 0; box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
+    p { margin-bottom: 1.25rem; }
+    strong { color: #fff; }
+    a { color: #3b82f6; text-decoration: none; }
   </style>
 </head>
 <body>
@@ -94,7 +92,7 @@ export async function onRequestGet(context) {
       
       ${image ? `<img src="${esc(image)}" alt="${esc(title)}">` : ''}
       
-      <p><strong>${esc(desc)}</strong></p>
+      <p class="lead"><strong>${esc(desc)}</strong></p>
       
       <p><em>This video content is available on the full OpenTuwa experience. <a href="${esc(url)}">Click here to watch.</a></em></p>
     </article>
