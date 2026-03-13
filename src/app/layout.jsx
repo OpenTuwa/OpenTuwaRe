@@ -1,3 +1,4 @@
+import { GoogleAnalytics } from '@next/third-parties/google';
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 
@@ -53,6 +54,7 @@ export default function RootLayout({ children }) {
       <body className="font-sans antialiased bg-[#0a0a0b] text-tuwa-text">
         {children}
       </body>
+      <GoogleAnalytics gaId="G-QLR0GR5SE8" />
     </html>
   );
 }
