@@ -15,7 +15,7 @@
   - Mark task complete when test is written, run, and failure is documented
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
 
-- [ ] 2. Write preservation property tests (BEFORE implementing fix)
+- [x] 2. Write preservation property tests (BEFORE implementing fix)
   - **Property 2: Preservation** - VTT Functionality Unchanged
   - **IMPORTANT**: Follow observation-first methodology
   - Observe behavior on UNFIXED code for VTT subtitle functionality
@@ -29,9 +29,9 @@
   - Mark task complete when tests are written, run, and passing on unfixed code
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9_
 
-- [ ] 3. Fix for VTT engine race condition
+- [-] 3. Fix for VTT engine race condition
 
-  - [ ] 3.1 Create VttEngine.jsx component
+  - [-] 3.1 Create VttEngine.jsx component
     - Create new file `src/components/VttEngine.jsx`
     - Extract all VTT subtitle processing logic from ArticleView.jsx into VttEngine component
     - Accept `articleRef` prop (React ref pointing to article DOM container)
