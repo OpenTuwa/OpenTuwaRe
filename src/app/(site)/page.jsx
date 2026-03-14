@@ -8,6 +8,25 @@ export const runtime = 'edge';
 export const metadata = {
   title: 'OpenTuwa | Independent Journalism & Documentaries',
   description: 'Independent news and journalism covering stories that matter. Deep dives, documentaries, and analysis.',
+  keywords: 'news, journalism, documentaries, independent media, deep dive, analysis, OpenTuwa',
+  alternates: { canonical: 'https://opentuwa.com' },
+  robots: { index: true, follow: true },
+  openGraph: {
+    title: 'OpenTuwa | Independent Journalism & Documentaries',
+    description: 'Independent news and journalism covering stories that matter. Deep dives, documentaries, and analysis.',
+    type: 'website',
+    url: 'https://opentuwa.com',
+    images: [{ url: 'https://opentuwa.com/assets/ui/web_512.png', alt: 'OpenTuwa - Independent Journalism' }],
+    siteName: 'OpenTuwa',
+    locale: 'en_US',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'OpenTuwa | Independent Journalism & Documentaries',
+    description: 'Independent news and journalism covering stories that matter.',
+    images: ['https://opentuwa.com/assets/ui/web_512.png'],
+    site: '@opentuwa',
+  },
 };
 
 export default async function HomePage({ searchParams }) {

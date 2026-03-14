@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import Head from 'next/head';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Footer from './Footer';
@@ -197,47 +196,9 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
   let tagsArray = [];
   if (Array.isArray(article.tags)) tagsArray = article.tags;
   else if (typeof article.tags === 'string') tagsArray = article.tags.split(',').map(t => t.trim()).filter(Boolean);
-  
-  const canonicalUrl = `https://opentuwa.com/articles/${slug}`;
-  const seoTitle = `${article.title} | OpenTuwa`;
-  const seoDesc = article.seo_description || article.subtitle || article.excerpt || article.title;
-  const imageUrl = article.image_url || 'https://opentuwa.com/assets/ui/web_512.png';
-  const publishedTime = article.published_at;
-  const modifiedTime = article.updated_at || article.published_at;
 
   return (
     <>
-      <Head>
-        <link rel="canonical" href={canonicalUrl} />
-        <title>{seoTitle}</title>
-        <meta name="description" content={seoDesc} />
-        <meta name="keywords" content={[...tagsArray, 'news', 'journalism', 'documentary', 'OpenTuwa'].join(', ')} />
-        <meta name="author" content={authorName} />
-        <meta property="article:published_time" content={publishedTime} />
-        <meta property="article:modified_time" content={modifiedTime} />
-        <meta property="article:section" content={article.section || 'Articles'} />
-        {tagsArray.map((tag, idx) => (
-          <meta key={idx} property="article:tag" content={tag} />
-        ))}
-        <meta property="og:title" content={article.title} />
-        <meta property="og:description" content={seoDesc} />
-        <meta property="og:type" content="article" />
-        <meta property="og:url" content={canonicalUrl} />
-        <meta property="og:image" content={imageUrl} />
-        <meta property="og:image:alt" content={article.title} />
-        <meta property="og:locale" content="en_US" />
-        <meta property="og:site_name" content="OpenTuwa" />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={article.title} />
-        <meta name="twitter:description" content={seoDesc} />
-        <meta name="twitter:image" content={imageUrl} />
-        <meta name="twitter:image:alt" content={article.title} />
-        <meta name="twitter:site" content="@opentuwa" />
-        <meta name="twitter:creator" content={authorName} />
-        <meta name="robots" content="index, follow" />
-        <meta name="googlebot" content="index, follow" />
-        <meta name="bingbot" content="index, follow" />
-      </Head>
       <div className="tuwa-upgrade selection-highlight bg-[rgba(10,10,11,1)] min-h-screen text-white">
         <header className={`fixed top-0 w-full z-50 transition-all duration-500 border-b ${headerScrolled ? 'backdrop-blur-md bg-[rgba(10,10,11,0.8)] border-white/5 shadow-lg' : 'border-transparent'}`}>
           <nav className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">

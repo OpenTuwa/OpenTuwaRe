@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 
 // JSON-LD Structured Data for NewsArticle
@@ -95,34 +93,28 @@ export function WebSiteSchema() {
 }
 
 // JSON-LD BreadcrumbList Schema
-export function BreadcrumbSchema({ article, isArticle = false }) {
+export function BreadcrumbSchema({ article, isArticle = false, page = null }) {
+  let items = [
+    { '@type': 'ListItem', 'position': 1, 'name': 'Home', 'item': 'https://opentuwa.com' }
+  ];
+
+  if (isArticle && article) {
+    items.push(
+      { '@type': 'ListItem', 'position': 2, 'name': article.section || 'Articles', 'item': 'https://opentuwa.com/articles' },
+      { '@type': 'ListItem', 'position': 3, 'name': article.title, 'item': `https://opentuwa.com/articles/${article.slug}` }
+    );
+  } else if (page === 'archive') {
+    items.push({ '@type': 'ListItem', 'position': 2, 'name': 'Archive', 'item': 'https://opentuwa.com/archive' });
+  } else if (page === 'about') {
+    items.push({ '@type': 'ListItem', 'position': 2, 'name': 'About', 'item': 'https://opentuwa.com/about' });
+  } else if (page === 'legal') {
+    items.push({ '@type': 'ListItem', 'position': 2, 'name': 'Legal', 'item': 'https://opentuwa.com/legal' });
+  }
+
   const schema = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
-    'itemListElement': [
-      {
-        '@type': 'ListItem',
-        'position': 1,
-        'name': 'Home',
-        'item': 'https://opentuwa.com'
-      },
-      ...(isArticle && article ? [{
-        '@type': 'ListItem',
-        'position': 2,
-        'name': article.section || 'Articles',
-        'item': 'https://opentuwa.com/articles'
-      }, {
-        '@type': 'ListItem',
-        'position': 3,
-        'name': article.title,
-        'item': `https://opentuwa.com/articles/${article.slug}`
-      }] : [{
-        '@type': 'ListItem',
-        'position': 2,
-        'name': 'Archive',
-        'item': 'https://opentuwa.com/archive'
-      }])
-    ]
+    'itemListElement': items
   };
 
   return (

@@ -17,16 +17,25 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 
 export const metadata = {
   title: {
-    default: 'OpenTuwa',
+    default: 'OpenTuwa | Independent Journalism & Documentaries',
     template: '%s | OpenTuwa'
   },
   description: 'OpenTuwa — independent news and journalism covering stories that matter.',
+  metadataBase: new URL('https://opentuwa.com'),
   openGraph: {
     siteName: 'OpenTuwa',
     locale: 'en_US',
     type: 'website',
-    title: 'OpenTuwa',
+    title: 'OpenTuwa | Independent Journalism & Documentaries',
     description: 'Independent news and journalism covering stories that matter.',
+    images: [{ url: '/assets/ui/web_512.png', width: 512, height: 512, alt: 'OpenTuwa' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    site: '@opentuwa',
+    title: 'OpenTuwa | Independent Journalism & Documentaries',
+    description: 'Independent news and journalism covering stories that matter.',
+    images: ['/assets/ui/web_512.png'],
   },
   icons: {
     icon: [
@@ -40,7 +49,12 @@ export const metadata = {
     types: {
       'application/rss+xml': '/feed.xml'
     }
-  }
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1 },
+  },
 };
 
 export const viewport = {

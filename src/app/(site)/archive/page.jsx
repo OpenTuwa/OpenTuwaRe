@@ -1,13 +1,30 @@
 import { getRequestContext } from '@cloudflare/next-on-pages';
 import ArchiveContent from '../../../components/ArchiveContent';
-import { ArchiveSEOHead } from '../../../components/SEOHead';
-import { OrganizationSchema, WebSiteSchema, CollectionPageSchema } from '../../../components/StructuredData';
+import { OrganizationSchema, WebSiteSchema, CollectionPageSchema, BreadcrumbSchema } from '../../../components/StructuredData';
 
 export const runtime = 'edge';
 
 export const metadata = {
   title: 'Archive | OpenTuwa',
   description: 'A complete timeline of all articles, documentaries, and stories published on OpenTuwa.',
+  openGraph: {
+    title: 'Archive | OpenTuwa',
+    description: 'A complete timeline of all articles, documentaries, and stories published on OpenTuwa.',
+    type: 'website',
+    url: 'https://opentuwa.com/archive',
+    images: [{ url: 'https://opentuwa.com/assets/ui/web_512.png', alt: 'OpenTuwa Archive' }],
+    siteName: 'OpenTuwa',
+    locale: 'en_US',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Archive | OpenTuwa',
+    description: 'A complete timeline of all articles, documentaries, and stories published on OpenTuwa.',
+    images: ['https://opentuwa.com/assets/ui/web_512.png'],
+    site: '@opentuwa',
+  },
+  alternates: { canonical: 'https://opentuwa.com/archive' },
+  robots: { index: true, follow: true },
 };
 
 async function getArchive() {
@@ -40,10 +57,10 @@ export default async function ArchivePage() {
   const archiveData = await getArchive();
   return (
     <>
-      <ArchiveSEOHead />
       <OrganizationSchema />
       <WebSiteSchema />
       <CollectionPageSchema />
+      <BreadcrumbSchema page="archive" />
       <ArchiveContent archiveData={archiveData} />
     </>
   );

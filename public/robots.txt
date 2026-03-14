@@ -1,11 +1,21 @@
 User-agent: *
 Allow: /
-Disallow: /search
 Disallow: /api/
 Disallow: /_next/
-Disallow: /node_modules/
-Disallow: /public/
+
+# AI crawlers
+User-agent: GPTBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
 
 Sitemap: https://opentuwa.com/sitemap-index.xml
-
-Crawl-delay: 10
+Sitemap: https://opentuwa.com/sitemap.xml
+Sitemap: https://opentuwa.com/news-sitemap.xml

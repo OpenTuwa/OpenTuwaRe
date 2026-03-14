@@ -1,6 +1,5 @@
 import { getRequestContext } from '@cloudflare/next-on-pages';
 import AboutPageContent from '../../../components/AboutPageContent';
-import { AboutSEOHead } from '../../../components/SEOHead';
 import { OrganizationSchema, WebSiteSchema, BreadcrumbSchema } from '../../../components/StructuredData';
 
 export const runtime = 'edge';
@@ -9,10 +8,23 @@ export const metadata = {
   title: 'About OpenTuwa | Independent Journalism',
   description: 'OpenTuwa is an independent platform for long-form articles, research, and media exploring foundational ideas. Built for deep thought, not fast cycles.',
   openGraph: {
-    title: 'About OpenTuwa',
+    title: 'About OpenTuwa | Independent Journalism',
     description: 'OpenTuwa is an independent platform for long-form articles, research, and media exploring foundational ideas.',
     type: 'website',
-  }
+    url: 'https://opentuwa.com/about',
+    images: [{ url: 'https://opentuwa.com/assets/ui/web_512.png', alt: 'About OpenTuwa' }],
+    siteName: 'OpenTuwa',
+    locale: 'en_US',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'About OpenTuwa | Independent Journalism',
+    description: 'OpenTuwa is an independent platform for long-form articles, research, and media exploring foundational ideas.',
+    images: ['https://opentuwa.com/assets/ui/web_512.png'],
+    site: '@opentuwa',
+  },
+  alternates: { canonical: 'https://opentuwa.com/about' },
+  robots: { index: true, follow: true },
 };
 
 async function getAuthors() {
@@ -37,10 +49,9 @@ export default async function AboutPage() {
   const authors = await getAuthors();
   return (
     <>
-      <AboutSEOHead />
       <OrganizationSchema />
       <WebSiteSchema />
-      <BreadcrumbSchema isArticle={false} />
+      <BreadcrumbSchema page="about" />
       <AboutPageContent authors={authors} />
     </>
   );

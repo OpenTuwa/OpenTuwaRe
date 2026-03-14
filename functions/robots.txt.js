@@ -4,9 +4,23 @@ export async function onRequestGet(context) {
   
   const robotsTxt = `User-agent: *
 Allow: /
-Disallow: /search
 Disallow: /api/
+Disallow: /_next/
 
+# AI crawlers
+User-agent: GPTBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+Sitemap: ${origin}/sitemap-index.xml
 Sitemap: ${origin}/sitemap.xml
 Sitemap: ${origin}/news-sitemap.xml
 `;
