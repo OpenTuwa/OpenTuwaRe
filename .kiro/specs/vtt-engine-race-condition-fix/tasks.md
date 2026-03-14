@@ -29,9 +29,9 @@
   - Mark task complete when tests are written, run, and passing on unfixed code
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9_
 
-- [-] 3. Fix for VTT engine race condition
+- [x] 3. Fix for VTT engine race condition
 
-  - [-] 3.1 Create VttEngine.jsx component
+  - [x] 3.1 Create VttEngine.jsx component
     - Create new file `src/components/VttEngine.jsx`
     - Extract all VTT subtitle processing logic from ArticleView.jsx into VttEngine component
     - Accept `articleRef` prop (React ref pointing to article DOM container)
@@ -42,7 +42,7 @@
     - _Preservation: All VTT subtitle functionality (parsing, display, synchronization) must remain unchanged_
     - _Requirements: 2.1, 2.2, 2.6_
 
-  - [ ] 3.2 Extract VTT logic functions to VttEngine
+  - [x] 3.2 Extract VTT logic functions to VttEngine
     - Copy `parseVttTime(timeStr)` function unchanged from ArticleView.jsx
     - Copy `parseVtt(vttText)` function unchanged from ArticleView.jsx
     - Copy `createOverlay(container, isStandaloneBox)` function unchanged from ArticleView.jsx
@@ -52,7 +52,7 @@
     - _Preservation: VTT parsing, overlay creation, and synchronization logic must remain unchanged_
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6_
 
-  - [ ] 3.3 Implement VTT useEffect in VttEngine
+  - [x] 3.3 Implement VTT useEffect in VttEngine
     - Create useEffect that depends on `articleRef` and `slug`
     - Early return if `!articleRef.current`
     - Initialize `AbortController` for fetch cancellation
@@ -69,7 +69,7 @@
     - _Expected_Behavior: Cleanup function runs on unmount, destroying all side effects_
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
 
-  - [ ] 3.4 Preserve concurrency guards in VttEngine
+  - [x] 3.4 Preserve concurrency guards in VttEngine
     - Keep `AbortController` for fetch cancellation on unmount
     - Keep `isActive` flag checks in all async operations
     - Keep `inFlightElements` WeakSet to prevent duplicate processing
@@ -79,7 +79,7 @@
     - _Expected_Behavior: Concurrency guards prevent duplicate processing and stale operations_
     - _Requirements: 2.1, 2.2, 2.3, 2.5_
 
-  - [ ] 3.5 Preserve YouTube API integration in VttEngine
+  - [x] 3.5 Preserve YouTube API integration in VttEngine
     - Keep `window.tuwaYTInitialized` flag
     - Keep `window.ytQueue` array for queuing player initialization
     - Keep `window.onYouTubeIframeAPIReady` callback
@@ -90,7 +90,7 @@
     - _Preservation: YouTube integration must continue to work exactly as before_
     - _Requirements: 3.3, 2.4_
 
-  - [ ] 3.6 Update ArticleView.jsx to use VttEngine
+  - [x] 3.6 Update ArticleView.jsx to use VttEngine
     - Import VttEngine: `import VttEngine from './VttEngine';`
     - Remove the entire VTT useEffect (lines ~120-450)
     - Keep `articleRef` ref unchanged
@@ -102,7 +102,7 @@
     - _Preservation: All other ArticleView functionality must remain unchanged_
     - _Requirements: 2.1, 2.2, 2.6, 3.9_
 
-  - [ ] 3.7 Verify bug condition exploration test now passes
+  - [x] 3.7 Verify bug condition exploration test now passes
     - **Property 1: Expected Behavior** - Single VTT Engine Per Article
     - **IMPORTANT**: Re-run the SAME test from task 1 - do NOT write a new test
     - The test from task 1 encodes the expected behavior
@@ -113,7 +113,7 @@
     - Verify that intervals, MutationObservers, and YouTube players are properly cleaned up
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6_
 
-  - [ ] 3.8 Verify preservation tests still pass
+  - [x] 3.8 Verify preservation tests still pass
     - **Property 2: Preservation** - VTT Functionality Unchanged
     - **IMPORTANT**: Re-run the SAME tests from task 2 - do NOT write new tests
     - Run preservation property tests from step 2
@@ -124,7 +124,7 @@
     - Confirm all tests still pass after fix (no regressions)
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9_
 
-- [ ] 4. Checkpoint - Ensure all tests pass
+- [x] 4. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
   - Verify no memory leaks or performance degradation
   - Verify rapid navigation between multiple articles works correctly
