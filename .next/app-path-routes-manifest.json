@@ -1,0 +1,13 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/legal/page": "/legal",
+  "/api/debug/my-brain/route": "/api/debug/my-brain",
+  "/api/recommendations/route": "/api/recommendations",
+  "/api/subscribe_contribute/route": "/api/subscribe_contribute",
+  "/api/subscribe/route": "/api/subscribe",
+  "/api/track-interaction/route": "/api/track-interaction",
+  "/articles/[slug]/page": "/articles/[slug]",
+  "/(site)/page": "/",
+  "/(site)/about/page": "/about",
+  "/(site)/archive/page": "/archive"
+}

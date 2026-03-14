@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "functions": {
+    "/api/debug/my-brain": {},
+    "/api/subscribe": {},
+    "/api/recommendations": {},
+    "/api/track-interaction": {},
+    "/api/subscribe_contribute": {},
+    "/articles/[slug]": {},
+    "/about": {},
+    "/archive": {},
+    "/": {}
+  }
+}
