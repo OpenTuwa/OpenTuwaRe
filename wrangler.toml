@@ -6,6 +6,13 @@ pages_build_output_dir = ".vercel/output/static"
 [ai]
 binding = "AI"
 
+# ==========================================
+# THE X-RAY / MEMORY DATABASE
+# ==========================================
+[[kv_namespaces]]
+binding = "BRAIN_KV"
+id = "b77c25b5918a49eaae7bdb666d11c23d"
+
 [[vectorize]]
 binding = "VECTORIZE_TEXT"
 index_name = "tuwa-brain"
@@ -18,4 +25,4 @@ index_name = "tuwa-vision"
 binding = "DB"
 database_name = "articles"
 database_id = "5494913d-dde9-48ae-82a4-5774ed2b11a6"
-preview_database_id = "5494913d-dde9-48ae-82a4-5774ed2b11a6" # <--- THIS IS CRITICAL
+preview_database_id = "5494913d-dde9-48ae-82a4-5774ed2b11a6"
