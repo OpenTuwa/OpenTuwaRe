@@ -138,22 +138,20 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
     if (!article || !article.content_html) return;
 
     const cleanupFns = [];
+    let isMounted = true; 
+    cleanupFns.push(() => { isMounted = false; }); // Safeguard against async unmount leaks
+
     const querySelectorStr = 'video, audio, iframe, .tuwa-subtitle-box';
 
-    // 🚨 GHOST BUG FIX: Forcefully scrub Next.js DOM caching artifacts!
-    // If the user navigates back to this page, Next.js reuses the DOM nodes but the event listeners
-    // are dead. We MUST clear all 'processed' flags and dead overlays so they can correctly re-initialize.
+    // Scrub Next.js cached DOM nodes
     if (articleRef.current) {
       const staleElements = articleRef.current.querySelectorAll(querySelectorStr);
-      staleElements.forEach(el => {
-        el.removeAttribute('data-vtt-processed'); 
-      });
+      staleElements.forEach(el => el.removeAttribute('data-vtt-processed'));
       const staleOverlays = articleRef.current.querySelectorAll('.tuwa-subtitle-overlay');
       staleOverlays.forEach(overlay => overlay.remove()); 
     }
 
     // --- helpers ---
-
     const parseVttTime = (timeStr) => {
       if (!timeStr) return 0;
       const clean = timeStr.trim().split(/\s+/)[0].replace(',', '.');
@@ -235,6 +233,7 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
       let lastCueText = null;
 
       const updateSubtitle = (currentTime) => {
+        if (!isMounted) return;
         const activeCue = cues.find(c => currentTime >= c.start && currentTime <= c.end);
         const newText = activeCue ? activeCue.text : null;
         if (newText === lastCueText) return;
@@ -274,6 +273,7 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
 
         const startYTPolling = (ytPlayer) => {
           const interval = setInterval(() => {
+            if (!isMounted) return clearInterval(interval);
             try {
               if (ytPlayer && typeof ytPlayer.getCurrentTime === 'function') {
                 updateSubtitle(ytPlayer.getCurrentTime());
@@ -284,11 +284,12 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
         };
 
         const setupYT = () => {
+          if (!isMounted) return;
           const ytPlayer = new window.YT.Player(mediaEl.id, {
             events: { onReady: (e) => startYTPolling(e.target) }
           });
           setTimeout(() => {
-            if (ytPlayer && typeof ytPlayer.getCurrentTime === 'function') startYTPolling(ytPlayer);
+            if (isMounted && ytPlayer && typeof ytPlayer.getCurrentTime === 'function') startYTPolling(ytPlayer);
           }, 2000);
         };
 
@@ -302,11 +303,10 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
     };
 
     // --- main per-element init ---
-
     const initSingleSubtitle = async (targetEl) => {
+      if (!isMounted) return;
       if (targetEl.dataset.vttProcessed === 'true' || targetEl.dataset.vttProcessed === 'pending' || targetEl.dataset.vttProcessed === 'ignored') return;
-      targetEl.dataset.vttProcessed = 'pending';
-
+      
       let mediaEl = null;
       let container = null;
       let mediaId = null;
@@ -318,21 +318,14 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
         container = targetEl;
         mediaId  = targetEl.dataset.video || targetEl.dataset.youtube || null;
         vttUrl   = targetEl.dataset.vtt   || null;
-
         mediaEl = targetEl.querySelector('video, audio, iframe');
 
+        // Look outside the box if media isn't strictly nested
         if (!mediaEl && mediaId) {
-          for (let attempt = 0; attempt < 3 && !mediaEl; attempt++) {
-            if (attempt > 0) await new Promise(r => setTimeout(r, 500));
-            // Prevent attempting to mount if component unmounted during the sleep
-            if (!articleRef.current) break;
-            
-            mediaEl = (articleRef.current ? articleRef.current.querySelector(`#${CSS.escape(mediaId)}`) : null)
-                   || document.getElementById(mediaId)
-                   || document.querySelector(`[data-media-id="${CSS.escape(mediaId)}"]`);
-          }
+          mediaEl = (articleRef.current ? articleRef.current.querySelector(`#${CSS.escape(mediaId)}`) : null)
+                 || document.getElementById(mediaId)
+                 || document.querySelector(`[data-media-id="${CSS.escape(mediaId)}"]`);
         }
-
       } else {
         mediaEl   = targetEl;
         mediaId   = targetEl.id || targetEl.dataset.mediaId || null;
@@ -354,71 +347,76 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
         targetEl.dataset.vttProcessed = 'ignored';
         return;
       }
-      if (!mediaEl) {
-        targetEl.dataset.vttProcessed = 'false';
-        console.warn(`[SubEngine] Could not find media element for id="${mediaId}" — retrying later.`);
-        return;
-      }
-      if (!container) {
-        container = mediaEl.parentElement;
-      }
+      
+      // If the media element hasn't loaded into the DOM yet, leave it blank so the Poller catches it next tick
+      if (!mediaEl) return; 
+
+      if (!container) container = mediaEl.parentElement;
+
+      // Only lock the state to pending once we actually have the media element ready
+      targetEl.dataset.vttProcessed = 'pending';
 
       try {
         const response = await fetch(vttUrl);
+        if (!isMounted) return; // Drop execution cleanly if user navigated away during fetch
+        
         if (!response.ok) {
           targetEl.dataset.vttProcessed = 'error';
-          console.error(`[SubEngine] VTT fetch failed (HTTP ${response.status}) → ${vttUrl}`);
           return;
         }
+        
         const vttText = await response.text();
+        if (!isMounted) return; 
+        
         const cues = parseVtt(vttText);
 
-        if (cues.length === 0) {
+        if (cues.length > 0) {
+          const overlay = createOverlay(container, isStandaloneBox);
+          attachSubtitleUpdater(overlay, cues, mediaEl, cleanupFns);
+          targetEl.dataset.vttProcessed = 'true';
+        } else {
           targetEl.dataset.vttProcessed = 'error';
-          console.warn(`[SubEngine] VTT parsed 0 cues from ${vttUrl} — check file format.`);
-          return;
         }
-
-        const overlay = createOverlay(container, isStandaloneBox);
-        attachSubtitleUpdater(overlay, cues, mediaEl, cleanupFns);
-        
-        targetEl.dataset.vttProcessed = 'true';
-
       } catch (error) {
-        targetEl.dataset.vttProcessed = 'error';
-        console.error('[SubEngine] Critical Error:', error);
+        if (isMounted) {
+          targetEl.dataset.vttProcessed = 'error';
+          console.error('[SubEngine] Critical Error:', error);
+        }
       }
     };
 
     // --- scan ---
-
     const scanAndInit = () => {
-      if (!articleRef.current) return;
+      if (!isMounted || !articleRef.current) return;
       const elements = articleRef.current.querySelectorAll(querySelectorStr);
       elements.forEach(el => initSingleSubtitle(el));
     };
 
-    const rafId = requestAnimationFrame(() => scanAndInit());
-    cleanupFns.push(() => cancelAnimationFrame(rafId));
+    // POLLING ENGINE: Check DOM gently every 1 second for the first 10 seconds.
+    // This perfectly catches lazy-loaded iframes or React Suspense delayed elements.
+    scanAndInit();
+    const pollInterval = setInterval(scanAndInit, 1000);
+    setTimeout(() => clearInterval(pollInterval), 10000);
+    cleanupFns.push(() => clearInterval(pollInterval));
 
-    const mutationObserver = new MutationObserver((mutations) => {
-      const hasNewNodes = mutations.some(m => m.addedNodes.length > 0);
-      if (hasNewNodes) scanAndInit();
-    });
-
+    // Fallback mutation observer
+    const mutationObserver = new MutationObserver(() => scanAndInit());
     if (articleRef.current) {
-      mutationObserver.observe(articleRef.current, { childList: true, subtree: true });
+      mutationObserver.observe(articleRef.current, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
     }
 
-    // YouTube IFrame API
-    if (!window.onYouTubeIframeAPIReady) {
+    // Safely inject YouTube IFrame API without overwriting external scripts
+    if (!window.tuwaYTInitialized) {
+      window.tuwaYTInitialized = true;
+      const originalYTReady = window.onYouTubeIframeAPIReady;
       window.onYouTubeIframeAPIReady = () => {
+        if (originalYTReady) originalYTReady();
         (window.ytQueue || []).forEach(fn => fn());
         window.ytQueue = [];
       };
     }
-    if (articleRef.current && articleRef.current.querySelector('iframe') &&
-        !document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
+    
+    if (articleRef.current && articleRef.current.querySelector('iframe') && !document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
       const s = document.createElement('script');
       s.src = 'https://www.youtube.com/iframe_api';
       document.head.appendChild(s);
@@ -516,7 +514,6 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
 
         <section className={`relative z-10 px-6 ${article.image_url ? '-mt-40' : 'pt-40'}`}>
           <div className="max-w-4xl mx-auto text-center">
-            
             {tagsArray.length > 0 && (
               <div className="flex flex-wrap justify-center gap-2 mb-8">
                 {tagsArray.map((tag, idx) => (
@@ -526,17 +523,14 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
                 ))}
               </div>
             )}
-            
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-6 tracking-tight text-white leading-tight">
               {article.title}
             </h1>
-            
             {article.subtitle && (
               <p className="text-xl md:text-2xl text-tuwa-muted font-light max-w-2xl mx-auto leading-relaxed">
                 {article.subtitle}
               </p>
             )}
-            
             <div className="mt-12 flex items-center justify-center space-x-6 border-y border-white/5 py-8 flex-wrap gap-y-4">
               <Link href={`/?author=${encodeURIComponent(authorName)}`} className="flex items-center space-x-3 group">
                 {authorAvatar ? (
