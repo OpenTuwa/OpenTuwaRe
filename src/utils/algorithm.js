@@ -184,7 +184,7 @@ export class RecommendationEngine {
           relevance += scoreBreakdown.gravity;
         }
 
-        // 3. Emotional Arousal
+        // 3. Emotional Arousal (if available)
         const arousal = article.arousal_score || 0; 
         scoreBreakdown.emotion = (arousal * SCORING_WEIGHTS.EMOTIONAL_RESONANCE);
         relevance += scoreBreakdown.emotion;
@@ -230,15 +230,8 @@ export class RecommendationEngine {
   }
 }
 
-// =================================================================================================
-//  MODULE 5: DATA INGESTION & PARSING
-// =================================================================================================
-
-// Fetch everything from D1, including your manual vectors
 export async function fetchCandidates(env, limit = 100, searchQuery = null, author = null, tag = null) {
   let results = [];
-  
-  // Explicitly selecting neural_vector and visual_vector from the D1 database
   const selectClause = `
     SELECT a.slug, a.title, a.subtitle, a.author, a.published_at, a.read_time_minutes, a.image_url, a.tags, a.seo_description,
            a.content_html, 
@@ -246,44 +239,34 @@ export async function fetchCandidates(env, limit = 100, searchQuery = null, auth
            COALESCE(a.avg_time_spent, 0) as avg_time_spent,
            COALESCE(a.total_views, 0) as _raw_views,
            COALESCE(a.trending_velocity, 0) as trending_velocity,
-           COALESCE(a.arousal_score, 0) as arousal_score, 
-           COALESCE(a.entropy_score, 0) as entropy_score,
-           a.neural_vector,
-           a.visual_vector
+           a.neural_vector, a.visual_vector
     FROM articles a
   `;
 
   try {
-    const conditions = [];
-    const bindings = [];
-
-    // Build WHERE clause dynamically
     if (searchQuery) {
       const q = searchQuery.trim();
       const wildcard = `%${q.replace(/%/g, '\\%').replace(/_/g, '\\_')}%`;
-      conditions.push('(a.title LIKE ? ESCAPE \'\\\' OR a.subtitle LIKE ? ESCAPE \'\\\' OR a.seo_description LIKE ? ESCAPE \'\\\')');
-      bindings.push(wildcard, wildcard, wildcard);
+      const sql = `${selectClause} WHERE (a.title LIKE ? ESCAPE '\\' OR a.subtitle LIKE ? ESCAPE '\\' OR a.seo_description LIKE ? ESCAPE '\\') ORDER BY a.published_at DESC LIMIT ?`;
+      const { results: raw } = await env.DB.prepare(sql).bind(wildcard, wildcard, wildcard, limit).all();
+      results = raw || [];
+    } else if (author) {
+      const sql = `${selectClause} WHERE a.author = ? ORDER BY a.published_at DESC LIMIT ?`;
+      const { results: raw } = await env.DB.prepare(sql).bind(author, limit).all();
+      results = raw || [];
+    } else if (tag) {
+      const wildcard = `%${tag.replace(/%/g, '\\%').replace(/_/g, '\\_')}%`;
+      const sql = `${selectClause} WHERE a.tags LIKE ? ESCAPE '\\' ORDER BY a.published_at DESC LIMIT ?`;
+      const { results: raw } = await env.DB.prepare(sql).bind(wildcard, limit).all();
+      results = raw || [];
+    } else {
+      const sql = `${selectClause} ORDER BY a.engagement_score DESC, a.published_at DESC LIMIT ?`;
+      const { results: raw } = await env.DB.prepare(sql).bind(limit).all();
+      results = raw || [];
     }
-
-    if (author) {
-      conditions.push('a.author = ?');
-      bindings.push(author);
-    }
-
-    if (tag) {
-      conditions.push('(a.tags LIKE ? ESCAPE \'\\\')');
-      const tagWildcard = `%${tag.replace(/%/g, '\\%').replace(/_/g, '\\_')}%`;
-      bindings.push(tagWildcard);
-    }
-
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-    const sql = `${selectClause} ${whereClause} ORDER BY a.engagement_score DESC, a.published_at DESC LIMIT ?`;
-    bindings.push(limit);
-
-    const { results: raw } = await env.DB.prepare(sql).bind(...bindings).all();
-    results = raw || [];
   } catch (err) {
-    console.error("[DB ERROR] fetchCandidates failed:", err.message, err);
+    console.error("[DB ERROR] fetchCandidates failed:", err.message);
+    // Return empty array to allow graceful degradation (e.g. show "No articles found" instead of crash)
     return [];
   }
 
