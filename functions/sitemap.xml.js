@@ -5,7 +5,7 @@ export async function onRequestGet(context) {
   let articles = [];
   try {
     const { results } = await env.DB.prepare(
-      "SELECT slug, published_at, image_url, title FROM articles ORDER BY published_at DESC"
+      "SELECT slug, published_at, updated_at, image_url, title FROM articles ORDER BY published_at DESC"
     ).bind().all();
     articles = results || [];
   } catch (e) { articles = []; }
@@ -34,7 +34,7 @@ export async function onRequestGet(context) {
   }
 
   for (const a of articles) {
-    const lastmod = toISO(a.published_at);
+    const lastmod = toISO(a.updated_at || a.published_at);
     const imageUrl = a.image_url
       ? (a.image_url.startsWith('http') ? a.image_url : origin + a.image_url)
       : '';

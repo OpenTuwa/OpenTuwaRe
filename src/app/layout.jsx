@@ -1,7 +1,7 @@
 import { GoogleAnalytics } from '@next/third-parties/google';
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
-import { OrganizationSchema, WebSiteSchema } from '../components/StructuredData';
+import GraphSchema from '../components/GraphSchema';
 
 const inter = Inter({ 
   subsets: ['latin'], 
@@ -91,8 +91,7 @@ export default function RootLayout({ children }) {
         <link rel="preload" href="/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossOrigin />
         <link rel="preload" href="/fonts/plus-jakarta-sans-var-latin.woff2" as="font" type="font/woff2" crossOrigin />
         {/* Structured Data */}
-        <OrganizationSchema />
-        <WebSiteSchema />
+        <GraphSchema type="homepage" />
         {/* Additional SEO meta tags */}
         <meta name="referrer" content="strict-origin-when-cross-origin" />
         <meta name="theme-color" content="#0a0a0b" />

@@ -1037,3 +1037,105 @@ Test subtitle`;
     });
   });
 });
+
+/**
+ * ============================================================================
+ * TASK 9.1: PROPERTY 13 — Hero image has priority loading attributes
+ * ============================================================================
+ *
+ * // Feature: seo-infrastructure, Property 13: Hero image has priority loading attributes
+ * **Validates: Requirements 4.1**
+ */
+
+describe('Property 13: Hero image has priority loading attributes', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+
+    global.IntersectionObserver = class IntersectionObserver {
+      constructor() {}
+      disconnect() {}
+      observe() {}
+      unobserve() {}
+      takeRecords() { return []; }
+    };
+
+    global.Audio = class Audio {
+      constructor() {}
+      play() { return Promise.resolve(); }
+    };
+
+    HTMLMediaElement.prototype.play = vi.fn(() => Promise.resolve());
+    HTMLMediaElement.prototype.pause = vi.fn();
+
+    global.fetch = vi.fn(() => Promise.reject(new Error('Not found')));
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it('Property 13 (PBT): hero <img> has fetchpriority="high" and loading="eager" for any non-empty image_url', async () => {
+    // Feature: seo-infrastructure, Property 13: Hero image has priority loading attributes
+    await fc.assert(
+      fc.asyncProperty(
+        fc.record({
+          image_url: fc.webUrl(),
+          title: fc.string({ minLength: 1, maxLength: 80 }),
+          slug: fc.stringMatching(/^[a-z0-9-]{3,30}$/),
+        }),
+        async ({ image_url, title, slug }) => {
+          const article = {
+            slug,
+            title,
+            image_url,
+            content_html: '<p>Body</p>',
+            published_at: '2025-01-01',
+          };
+
+          const { unmount } = await act(async () => {
+            return render(
+              <ArticleView article={article} recommended={[]} authorInfo={{}} />
+            );
+          });
+
+          // The hero section is only rendered when image_url is non-empty
+          const heroSection = document.querySelector('main section.overflow-hidden');
+          const heroImg = heroSection ? heroSection.querySelector('img') : null;
+
+          const hasFetchPriority =
+            heroImg !== null &&
+            heroImg.getAttribute('fetchpriority') === 'high';
+
+          const hasLoadingEager =
+            heroImg !== null &&
+            heroImg.getAttribute('loading') === 'eager';
+
+          await act(async () => { unmount(); });
+          cleanup();
+
+          return hasFetchPriority && hasLoadingEager;
+        }
+      ),
+      { numRuns: 100, verbose: false }
+    );
+  });
+
+  it('should not render hero image when image_url is empty', async () => {
+    const article = {
+      slug: 'no-image',
+      title: 'No Image Article',
+      image_url: '',
+      content_html: '<p>Body</p>',
+      published_at: '2025-01-01',
+    };
+
+    await act(async () => {
+      render(<ArticleView article={article} recommended={[]} authorInfo={{}} />);
+    });
+
+    // The hero section has overflow-hidden and h-[80vh]; the content section does not
+    const heroImg = document.querySelector('main section.overflow-hidden img');
+    expect(heroImg).toBeNull();
+  });
+});

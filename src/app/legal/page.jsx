@@ -1,5 +1,5 @@
 import LegalContent from '../../components/LegalContent';
-import { BreadcrumbSchema } from '../../components/StructuredData';
+import GraphSchema from '../../components/GraphSchema';
 
 export const metadata = {
   title: 'Legal | OpenTuwa',
@@ -27,7 +27,7 @@ export const metadata = {
 export default function LegalPage() {
   return (
     <>
-      <BreadcrumbSchema page="legal" />
+      <GraphSchema type="legal" />
       <LegalContent />
     </>
   );

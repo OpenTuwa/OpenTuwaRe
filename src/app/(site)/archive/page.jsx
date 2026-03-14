@@ -1,6 +1,6 @@
 import { getRequestContext } from '@cloudflare/next-on-pages';
 import ArchiveContent from '../../../components/ArchiveContent';
-import { CollectionPageSchema, BreadcrumbSchema } from '../../../components/StructuredData';
+import GraphSchema from '../../../components/GraphSchema';
 
 export const runtime = 'edge';
 
@@ -57,8 +57,7 @@ export default async function ArchivePage() {
   const archiveData = await getArchive();
   return (
     <>
-      <CollectionPageSchema />
-      <BreadcrumbSchema page="archive" />
+      <GraphSchema type="archive" />
       <ArchiveContent archiveData={archiveData} />
     </>
   );

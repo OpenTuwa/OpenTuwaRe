@@ -1,12 +1,10 @@
 export async function onRequestGet(context) {
-  const { request } = context;
-  const origin = new URL(request.url).origin;
-  
   const robotsTxt = `User-agent: *
 Allow: /
 Allow: /feed.xml
 Disallow: /api/
-Disallow: /_next/
+Disallow: /_next/static/
+Crawl-delay: 10
 
 # AI crawlers
 User-agent: GPTBot
@@ -21,9 +19,7 @@ Allow: /
 User-agent: PerplexityBot
 Allow: /
 
-Sitemap: ${origin}/sitemap-index.xml
-Sitemap: ${origin}/sitemap.xml
-Sitemap: ${origin}/news-sitemap.xml
+Sitemap: https://opentuwa.com/sitemap-index.xml
 `;
 
   return new Response(robotsTxt, {

@@ -8,7 +8,7 @@ module.exports = {
         'tuwa-black': '#0a0a0b',
         'tuwa-gray': '#161618',
         'tuwa-text': '#e5e5e5',
-        'tuwa-muted': '#a1a1aa',
+        'tuwa-muted': '#c4c4c4',
         'tuwa-accent': '#3b82f6',
         'tuwa-gold': '#d4af37'
       },

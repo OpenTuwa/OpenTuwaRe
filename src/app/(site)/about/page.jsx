@@ -1,6 +1,6 @@
 import { getRequestContext } from '@cloudflare/next-on-pages';
 import AboutPageContent from '../../../components/AboutPageContent';
-import { BreadcrumbSchema } from '../../../components/StructuredData';
+import GraphSchema from '../../../components/GraphSchema';
 
 export const runtime = 'edge';
 
@@ -49,7 +49,7 @@ export default async function AboutPage() {
   const authors = await getAuthors();
   return (
     <>
-      <BreadcrumbSchema page="about" />
+      <GraphSchema type="about" />
       <AboutPageContent authors={authors} />
     </>
   );

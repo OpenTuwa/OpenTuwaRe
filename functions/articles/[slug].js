@@ -1,4 +1,5 @@
 import { isBot } from '../_utils/bot-detector.js';
+import { buildArticleGraph } from '../_utils/schema.js';
 
 const SITE_NAME = 'OpenTuwa';
 const SITE_URL = 'https://opentuwa.com';
@@ -55,24 +56,10 @@ export async function onRequest(context) {
   const imgHeight = hasImage ? '630' : '512';
   const ogImage = image || `${origin}/assets/ui/web_512.png`;
 
-  // JSON-LD NewsArticle — publisher uses NewsMediaOrganization to match OrganizationSchema
+  // JSON-LD @graph — built from shared schema utility for bot/React parity
   const jsonLd = {
     '@context': 'https://schema.org',
-    '@type': 'NewsArticle',
-    headline: title,
-    description: desc,
-    datePublished: pubDate,
-    dateModified: updatedAt,
-    author: { '@type': 'Person', name: authorDisplay },
-    publisher: {
-      '@type': 'NewsMediaOrganization',
-      name: SITE_NAME,
-      logo: { '@type': 'ImageObject', url: LOGO_URL, width: 512, height: 512 }
-    },
-    mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalUrl },
-    image: ogImage,
-    ...(keywords ? { keywords } : {}),
-    ...(article.section ? { articleSection: article.section } : {})
+    '@graph': buildArticleGraph(article, SITE_URL),
   };
 
   // Related articles
@@ -122,7 +109,7 @@ export async function onRequest(context) {
   <meta name="twitter:image:alt" content="${esc(title)}">
   <script type="application/ld+json">${JSON.stringify(jsonLd)}</script>
   <style>
-    :root{--bg:#0a0a0b;--text:#e5e5e5;--muted:#a1a1aa;--accent:#3b82f6}
+    :root{--bg:#0a0a0b;--text:#e5e5e5;--muted:#c4c4c4;--accent:#3b82f6}
     *{box-sizing:border-box}
     body{background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;line-height:1.8;margin:0;padding:2rem}
     article{max-width:700px;margin:0 auto}

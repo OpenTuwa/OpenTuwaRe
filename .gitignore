@@ -34,3 +34,18 @@ coverage/
 
 # TypeScript
 *.tsbuildinfo
+
+# ---------------------------------------------------
+# ADDED FOR OPENTUWA SECURITY FIXES
+# ---------------------------------------------------
+
+# Cloudflare & Wrangler (CRITICAL: Prevents exposing local SQLite databases)
+.wrangler/
+.capnp
+
+# AI Assistant Settings (Prevents exposing local system environment)
+.claude/
+
+# Specific scripts with hardcoded secrets
+# (Remove this ignore ONLY AFTER you move the Cloudflare API keys to your .env file)
+ping-google.js

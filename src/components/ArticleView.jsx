@@ -8,6 +8,14 @@ import useScrollReveal from '../hooks/useScrollReveal';
 import SkeletonImage from './SkeletonImage';
 import VttEngine from './VttEngine';
 
+const scheduleIdleTask = (fn) => {
+  if (typeof requestIdleCallback !== 'undefined') {
+    requestIdleCallback(fn, { timeout: 2000 });
+  } else {
+    setTimeout(fn, 200);
+  }
+};
+
 function RevealSection({ children, className = '' }) {
   const ref = useScrollReveal();
   return <div ref={ref} className={`reveal ${className}`}>{children}</div>;
@@ -76,11 +84,13 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
       hardware_concurrency: navigator.hardwareConcurrency || 0
     };
 
-    fetch('/api/track-interaction', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'view', slug, ...harvestData })
-    }).catch(() => {});
+    scheduleIdleTask(() => {
+      fetch('/api/track-interaction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'view', slug, ...harvestData })
+      }).catch(() => {});
+    });
 
     // Fetch personalized recommendations after 3 seconds
     const personalizeTimer = setTimeout(() => {
@@ -201,7 +211,7 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
     <>
       <div className="tuwa-upgrade selection-highlight bg-[rgba(10,10,11,1)] min-h-screen text-white">
         <header className={`fixed top-0 w-full z-50 transition-all duration-500 border-b ${headerScrolled ? 'backdrop-blur-md bg-[rgba(10,10,11,0.8)] border-white/5 shadow-lg' : 'border-transparent'}`}>
-          <nav className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+          <nav aria-label="Site navigation" className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
             <div className="flex items-center space-x-8">
               <Link href="/" className="text-2xl font-extrabold tracking-tighter font-heading text-white hover:text-white/80 transition-colors">OpenTuwa</Link>
               <div className={`hidden lg:flex items-center space-x-6 text-sm font-medium text-tuwa-muted transition-opacity duration-300 ${headerScrolled ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
@@ -210,7 +220,7 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <div className="hidden md:block">
+              <div className="hidden md:block" role="search" aria-label="Search articles">
                 <input 
                   value={searchQuery} 
                   onChange={(e) => setSearchQuery(e.target.value)} 
@@ -224,16 +234,21 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
               </button>
             </div>
           </nav>
-          <div className="fixed left-0 top-0 h-[3px] bg-gradient-to-r from-tuwa-accent to-tuwa-gold z-60 transition-all duration-150" style={{ width: `${readingProgress}%` }}></div>
+          <div className="fixed left-0 top-0 h-[3px] bg-gradient-to-r from-tuwa-accent to-tuwa-gold z-60 transition-all duration-150" style={{ width: `${readingProgress}%` }} role="progressbar" aria-valuenow={Math.round(readingProgress)} aria-valuemin={0} aria-valuemax={100} aria-label="Reading progress"></div>
         </header>
 
         <main>
           {article.image_url && (
             <section className="relative w-full h-[80vh] overflow-hidden">
-              <SkeletonImage 
-                alt={article.title} 
-                className="w-full h-full object-cover transform scale-105" 
-                src={article.image_url} 
+              <img
+                src={article.image_url}
+                alt={article.title}
+                className="w-full h-full object-cover transform scale-105"
+                fetchpriority="high"
+                loading="eager"
+                decoding="async"
+                width={1200}
+                height={630}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[rgba(10,10,11,1)] via-[rgba(10,10,11,0.6)] to-transparent"></div>
             </section>
@@ -250,7 +265,7 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
                   ))}
                 </div>
               )}
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-6 tracking-tight text-white leading-tight">
+              <h1 id="article-heading" className="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-6 tracking-tight text-white leading-tight">
                 {article.title}
               </h1>
               {article.subtitle && (
@@ -261,7 +276,7 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
               <div className="mt-12 flex items-center justify-center space-x-6 border-y border-white/5 py-8 flex-wrap gap-y-4">
                 <Link href={`/?author=${encodeURIComponent(authorName)}`} className="flex items-center space-x-3 group">
                   {authorAvatar ? (
-                    <SkeletonImage src={authorAvatar} alt={authorName} className="w-12 h-12 rounded-full object-cover border border-white/10 group-hover:border-tuwa-accent transition-colors" />
+                    <SkeletonImage src={authorAvatar} alt={authorName} width={48} height={48} className="w-12 h-12 rounded-full object-cover border border-white/10 group-hover:border-tuwa-accent transition-colors" />
                   ) : (
                     <div className="w-12 h-12 rounded-full bg-tuwa-accent flex items-center justify-center font-bold text-sm text-white uppercase group-hover:bg-blue-600 transition-colors">
                       {authorInitials}
@@ -288,7 +303,7 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
 
           {/* key={slug} ensures a fresh DOM unmount/mount on every client navigation */}
           {/* SEO: Req 14.1, 14.2 — article element and h1 for semantic HTML */}
-          <article key={slug} ref={articleRef} className="max-w-[720px] mx-auto px-6 py-20 prose prose-invert prose-xl text-tuwa-text prose-a:text-tuwa-accent hover:prose-a:text-blue-400 prose-img:rounded-xl">
+          <article key={slug} ref={articleRef} aria-labelledby="article-heading" className="max-w-[720px] mx-auto px-6 py-20 prose prose-invert prose-xl text-tuwa-text prose-a:text-tuwa-accent hover:prose-a:text-blue-400 prose-img:rounded-xl">
             <ArticleContent html={article.content_html} />
           </article>
 
@@ -311,6 +326,8 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
                         <SkeletonImage
                           src={a.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=200&auto=format&fit=crop'}
                           alt={a.title}
+                          width={56}
+                          height={40}
                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300 opacity-80 group-hover:opacity-100"
                         />
                       </div>
@@ -343,6 +360,7 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
                         <SkeletonImage 
                           src={a.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop'} 
                           alt={a.title} 
+                          aspectRatio="16/9"
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                         />
                       </div>

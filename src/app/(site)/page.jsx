@@ -1,43 +1,63 @@
 import { getRequestContext } from '@cloudflare/next-on-pages';
 import ArticleCard from '../../components/ArticleCard';
 import { fetchCandidates, RecommendationEngine } from '../../utils/algorithm';
-import { BreadcrumbSchema } from '../../components/StructuredData';
+import GraphSchema from '../../components/GraphSchema';
 
 export const runtime = 'edge';
 
-export const metadata = {
-  title: 'OpenTuwa | Independent Journalism & Documentaries',
-  description: 'Independent news and journalism covering stories that matter. Deep dives, documentaries, and analysis.',
-  keywords: 'news, journalism, documentaries, independent media, deep dive, analysis, OpenTuwa',
-  alternates: { canonical: 'https://opentuwa.com' }, // SEO: Req 13.1, 13.6 — canonical URL, no trailing slash
-  robots: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1 },
-  openGraph: {
-    title: 'OpenTuwa | Independent Journalism & Documentaries',
-    description: 'Independent news and journalism covering stories that matter. Deep dives, documentaries, and analysis.',
-    type: 'website',
-    url: 'https://opentuwa.com',
-    images: [
-      { url: 'https://opentuwa.com/assets/ui/web_512.png', width: 512, height: 512, alt: 'OpenTuwa' },
-      { url: 'https://opentuwa.com/assets/ui/web_1200.png', width: 1200, height: 630, alt: 'OpenTuwa - Independent Journalism' }
-    ],
-    siteName: 'OpenTuwa',
-    locale: 'en_US',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'OpenTuwa | Independent Journalism & Documentaries',
-    description: 'Independent news and journalism covering stories that matter.',
-    images: ['https://opentuwa.com/assets/ui/web_1200.png'],
-    site: '@opentuwa',
-  },
-  // Additional SEO metadata
-  authors: [{ name: 'OpenTuwa' }],
-  creator: 'OpenTuwa',
-  publisher: 'OpenTuwa',
-  formatDetection: {
-    telephone: false,
-  },
-};
+const BASE_TITLE = 'OpenTuwa | Independent Journalism & Documentaries';
+const BASE_DESC = 'Independent news and journalism covering stories that matter. Deep dives, documentaries, and analysis.';
+const CANONICAL_HOME = 'https://opentuwa.com';
+
+export async function generateMetadata({ searchParams }) {
+  const { author, tag, q } = await searchParams;
+  const isVariant = !!(author || tag || q);
+
+  // Build variant canonical URL when filter params are present
+  const variantUrl = isVariant
+    ? author
+      ? `${CANONICAL_HOME}/?author=${encodeURIComponent(author)}`
+      : tag
+        ? `${CANONICAL_HOME}/?tag=${encodeURIComponent(tag)}`
+        : `${CANONICAL_HOME}/?q=${encodeURIComponent(q)}`
+    : null;
+
+  const canonicalUrl = variantUrl ?? CANONICAL_HOME;
+
+  return {
+    title: BASE_TITLE,
+    description: BASE_DESC,
+    keywords: 'news, journalism, documentaries, independent media, deep dive, analysis, OpenTuwa',
+    alternates: { canonical: canonicalUrl },
+    // SEO: Req 1.5, 1.6 — noindex variant pages (?author, ?tag, ?q); canonical always set
+    robots: isVariant
+      ? { index: false, follow: true }
+      : { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1 },
+    openGraph: {
+      title: BASE_TITLE,
+      description: BASE_DESC,
+      type: 'website',
+      url: canonicalUrl,
+      images: [
+        { url: 'https://opentuwa.com/assets/ui/web_512.png', width: 512, height: 512, alt: 'OpenTuwa' },
+        { url: 'https://opentuwa.com/assets/ui/web_1200.png', width: 1200, height: 630, alt: 'OpenTuwa - Independent Journalism' }
+      ],
+      siteName: 'OpenTuwa',
+      locale: 'en_US',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: BASE_TITLE,
+      description: 'Independent news and journalism covering stories that matter.',
+      images: ['https://opentuwa.com/assets/ui/web_1200.png'],
+      site: '@opentuwa',
+    },
+    authors: [{ name: 'OpenTuwa' }],
+    creator: 'OpenTuwa',
+    publisher: 'OpenTuwa',
+    formatDetection: { telephone: false },
+  };
+}
 
 export default async function HomePage({ searchParams }) {
   const { q, author, tag } = await searchParams;
@@ -54,7 +74,7 @@ export default async function HomePage({ searchParams }) {
 
   return (
     <>
-      <BreadcrumbSchema isArticle={false} />
+      <GraphSchema type="homepage" />
       <main className="max-w-7xl mx-auto px-6 py-24 min-h-screen">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {articles.map((article, i) => (

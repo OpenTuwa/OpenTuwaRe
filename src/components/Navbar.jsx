@@ -28,7 +28,7 @@ export default function Navbar({ showSearch = false, onSearch }) {
 
   return (
     <header className="fixed top-0 w-full z-50 backdrop-blur-md bg-[rgba(10,10,11,0.8)] border-b border-white/5">
-      <nav className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+      <nav aria-label="Site navigation" className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
         <div className="flex items-center space-x-8">
           <Link className="text-2xl font-extrabold tracking-tighter font-heading text-white" href="/">OpenTuwa</Link>
           <div className="hidden md:flex items-center space-x-6 text-sm font-medium text-tuwa-muted">
@@ -76,7 +76,7 @@ export default function Navbar({ showSearch = false, onSearch }) {
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-x-4 top-20 z-40 rounded-lg bg-[rgba(10,10,11,0.95)] border border-white/5 p-4 shadow-lg md:hidden">
+        <div role="navigation" aria-label="Mobile navigation" className="fixed inset-x-4 top-20 z-40 rounded-lg bg-[rgba(10,10,11,0.95)] border border-white/5 p-4 shadow-lg md:hidden">
           {links.map((link) => (
             <Link
               key={link.href}

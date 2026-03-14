@@ -1,7 +1,7 @@
 export async function onRequestGet(context) {
   const { env, request } = context;
   const origin = new URL(request.url).origin;
-  const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const cutoff = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
 
   let articles = [];
   try {
@@ -10,16 +10,6 @@ export async function onRequestGet(context) {
     ).bind(cutoff).all();
     articles = results || [];
   } catch (e) { articles = []; }
-
-  // Fallback: no recent articles → get latest 1
-  if (articles.length === 0) {
-    try {
-      const { results } = await env.DB.prepare(
-        "SELECT slug, title, published_at, image_url, section, category, tags, author, author_name FROM articles ORDER BY published_at DESC LIMIT 1"
-      ).all();
-      articles = results || [];
-    } catch (e) { articles = []; }
-  }
 
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
@@ -58,10 +48,6 @@ export async function onRequestGet(context) {
       <image:title>${esc(a.title || '')}</image:title>
     </image:image>` : ''}
   </url>`;
-  }
-
-  if (!xml.includes('<url>')) {
-    xml += `\n  <url><loc>${esc(origin)}</loc></url>`;
   }
 
   xml += `\n</urlset>`;

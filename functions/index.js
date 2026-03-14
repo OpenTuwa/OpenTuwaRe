@@ -1,6 +1,8 @@
 import { isBot } from './_utils/bot-detector.js';
+import { buildHomepageGraph } from './_utils/schema.js';
 
 const SITE_NAME = 'OpenTuwa';
+const SITE_URL = 'https://opentuwa.com';
 const SITE_DESC = 'Discover stories, documentaries, and articles on OpenTuwa. Substantive journalism and rigorous intellectual inquiry.';
 const OG_IMAGE = 'https://opentuwa.com/assets/ui/web_512.png';
 const FEED_URL = 'https://opentuwa.com/feed.xml';
@@ -94,20 +96,9 @@ export async function onRequestGet(context) {
   <meta name="twitter:title" content="${esc(pageTitle)}">
   <meta name="twitter:description" content="${esc(pageDesc)}">
   <meta name="twitter:image" content="${OG_IMAGE}">
-  <script type="application/ld+json">${JSON.stringify({
-    '@context': 'https://schema.org',
-    '@type': 'WebSite',
-    name: SITE_NAME,
-    url: 'https://opentuwa.com',
-    description: 'Independent news and journalism covering stories that matter.',
-    potentialAction: {
-      '@type': 'SearchAction',
-      target: { '@type': 'EntryPoint', urlTemplate: 'https://opentuwa.com/?q={search_term_string}' },
-      'query-input': 'required name=search_term_string'
-    }
-  })}</script>
+  <script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@graph': buildHomepageGraph(SITE_URL) })}</script>
   <style>
-    :root{--bg:#0a0a0b;--text:#e5e5e5;--muted:#a1a1aa;--accent:#3b82f6}
+    :root{--bg:#0a0a0b;--text:#e5e5e5;--muted:#c4c4c4;--accent:#3b82f6}
     *{box-sizing:border-box}
     body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;line-height:1.6;margin:0;padding:2rem}
     main{max-width:800px;margin:0 auto}

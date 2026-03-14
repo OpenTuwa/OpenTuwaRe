@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 
-const SkeletonImage = ({ src, alt, className = '', ...props }) => {
+const SkeletonImage = ({ src, alt, className = '', width, height, aspectRatio, ...props }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState(false);
   const imgRef = useRef(null);
@@ -18,17 +18,26 @@ const SkeletonImage = ({ src, alt, className = '', ...props }) => {
     }
   }, [src]);
 
+  // Build wrapper inline styles for layout space reservation (CLS prevention)
+  const wrapperStyle = {};
+  if (width && height) {
+    wrapperStyle.width = typeof width === 'number' ? `${width}px` : width;
+    wrapperStyle.height = typeof height === 'number' ? `${height}px` : height;
+  } else if (aspectRatio) {
+    wrapperStyle.aspectRatio = aspectRatio;
+  }
+
   // If no src is provided, show placeholder immediately
   if (!src) {
     return (
-       <div className={`relative overflow-hidden bg-tuwa-gray ${className}`}>
+       <div className={`relative overflow-hidden bg-tuwa-gray ${className}`} style={wrapperStyle}>
           <div className="absolute inset-0 flex items-center justify-center text-tuwa-muted text-xs">No Image</div>
        </div>
     );
   }
 
   return (
-    <div className={`relative overflow-hidden ${className}`}>
+    <div className={`relative overflow-hidden ${className}`} style={wrapperStyle}>
       {/* Show skeleton while loading OR if error occurred */}
       {(!isLoaded || error) && (
         <div className="absolute inset-0 bg-tuwa-gray w-full h-full z-0">

@@ -2,7 +2,7 @@ import { getRequestContext } from '@cloudflare/next-on-pages';
 import { notFound } from 'next/navigation';
 import ArticleView from '../../../components/ArticleView';
 import { fetchCandidates, RecommendationEngine } from '../../../utils/algorithm';
-import { NewsArticleSchema, BreadcrumbSchema } from '../../../components/StructuredData';
+import GraphSchema from '../../../components/GraphSchema';
 
 export const runtime = 'edge';
 
@@ -126,8 +126,10 @@ export default async function ArticlePage({ params }) {
 
   return (
     <>
-      <NewsArticleSchema article={article} author={authorInfo} />
-      <BreadcrumbSchema article={article} isArticle={true} />
+      {article.image_url && (
+        <link rel="preload" as="image" href={article.image_url} fetchPriority="high" />
+      )}
+      <GraphSchema type="article" data={article} />
       <ArticleView
         article={article}
         recommended={recommended}
