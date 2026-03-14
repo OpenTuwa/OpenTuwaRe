@@ -309,7 +309,12 @@ export default function VttEngine({ articleRef, slug, htmlContent }) {
       elements.forEach(el => initSingleSubtitle(el));
     };
 
-    scanAndInit();
+    // Use requestAnimationFrame to ensure DOM is ready after navigation
+    requestAnimationFrame(() => {
+      if (!isActive) return;
+      scanAndInit();
+    });
+    
     const pollInterval = setInterval(scanAndInit, 1000);
     setTimeout(() => clearInterval(pollInterval), 10000);
     cleanupFns.push(() => clearInterval(pollInterval));
