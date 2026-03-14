@@ -7,7 +7,7 @@ export async function onRequestGet(context) {
   let articles = [];
   try {
     const { results } = await env.DB.prepare(
-      "SELECT slug, title, published_at, image_url, tags, author, author_name FROM articles WHERE published_at >= ? ORDER BY published_at DESC LIMIT 1000"
+      "SELECT slug, title, published_at, image_url, section, category, tags, author, author_name FROM articles WHERE published_at >= ? ORDER BY published_at DESC LIMIT 1000"
     ).bind(cutoff).all();
     articles = results || [];
   } catch (e) { articles = []; }

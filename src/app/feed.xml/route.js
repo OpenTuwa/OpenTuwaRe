@@ -13,7 +13,9 @@ export async function GET() {
         "SELECT slug, title, seo_description, subtitle, excerpt, author_name, author, published_at, created_at, date_published, image_url, content_html, tags, section, category FROM articles ORDER BY COALESCE(published_at, created_at, date_published) DESC LIMIT 50"
       ).bind().all();
       articles = results || [];
-    } catch (e) { articles = []; }
+    } catch (e) {
+      return new Response(`DB ERROR: ${e?.message || String(e)}`, { status: 500, headers: { 'content-type': 'text/plain' } });
+    }
 
     const now = new Date().toUTCString();
 
