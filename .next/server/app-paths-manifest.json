@@ -1,4 +1,4 @@
 {
-  "/articles/[slug]/page": "static/webpack/app/articles/[slug]/page.c512c932941e9b8f.hot-update.js",
-  "/(site)/page": "static/webpack/app/(site)/page.c512c932941e9b8f.hot-update.js"
+  "/articles/[slug]/page": "static/webpack/app/articles/[slug]/page.0d26da9f14408ef0.hot-update.js",
+  "/(site)/page": "app/(site)/page.js"
 }

@@ -30,15 +30,19 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
   const [email, setEmail] = useState('');
   const [subStatus, setSubStatus] = useState({ loading: false, message: '', type: '' });
 
+  // Personalized recommendations state
+  const [personalizedRecs, setPersonalizedRecs] = useState(recommended);
+  const [recsLoading, setRecsLoading] = useState(false);
+
   const canAutoplayRef = useRef(false);
-  const recommendedRef = useRef(recommended);
+  const recommendedRef = useRef(personalizedRecs);
   const recommendedSectionRef = useRef(null);
   const inRecommendedZone = useRef(false);
   const sidebarHideTimer = useRef(null);
 
   useEffect(() => {
-    recommendedRef.current = recommended;
-  }, [recommended]);
+    recommendedRef.current = personalizedRecs;
+  }, [personalizedRecs]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -78,6 +82,20 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
       body: JSON.stringify({ action: 'view', slug, ...harvestData })
     }).catch(() => {});
 
+    // Fetch personalized recommendations after 3 seconds
+    const personalizeTimer = setTimeout(() => {
+      setRecsLoading(true);
+      fetch(`/api/recommendations?slug=${slug}&session_id=${sessionId}`)
+        .then(r => r.json())
+        .then(data => {
+          if (Array.isArray(data) && data.length > 0) {
+            setPersonalizedRecs(data);
+          }
+        })
+        .catch(() => {})
+        .finally(() => setRecsLoading(false));
+    }, 3000);
+
     heartbeatInterval = setInterval(() => {
       if (document.visibilityState === 'visible') {
         fetch('/api/track-interaction', {
@@ -89,6 +107,7 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
     }, 10000);
 
     return () => {
+      clearTimeout(personalizeTimer);
       if (heartbeatInterval) clearInterval(heartbeatInterval);
     };
   }, [slug]);
@@ -280,7 +299,7 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
                 <span className="text-[10px] tracking-widest font-bold uppercase text-tuwa-muted/70">Trending Now</span>
               </div>
               <div className="space-y-1">
-                {recommended.slice(0, 5).map((a) => (
+                {personalizedRecs.slice(0, 5).map((a) => (
                   <Link
                     key={a.slug}
                     href={`/articles/${a.slug}`}
@@ -306,14 +325,17 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
 
         <RevealSection>
           <section ref={recommendedSectionRef} className="max-w-6xl mx-auto px-6 pb-24">
-            <h3 className="text-2xl font-bold text-white mb-8">Recommended For You</h3>
+            <h3 className="text-2xl font-bold text-white mb-8">
+              Recommended For You
+              {recsLoading && <span className="text-sm text-tuwa-muted ml-3 animate-pulse">Personalizing...</span>}
+            </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-6">
-              {recommended.length === 0 ? (
+              {personalizedRecs.length === 0 ? (
                 <div className="text-tuwa-muted col-span-full py-10 text-center bg-white/5 rounded-xl border border-white/5">
                   No recommendations available at this time.
                 </div>
               ) : (
-                recommended.slice(0, 8).map(a => (
+                personalizedRecs.slice(0, 8).map(a => (
                   <Link key={a.slug} href={`/articles/${a.slug}`} className="group block rounded-xl overflow-hidden bg-tuwa-black border border-white/5 hover:border-white/10 hover:bg-white/5 transition-all duration-300 shadow-lg hover:shadow-2xl">
                     <div className="w-full h-40 overflow-hidden bg-white/5">
                       <SkeletonImage 
