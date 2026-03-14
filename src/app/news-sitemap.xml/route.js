@@ -30,7 +30,9 @@ export async function GET() {
       ).bind(cutoff30d).all());
     }
     articles = results || [];
-  } catch { articles = []; }
+  } catch (e) {
+    return new Response(`DB ERROR: ${e?.message || String(e)}`, { status: 500, headers: { 'content-type': 'text/plain' } });
+  }
 
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
