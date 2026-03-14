@@ -96,7 +96,9 @@ export async function onRequest(context) {
   <meta name="twitter:title" content="${esc(title)}">
   <meta name="twitter:description" content="${esc(desc)}">
   <meta name="twitter:image" content="${esc(ogImage)}">
+  <meta name="twitter:site" content="@opentuwa">
   <meta name="twitter:creator" content="${esc(twitterCreator)}">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
   <script type="application/ld+json">${JSON.stringify(jsonLd)}</script>
   <style>
     :root { --bg: #0a0a0b; --text: #e5e5e5; --muted: #a1a1aa; --accent: #3b82f6; }

@@ -48,6 +48,13 @@ export async function onRequestGet(context) {
     return context.next();
   }
 
+  // Determine canonical URL for this page variant
+  const canonicalUrl = author
+    ? `https://opentuwa.com/?author=${encodeURIComponent(author)}`
+    : tag
+      ? `https://opentuwa.com/?tag=${encodeURIComponent(tag)}`
+      : 'https://opentuwa.com';
+
   // Self-contained Bot HTML with Inline Styles
   const botHtml = `<!doctype html>
 <html lang="en">
@@ -55,19 +62,20 @@ export async function onRequestGet(context) {
   <meta charset="utf-8">
   <title>${escapeHtml(pageTitle)}</title>
   <meta name="description" content="${escapeHtml(pageDesc)}">
-  <meta property="og:title" content="OpenTuwa | Independent Journalism &amp; Documentaries">
-  <meta property="og:description" content="Independent news and journalism covering stories that matter.">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+  <meta property="og:title" content="${escapeHtml(pageTitle)}">
+  <meta property="og:description" content="${escapeHtml(pageDesc)}">
   <meta property="og:image" content="https://opentuwa.com/assets/ui/web_512.png">
   <meta property="og:image:width" content="512">
   <meta property="og:image:height" content="512">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://opentuwa.com">
+  <meta property="og:url" content="${escapeHtml(canonicalUrl)}">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="OpenTuwa | Independent Journalism &amp; Documentaries">
-  <meta name="twitter:description" content="Independent news and journalism covering stories that matter.">
+  <meta name="twitter:title" content="${escapeHtml(pageTitle)}">
+  <meta name="twitter:description" content="${escapeHtml(pageDesc)}">
   <meta name="twitter:image" content="https://opentuwa.com/assets/ui/web_512.png">
   <meta name="twitter:site" content="@opentuwa">
-  <link rel="canonical" href="https://opentuwa.com">
+  <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
   <style>
     :root { --bg: #0a0a0b; --text: #e5e5e5; --muted: #a1a1aa; --accent: #3b82f6; }
     body { background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; margin: 0; padding: 2rem; }

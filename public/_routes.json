@@ -3,6 +3,7 @@
   "include":[
     "/",
     "/about",
+    "/legal",
     "/archive",
     "/articles/*",
     "/player/*",

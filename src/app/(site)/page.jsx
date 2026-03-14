@@ -16,7 +16,7 @@ export const metadata = {
     description: 'Independent news and journalism covering stories that matter. Deep dives, documentaries, and analysis.',
     type: 'website',
     url: 'https://opentuwa.com',
-    images: [{ url: 'https://opentuwa.com/assets/ui/web_512.png', alt: 'OpenTuwa - Independent Journalism' }],
+    images: [{ url: 'https://opentuwa.com/assets/ui/web_512.png', width: 512, height: 512, alt: 'OpenTuwa - Independent Journalism' }],
     siteName: 'OpenTuwa',
     locale: 'en_US',
   },
