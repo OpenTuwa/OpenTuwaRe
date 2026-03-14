@@ -1,6 +1,7 @@
+const SITE_URL = 'https://opentuwa.com';
+
 export async function onRequestGet(context) {
-  const { env, request } = context;
-  const origin = new URL(request.url).origin;
+  const { env } = context;
   const cutoff = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
 
   let articles = [];
@@ -21,7 +22,7 @@ export async function onRequestGet(context) {
     const isoDate = toISO(a.published_at);
     if (!isoDate) continue;
     const imageUrl = a.image_url
-      ? (a.image_url.startsWith('http') ? a.image_url : origin + a.image_url)
+      ? (a.image_url.startsWith('http') ? a.image_url : SITE_URL + a.image_url)
       : '';
 
     // Parse tags for news:keywords
@@ -32,7 +33,7 @@ export async function onRequestGet(context) {
 
     xml += `
   <url>
-    <loc>${esc(origin + '/articles/' + a.slug)}</loc>
+    <loc>${esc(SITE_URL + '/articles/' + a.slug)}</loc>
     <news:news>
       <news:publication>
         <news:name>OpenTuwa</news:name>

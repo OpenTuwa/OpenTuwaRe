@@ -1,6 +1,7 @@
+const SITE_URL = 'https://opentuwa.com';
+
 export async function onRequestGet(context) {
-  const { env, request } = context;
-  const origin = new URL(request.url).origin;
+  const { env } = context;
 
   let articles = [];
   try {
@@ -26,7 +27,7 @@ export async function onRequestGet(context) {
   for (const page of staticPages) {
     xml += `
   <url>
-    <loc>${esc(origin + page.path)}</loc>
+    <loc>${esc(SITE_URL + page.path)}</loc>
     <lastmod>${esc(now)}</lastmod>
     <changefreq>${page.changefreq}</changefreq>
     <priority>${page.priority}</priority>
@@ -36,12 +37,12 @@ export async function onRequestGet(context) {
   for (const a of articles) {
     const lastmod = toISO(a.updated_at || a.published_at);
     const imageUrl = a.image_url
-      ? (a.image_url.startsWith('http') ? a.image_url : origin + a.image_url)
+      ? (a.image_url.startsWith('http') ? a.image_url : SITE_URL + a.image_url)
       : '';
     
     xml += `
   <url>
-    <loc>${esc(origin + '/articles/' + a.slug)}</loc>${lastmod ? `
+    <loc>${esc(SITE_URL + '/articles/' + a.slug)}</loc>${lastmod ? `
     <lastmod>${esc(lastmod)}</lastmod>` : ''}
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>${imageUrl ? `

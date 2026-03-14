@@ -1,17 +1,17 @@
+const SITE_URL = 'https://opentuwa.com';
+
 export async function onRequest(context) {
-  const { request } = context;
-  const origin = new URL(request.url).origin;
   const now = new Date().toISOString();
 
   try {
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <sitemap>
-    <loc>${origin}/sitemap.xml</loc>
+    <loc>${SITE_URL}/sitemap.xml</loc>
     <lastmod>${now}</lastmod>
   </sitemap>
   <sitemap>
-    <loc>${origin}/news-sitemap.xml</loc>
+    <loc>${SITE_URL}/news-sitemap.xml</loc>
     <lastmod>${now}</lastmod>
   </sitemap>
 </sitemapindex>`;
