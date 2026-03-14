@@ -1,0 +1,131 @@
+# Implementation Plan
+
+- [x] 1. Write bug condition exploration test
+  - **Property 1: Bug Condition** - Multiple VTT Engines Run Concurrently
+  - **CRITICAL**: This test MUST FAIL on unfixed code - failure confirms the bug exists
+  - **DO NOT attempt to fix the test or the code when it fails**
+  - **NOTE**: This test encodes the expected behavior - it will validate the fix when it passes after implementation
+  - **GOAL**: Surface counterexamples that demonstrate multiple VTT engines running simultaneously during navigation
+  - **Scoped PBT Approach**: Scope the property to concrete failing case: navigate from Article A to Article B and verify only one engine is active
+  - Test that navigating between articles causes multiple VTT engines to run simultaneously (from Bug Condition in design)
+  - The test assertions should match the Expected Behavior Properties from design: only one VTT engine should be active at a time
+  - Run test on UNFIXED code
+  - **EXPECTED OUTCOME**: Test FAILS (this is correct - it proves the bug exists)
+  - Document counterexamples found: intervals accumulate, MutationObservers pile up, YouTube players not destroyed
+  - Mark task complete when test is written, run, and failure is documented
+  - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
+
+- [ ] 2. Write preservation property tests (BEFORE implementing fix)
+  - **Property 2: Preservation** - VTT Functionality Unchanged
+  - **IMPORTANT**: Follow observation-first methodology
+  - Observe behavior on UNFIXED code for VTT subtitle functionality
+  - Observe: VTT files are parsed correctly and subtitles display synchronized with media playback
+  - Observe: Video, audio, YouTube iframes, and standalone subtitle boxes all work correctly
+  - Write property-based tests capturing observed VTT behavior patterns from Preservation Requirements
+  - Test VTT parsing (parseVtt function), subtitle overlay creation (createOverlay function), and synchronization (attachSubtitleUpdater function)
+  - Property-based testing generates many test cases for stronger guarantees
+  - Run tests on UNFIXED code
+  - **EXPECTED OUTCOME**: Tests PASS (this confirms baseline behavior to preserve)
+  - Mark task complete when tests are written, run, and passing on unfixed code
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9_
+
+- [ ] 3. Fix for VTT engine race condition
+
+  - [ ] 3.1 Create VttEngine.jsx component
+    - Create new file `src/components/VttEngine.jsx`
+    - Extract all VTT subtitle processing logic from ArticleView.jsx into VttEngine component
+    - Accept `articleRef` prop (React ref pointing to article DOM container)
+    - Accept `slug` prop (for debugging/logging only)
+    - Return `null` (logic-only component with no visual output)
+    - _Bug_Condition: isBugCondition(navigation) where navigation causes multiple VTT engines to run simultaneously_
+    - _Expected_Behavior: Each article has exactly one isolated VTT engine with complete cleanup on navigation_
+    - _Preservation: All VTT subtitle functionality (parsing, display, synchronization) must remain unchanged_
+    - _Requirements: 2.1, 2.2, 2.6_
+
+  - [ ] 3.2 Extract VTT logic functions to VttEngine
+    - Copy `parseVttTime(timeStr)` function unchanged from ArticleView.jsx
+    - Copy `parseVtt(vttText)` function unchanged from ArticleView.jsx
+    - Copy `createOverlay(container, isStandaloneBox)` function unchanged from ArticleView.jsx
+    - Copy `attachSubtitleUpdater(overlay, cues, mediaEl, cleanupFns)` function unchanged from ArticleView.jsx
+    - Copy `initSingleSubtitle(targetEl)` function unchanged from ArticleView.jsx
+    - Copy `scanAndInit()` function unchanged from ArticleView.jsx
+    - _Preservation: VTT parsing, overlay creation, and synchronization logic must remain unchanged_
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6_
+
+  - [ ] 3.3 Implement VTT useEffect in VttEngine
+    - Create useEffect that depends on `articleRef` and `slug`
+    - Early return if `!articleRef.current`
+    - Initialize `AbortController` for fetch cancellation
+    - Initialize `isActive` flag for lifecycle tracking
+    - Initialize `inFlightElements` WeakSet for duplicate processing prevention
+    - Initialize `cleanupFns` array for cleanup function collection
+    - Wipe stale `data-vtt-processed` flags and overlays from article DOM
+    - Call `scanAndInit()` to process media elements
+    - Set up polling interval (1 second for 10 seconds)
+    - Set up MutationObserver for dynamic element detection
+    - Initialize YouTube IFrame API if needed
+    - Return cleanup function that disconnects observers, clears intervals, removes event listeners, destroys YouTube players, and aborts fetches
+    - _Bug_Condition: Previous VTT engine instances must be completely cleaned up before new ones start_
+    - _Expected_Behavior: Cleanup function runs on unmount, destroying all side effects_
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
+
+  - [ ] 3.4 Preserve concurrency guards in VttEngine
+    - Keep `AbortController` for fetch cancellation on unmount
+    - Keep `isActive` flag checks in all async operations
+    - Keep `inFlightElements` WeakSet to prevent duplicate processing
+    - Keep `articleEl.isConnected` check before DOM operations
+    - Keep `data-vtt-processed` attribute checks (true/ignored/error/pending)
+    - _Bug_Condition: Race conditions occur when multiple engines process the same elements_
+    - _Expected_Behavior: Concurrency guards prevent duplicate processing and stale operations_
+    - _Requirements: 2.1, 2.2, 2.3, 2.5_
+
+  - [ ] 3.5 Preserve YouTube API integration in VttEngine
+    - Keep `window.tuwaYTInitialized` flag
+    - Keep `window.ytQueue` array for queuing player initialization
+    - Keep `window.onYouTubeIframeAPIReady` callback
+    - Keep dynamic script injection for YouTube IFrame API
+    - Keep `enablejsapi=1` parameter injection for YouTube iframes
+    - Keep YouTube player polling interval (100ms)
+    - Keep YouTube player destroy() call in cleanup
+    - _Preservation: YouTube integration must continue to work exactly as before_
+    - _Requirements: 3.3, 2.4_
+
+  - [ ] 3.6 Update ArticleView.jsx to use VttEngine
+    - Import VttEngine: `import VttEngine from './VttEngine';`
+    - Remove the entire VTT useEffect (lines ~120-450)
+    - Keep `articleRef` ref unchanged
+    - Add VttEngine component after the `<article>` element: `<VttEngine key={slug} articleRef={articleRef} slug={slug} />`
+    - **CRITICAL**: Use `key={slug}` to force React to unmount/remount VttEngine on every navigation
+    - Preserve all other ArticleView functionality (scroll tracking, recommendations, subscription form, header behavior)
+    - _Bug_Condition: Component lifecycle mismatch causes multiple engines to run_
+    - _Expected_Behavior: key={slug} forces complete unmount/remount, ensuring single engine per article_
+    - _Preservation: All other ArticleView functionality must remain unchanged_
+    - _Requirements: 2.1, 2.2, 2.6, 3.9_
+
+  - [ ] 3.7 Verify bug condition exploration test now passes
+    - **Property 1: Expected Behavior** - Single VTT Engine Per Article
+    - **IMPORTANT**: Re-run the SAME test from task 1 - do NOT write a new test
+    - The test from task 1 encodes the expected behavior
+    - When this test passes, it confirms only one VTT engine is active at a time
+    - Run bug condition exploration test from step 1
+    - **EXPECTED OUTCOME**: Test PASSES (confirms bug is fixed)
+    - Verify that navigating between articles results in only one active VTT engine
+    - Verify that intervals, MutationObservers, and YouTube players are properly cleaned up
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6_
+
+  - [ ] 3.8 Verify preservation tests still pass
+    - **Property 2: Preservation** - VTT Functionality Unchanged
+    - **IMPORTANT**: Re-run the SAME tests from task 2 - do NOT write new tests
+    - Run preservation property tests from step 2
+    - **EXPECTED OUTCOME**: Tests PASS (confirms no regressions)
+    - Verify VTT parsing produces identical results
+    - Verify subtitle display and synchronization work identically
+    - Verify video, audio, YouTube iframes, and standalone subtitle boxes all work correctly
+    - Confirm all tests still pass after fix (no regressions)
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9_
+
+- [ ] 4. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+  - Verify no memory leaks or performance degradation
+  - Verify rapid navigation between multiple articles works correctly
+  - Verify mixed media articles (video + audio + YouTube + standalone boxes) work correctly
