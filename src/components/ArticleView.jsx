@@ -134,21 +134,43 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
 
   const articleRef = useRef(null);
 
+  // FIX 1: Depend ONLY on `slug`, not on `[article, router]`.
+  // `router` from useRouter() issues a new object reference on every navigation in
+  // Next.js App Router, causing this effect to fire TWICE per navigation:
+  //   - Fire 1: router changes → isMounted set false by cleanup → new run marks video
+  //             'pending' then gets cancelled mid-fetch by the upcoming cleanup
+  //   - Fire 2: article changes → video is still 'pending' from Fire 1 → skipped entirely
+  // This is the root cause of the alternating article-2-no-vtt / article-3-yes-vtt pattern.
   useEffect(() => {
-    if (!article || !article.content_html) return;
+    if (!article?.content_html) return;
+
+    // FIX 2: Capture the article DOM element at the moment this effect starts.
+    // By the time the cleanup/return function runs, articleRef.current has already
+    // been mutated by React to point to the NEXT article's DOM (refs update before
+    // effects run). Capturing it here gives the cleanup the CORRECT DOM to wipe.
+    const articleEl = articleRef.current;
+    if (!articleEl) return;
+
+    // FIX 3: Use AbortController to cancel in-flight VTT fetches on cleanup.
+    // This is more reliable than checking `isMounted` after await, because the
+    // abort signal is checked synchronously by the browser fetch API.
+    const abortController = new AbortController();
+    let isActive = true;
 
     const cleanupFns = [];
-    let isMounted = true; 
-    cleanupFns.push(() => { isMounted = false; }); 
+    cleanupFns.push(() => {
+      isActive = false;
+      abortController.abort();
+    });
 
+    // Wipe any stale vtt-processed flags and overlays from THIS article's DOM.
+    // With key={slug} React creates a fresh DOM for each slug, so for cross-slug
+    // navigations this is a no-op. For same-slug re-renders it correctly resets state.
     const querySelectorStr = 'video, audio, iframe, .tuwa-subtitle-box';
-
-    if (articleRef.current) {
-      const staleElements = articleRef.current.querySelectorAll(querySelectorStr);
-      staleElements.forEach(el => el.removeAttribute('data-vtt-processed'));
-      const staleOverlays = articleRef.current.querySelectorAll('.tuwa-subtitle-overlay');
-      staleOverlays.forEach(overlay => overlay.remove()); 
-    }
+    const staleElements = articleEl.querySelectorAll(querySelectorStr);
+    staleElements.forEach(el => el.removeAttribute('data-vtt-processed'));
+    const staleOverlays = articleEl.querySelectorAll('.tuwa-subtitle-overlay');
+    staleOverlays.forEach(overlay => overlay.remove());
 
     const parseVttTime = (timeStr) => {
       if (!timeStr) return 0;
@@ -231,7 +253,7 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
       let lastCueText = null;
 
       const updateSubtitle = (currentTime) => {
-        if (!isMounted) return;
+        if (!isActive) return;
         const activeCue = cues.find(c => currentTime >= c.start && currentTime <= c.end);
         const newText = activeCue ? activeCue.text : null;
         if (newText === lastCueText) return;
@@ -269,9 +291,18 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
           }
         }
 
+        // FIX 4: Guard against double-polling. `onReady` AND the old setTimeout fallback
+        // both called `startYTPolling`, creating two concurrent intervals. Only one was
+        // ever cleaned up, causing the second to leak across navigations. Now we use a
+        // single `pollingStarted` flag so polling begins exactly once.
+        let pollingStarted = false;
+        let ytPlayerInstance = null;
+
         const startYTPolling = (ytPlayer) => {
+          if (pollingStarted || !isActive) return;
+          pollingStarted = true;
           const interval = setInterval(() => {
-            if (!isMounted) return clearInterval(interval);
+            if (!isActive) { clearInterval(interval); return; }
             try {
               if (ytPlayer && typeof ytPlayer.getCurrentTime === 'function') {
                 updateSubtitle(ytPlayer.getCurrentTime());
@@ -282,15 +313,37 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
         };
 
         const setupYT = () => {
-          if (!isMounted) return;
-          // IMPORTANT FIX: Passing the direct DOM element (mediaEl) instead of mediaEl.id
-          // This prevents YT API from fetching stale destroyed iframes from previous routes
+          if (!isActive) return;
+          // Pass the direct DOM element to prevent YT API from fetching stale
+          // destroyed iframes from previous routes by ID string lookup.
           const ytPlayer = new window.YT.Player(mediaEl, {
-            events: { onReady: (e) => startYTPolling(e.target) }
+            events: {
+              onReady: (e) => {
+                if (!isActive) {
+                  // FIX 5: Destroy YT Player immediately if the effect was already
+                  // cleaned up before onReady fired. Without this, stale players
+                  // accumulate and can block new YT.Player() calls on subsequent articles.
+                  try { e.target.destroy(); } catch (_) {}
+                  return;
+                }
+                ytPlayerInstance = e.target;
+                startYTPolling(e.target);
+              }
+            }
           });
-          setTimeout(() => {
-            if (isMounted && ytPlayer && typeof ytPlayer.getCurrentTime === 'function') startYTPolling(ytPlayer);
-          }, 2000);
+          // FIX 5 cont: Register player destroy in cleanupFns so it is torn down
+          // when navigating away, regardless of whether onReady has fired yet.
+          cleanupFns.push(() => {
+            try {
+              if (ytPlayerInstance) {
+                ytPlayerInstance.destroy();
+                ytPlayerInstance = null;
+              } else {
+                // player created but onReady not fired yet — destroy via the local ref
+                ytPlayer.destroy();
+              }
+            } catch (_) {}
+          });
         };
 
         if (window.YT && window.YT.Player) {
@@ -303,8 +356,12 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
     };
 
     const initSingleSubtitle = async (targetEl) => {
-      if (!isMounted) return;
-      if (targetEl.dataset.vttProcessed === 'true' || targetEl.dataset.vttProcessed === 'pending' || targetEl.dataset.vttProcessed === 'ignored') return;
+      if (!isActive) return;
+      if (
+        targetEl.dataset.vttProcessed === 'true' ||
+        targetEl.dataset.vttProcessed === 'pending' ||
+        targetEl.dataset.vttProcessed === 'ignored'
+      ) return;
       
       let mediaEl = null;
       let container = null;
@@ -319,11 +376,12 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
         vttUrl   = targetEl.dataset.vtt   || null;
         mediaEl = targetEl.querySelector('video, audio, iframe');
 
-        // STRICTLY SCOPE fallback searches to the current articleRef
-        // Prevents latching onto stale/cached media nodes from previous pages
+        // Strictly scope fallback searches to the captured articleEl snapshot.
+        // Querying articleRef.current here risks hitting a different article's DOM
+        // if the ref has already been updated by React.
         if (!mediaEl && mediaId) {
-          mediaEl = (articleRef.current ? articleRef.current.querySelector(`#${CSS.escape(mediaId)}`) : null)
-                 || (articleRef.current ? articleRef.current.querySelector(`[data-media-id="${CSS.escape(mediaId)}"]`) : null);
+          mediaEl = (articleEl ? articleEl.querySelector(`#${CSS.escape(mediaId)}`) : null)
+                 || (articleEl ? articleEl.querySelector(`[data-media-id="${CSS.escape(mediaId)}"]`) : null);
         }
       } else {
         mediaEl   = targetEl;
@@ -354,8 +412,11 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
       targetEl.dataset.vttProcessed = 'pending';
 
       try {
-        const response = await fetch(vttUrl);
-        if (!isMounted) return; 
+        // FIX 3 cont: Pass the AbortController signal so the browser cancels the
+        // request immediately on navigation instead of letting it complete and then
+        // checking `isActive` after the await (by which point the DOM may be gone).
+        const response = await fetch(vttUrl, { signal: abortController.signal });
+        if (!isActive) return;
         
         if (!response.ok) {
           targetEl.dataset.vttProcessed = 'error';
@@ -363,7 +424,7 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
         }
         
         const vttText = await response.text();
-        if (!isMounted) return; 
+        if (!isActive) return;
         
         const cues = parseVtt(vttText);
 
@@ -375,7 +436,9 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
           targetEl.dataset.vttProcessed = 'error';
         }
       } catch (error) {
-        if (isMounted) {
+        // AbortError is expected on cleanup — don't log it as a real error.
+        if (error.name === 'AbortError') return;
+        if (isActive) {
           targetEl.dataset.vttProcessed = 'error';
           console.error('[SubEngine] Critical Error:', error);
         }
@@ -383,8 +446,13 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
     };
 
     const scanAndInit = () => {
-      if (!isMounted || !articleRef.current) return;
-      const elements = articleRef.current.querySelectorAll(querySelectorStr);
+      // FIX 6: Use the captured `articleEl` snapshot (not `articleRef.current`) so
+      // that the scan is always scoped to THIS effect run's article DOM.
+      // `articleRef.current` can change mid-flight if React commits the next article
+      // before our poll interval fires, causing us to scan and double-process the
+      // wrong article's elements.
+      if (!isActive || !articleEl) return;
+      const elements = articleEl.querySelectorAll(querySelectorStr);
       elements.forEach(el => initSingleSubtitle(el));
     };
 
@@ -394,9 +462,8 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
     cleanupFns.push(() => clearInterval(pollInterval));
 
     const mutationObserver = new MutationObserver(() => scanAndInit());
-    if (articleRef.current) {
-      mutationObserver.observe(articleRef.current, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
-    }
+    // Observe the captured snapshot — not articleRef.current — for the same reason.
+    mutationObserver.observe(articleEl, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
 
     if (!window.tuwaYTInitialized) {
       window.tuwaYTInitialized = true;
@@ -408,7 +475,7 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
       };
     }
     
-    if (articleRef.current && articleRef.current.querySelector('iframe') && !document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
+    if (articleEl.querySelector('iframe') && !document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
       const s = document.createElement('script');
       s.src = 'https://www.youtube.com/iframe_api';
       document.head.appendChild(s);
@@ -417,8 +484,26 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
     return () => {
       mutationObserver.disconnect();
       cleanupFns.forEach(fn => fn());
+
+      // FIX 7: Wipe vtt-processed flags and overlays from THIS effect's article DOM
+      // DURING cleanup (not at the start of the next effect).
+      // The previous code wiped at the start of the new effect but by then
+      // `articleRef.current` already points to the NEXT article's fresh DOM — meaning
+      // stale flags on the OLD DOM were never cleared, and the next scan of the OLD
+      // DOM (by a leaked poll interval in extreme edge cases) could be misled.
+      // Using the captured `articleEl` here always targets the correct DOM.
+      try {
+        const els = articleEl.querySelectorAll(querySelectorStr);
+        els.forEach(el => el.removeAttribute('data-vtt-processed'));
+        const overlays = articleEl.querySelectorAll('.tuwa-subtitle-overlay');
+        overlays.forEach(o => { o.innerHTML = ''; o.remove(); });
+      } catch (_) {}
     };
-  }, [article, router]);
+
+  // FIX 1: `slug` only — never `router`.
+  // Depending on `article` (object) works too but re-fires if the parent passes a
+  // new object reference with identical content. `slug` is a stable primitive.
+  }, [slug]);
 
   const handleSearch = (e) => {
     if (e.key === 'Enter' && searchQuery.trim()) {
@@ -551,7 +636,7 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
           </div>
         </section>
 
-        {/* IMPORTANT FIX: key={slug} added to ensure fresh DOM unmount/mount on client navigations */}
+        {/* key={slug} ensures a fresh DOM unmount/mount on every client navigation */}
         <article key={slug} ref={articleRef} className="max-w-[720px] mx-auto px-6 py-20 prose prose-invert prose-xl text-tuwa-text prose-a:text-tuwa-accent hover:prose-a:text-blue-400 prose-img:rounded-xl">
           <ArticleContent html={article.content_html} />
         </article>
