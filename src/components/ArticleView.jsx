@@ -134,28 +134,22 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
 
   const articleRef = useRef(null);
 
-  // FIX 1: Depend ONLY on `slug`, not on `[article, router]`.
-  // `router` from useRouter() issues a new object reference on every navigation in
-  // Next.js App Router, causing this effect to fire TWICE per navigation:
-  //   - Fire 1: router changes → isMounted set false by cleanup → new run marks video
-  //             'pending' then gets cancelled mid-fetch by the upcoming cleanup
-  //   - Fire 2: article changes → video is still 'pending' from Fire 1 → skipped entirely
-  // This is the root cause of the alternating article-2-no-vtt / article-3-yes-vtt pattern.
+  // FIX A: Depend on both slug AND the truthiness of article.content_html
+  // This prevents the effect from running on optimistic navigation before the new data arrives.
   useEffect(() => {
     if (!article?.content_html) return;
 
-    // FIX 2: Capture the article DOM element at the moment this effect starts.
-    // By the time the cleanup/return function runs, articleRef.current has already
-    // been mutated by React to point to the NEXT article's DOM (refs update before
-    // effects run). Capturing it here gives the cleanup the CORRECT DOM to wipe.
+    // Capture the article DOM element at the moment this effect starts.
     const articleEl = articleRef.current;
     if (!articleEl) return;
 
-    // FIX 3: Use AbortController to cancel in-flight VTT fetches on cleanup.
-    // This is more reliable than checking `isMounted` after await, because the
-    // abort signal is checked synchronously by the browser fetch API.
+    // Use AbortController to cancel in-flight VTT fetches on cleanup.
     const abortController = new AbortController();
     let isActive = true;
+    
+    // FIX B: Use a WeakSet to track in-flight requests in memory.
+    // This solves the race condition where DOM flags might be read/cleared concurrently.
+    const inFlightElements = new WeakSet();
 
     const cleanupFns = [];
     cleanupFns.push(() => {
@@ -164,8 +158,6 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
     });
 
     // Wipe any stale vtt-processed flags and overlays from THIS article's DOM.
-    // With key={slug} React creates a fresh DOM for each slug, so for cross-slug
-    // navigations this is a no-op. For same-slug re-renders it correctly resets state.
     const querySelectorStr = 'video, audio, iframe, .tuwa-subtitle-box';
     const staleElements = articleEl.querySelectorAll(querySelectorStr);
     staleElements.forEach(el => el.removeAttribute('data-vtt-processed'));
@@ -291,10 +283,6 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
           }
         }
 
-        // FIX 4: Guard against double-polling. `onReady` AND the old setTimeout fallback
-        // both called `startYTPolling`, creating two concurrent intervals. Only one was
-        // ever cleaned up, causing the second to leak across navigations. Now we use a
-        // single `pollingStarted` flag so polling begins exactly once.
         let pollingStarted = false;
         let ytPlayerInstance = null;
 
@@ -314,15 +302,10 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
 
         const setupYT = () => {
           if (!isActive) return;
-          // Pass the direct DOM element to prevent YT API from fetching stale
-          // destroyed iframes from previous routes by ID string lookup.
           const ytPlayer = new window.YT.Player(mediaEl, {
             events: {
               onReady: (e) => {
                 if (!isActive) {
-                  // FIX 5: Destroy YT Player immediately if the effect was already
-                  // cleaned up before onReady fired. Without this, stale players
-                  // accumulate and can block new YT.Player() calls on subsequent articles.
                   try { e.target.destroy(); } catch (_) {}
                   return;
                 }
@@ -331,15 +314,12 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
               }
             }
           });
-          // FIX 5 cont: Register player destroy in cleanupFns so it is torn down
-          // when navigating away, regardless of whether onReady has fired yet.
           cleanupFns.push(() => {
             try {
               if (ytPlayerInstance) {
                 ytPlayerInstance.destroy();
                 ytPlayerInstance = null;
               } else {
-                // player created but onReady not fired yet — destroy via the local ref
                 ytPlayer.destroy();
               }
             } catch (_) {}
@@ -357,10 +337,13 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
 
     const initSingleSubtitle = async (targetEl) => {
       if (!isActive) return;
+      
+      // FIX B: Early return if already processed OR actively in flight
       if (
+        inFlightElements.has(targetEl) ||
         targetEl.dataset.vttProcessed === 'true' ||
-        targetEl.dataset.vttProcessed === 'pending' ||
-        targetEl.dataset.vttProcessed === 'ignored'
+        targetEl.dataset.vttProcessed === 'ignored' ||
+        targetEl.dataset.vttProcessed === 'error'
       ) return;
       
       let mediaEl = null;
@@ -376,9 +359,6 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
         vttUrl   = targetEl.dataset.vtt   || null;
         mediaEl = targetEl.querySelector('video, audio, iframe');
 
-        // Strictly scope fallback searches to the captured articleEl snapshot.
-        // Querying articleRef.current here risks hitting a different article's DOM
-        // if the ref has already been updated by React.
         if (!mediaEl && mediaId) {
           mediaEl = (articleEl ? articleEl.querySelector(`#${CSS.escape(mediaId)}`) : null)
                  || (articleEl ? articleEl.querySelector(`[data-media-id="${CSS.escape(mediaId)}"]`) : null);
@@ -409,17 +389,17 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
 
       if (!container) container = mediaEl.parentElement;
 
+      // Mark element as in-flight and pending
+      inFlightElements.add(targetEl);
       targetEl.dataset.vttProcessed = 'pending';
 
       try {
-        // FIX 3 cont: Pass the AbortController signal so the browser cancels the
-        // request immediately on navigation instead of letting it complete and then
-        // checking `isActive` after the await (by which point the DOM may be gone).
         const response = await fetch(vttUrl, { signal: abortController.signal });
         if (!isActive) return;
         
         if (!response.ok) {
           targetEl.dataset.vttProcessed = 'error';
+          inFlightElements.delete(targetEl);
           return;
         }
         
@@ -436,22 +416,18 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
           targetEl.dataset.vttProcessed = 'error';
         }
       } catch (error) {
-        // AbortError is expected on cleanup — don't log it as a real error.
         if (error.name === 'AbortError') return;
         if (isActive) {
           targetEl.dataset.vttProcessed = 'error';
+          inFlightElements.delete(targetEl);
           console.error('[SubEngine] Critical Error:', error);
         }
       }
     };
 
     const scanAndInit = () => {
-      // FIX 6: Use the captured `articleEl` snapshot (not `articleRef.current`) so
-      // that the scan is always scoped to THIS effect run's article DOM.
-      // `articleRef.current` can change mid-flight if React commits the next article
-      // before our poll interval fires, causing us to scan and double-process the
-      // wrong article's elements.
-      if (!isActive || !articleEl) return;
+      // FIX C: Ensure the element is still connected to the DOM before scanning
+      if (!isActive || !articleEl || !articleEl.isConnected) return;
       const elements = articleEl.querySelectorAll(querySelectorStr);
       elements.forEach(el => initSingleSubtitle(el));
     };
@@ -462,7 +438,6 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
     cleanupFns.push(() => clearInterval(pollInterval));
 
     const mutationObserver = new MutationObserver(() => scanAndInit());
-    // Observe the captured snapshot — not articleRef.current — for the same reason.
     mutationObserver.observe(articleEl, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
 
     if (!window.tuwaYTInitialized) {
@@ -485,13 +460,6 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
       mutationObserver.disconnect();
       cleanupFns.forEach(fn => fn());
 
-      // FIX 7: Wipe vtt-processed flags and overlays from THIS effect's article DOM
-      // DURING cleanup (not at the start of the next effect).
-      // The previous code wiped at the start of the new effect but by then
-      // `articleRef.current` already points to the NEXT article's fresh DOM — meaning
-      // stale flags on the OLD DOM were never cleared, and the next scan of the OLD
-      // DOM (by a leaked poll interval in extreme edge cases) could be misled.
-      // Using the captured `articleEl` here always targets the correct DOM.
       try {
         const els = articleEl.querySelectorAll(querySelectorStr);
         els.forEach(el => el.removeAttribute('data-vtt-processed'));
@@ -500,10 +468,8 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
       } catch (_) {}
     };
 
-  // FIX 1: `slug` only — never `router`.
-  // Depending on `article` (object) works too but re-fires if the parent passes a
-  // new object reference with identical content. `slug` is a stable primitive.
-  }, [slug]);
+  // FIX A: Added !!article?.content_html to dependency array
+  }, [slug, !!article?.content_html]); 
 
   const handleSearch = (e) => {
     if (e.key === 'Enter' && searchQuery.trim()) {
