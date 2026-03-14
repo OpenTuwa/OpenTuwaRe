@@ -14,48 +14,45 @@ function toISO(val) {
 }
 
 export async function GET() {
+  const cutoff = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
   let articles = [];
   try {
     const { env } = getRequestContext();
     const { results } = await env.DB.prepare(
-      'SELECT slug, published_at, updated_at, image_url, title FROM articles ORDER BY published_at DESC'
-    ).all();
+      'SELECT slug, title, published_at, image_url, section, tags FROM articles WHERE published_at >= ? ORDER BY published_at DESC LIMIT 1000'
+    ).bind(cutoff).all();
     articles = results || [];
   } catch { articles = []; }
 
-  const staticPages = [
-    { path: '/', changefreq: 'daily', priority: '1.0' },
-    { path: '/about', changefreq: 'monthly', priority: '0.6' },
-    { path: '/archive', changefreq: 'daily', priority: '0.7' },
-    { path: '/legal', changefreq: 'yearly', priority: '0.3' },
-  ];
-
-  const now = new Date().toISOString();
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:news="http://www.google.com/schemas/sitemap-news/0.9"
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">`;
 
-  for (const page of staticPages) {
-    xml += `
-  <url>
-    <loc>${esc(SITE_URL + page.path)}</loc>
-    <lastmod>${esc(now)}</lastmod>
-    <changefreq>${page.changefreq}</changefreq>
-    <priority>${page.priority}</priority>
-  </url>`;
-  }
-
   for (const a of articles) {
-    const lastmod = toISO(a.updated_at || a.published_at);
+    const isoDate = toISO(a.published_at);
+    if (!isoDate) continue;
     const imageUrl = a.image_url
       ? (a.image_url.startsWith('http') ? a.image_url : SITE_URL + a.image_url)
       : '';
+
+    let tagsArray = [];
+    if (Array.isArray(a.tags)) tagsArray = a.tags;
+    else if (typeof a.tags === 'string') tagsArray = a.tags.split(',').map(t => t.trim()).filter(Boolean);
+    const keywords = tagsArray.slice(0, 10).join(', ');
+
     xml += `
   <url>
-    <loc>${esc(SITE_URL + '/articles/' + a.slug)}</loc>${lastmod ? `
-    <lastmod>${esc(lastmod)}</lastmod>` : ''}
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>${imageUrl ? `
+    <loc>${esc(SITE_URL + '/articles/' + a.slug)}</loc>
+    <news:news>
+      <news:publication>
+        <news:name>OpenTuwa</news:name>
+        <news:language>en</news:language>
+      </news:publication>
+      <news:publication_date>${esc(isoDate)}</news:publication_date>
+      <news:title>${esc(a.title || '')}</news:title>${keywords ? `
+      <news:keywords>${esc(keywords)}</news:keywords>` : ''}
+    </news:news>${imageUrl ? `
     <image:image>
       <image:loc>${esc(imageUrl)}</image:loc>
       <image:title>${esc(a.title || '')}</image:title>
@@ -68,7 +65,7 @@ export async function GET() {
   return new Response(xml, {
     headers: {
       'content-type': 'application/xml; charset=utf-8',
-      'cache-control': 'public, max-age=3600',
+      'cache-control': 'public, max-age=900',
     },
   });
 }
