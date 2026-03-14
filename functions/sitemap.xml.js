@@ -10,21 +10,26 @@ export async function onRequestGet(context) {
     articles = results || [];
   } catch (e) { articles = []; }
 
-  const staticPages = ['/', '/about', '/archive', '/legal'];
+  const staticPages = [
+    { path: '/', changefreq: 'daily', priority: '1.0' },
+    { path: '/about', changefreq: 'monthly', priority: '0.6' },
+    { path: '/archive', changefreq: 'daily', priority: '0.7' },
+    { path: '/legal', changefreq: 'yearly', priority: '0.3' },
+  ];
 
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
         xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">`;
 
+  const now = new Date().toISOString();
   for (const page of staticPages) {
-    const lastmod = page === '/' ? new Date().toISOString() : null;
     xml += `
   <url>
-    <loc>${esc(origin + page)}</loc>${lastmod ? `
-    <lastmod>${esc(lastmod)}</lastmod>` : ''}
-    <changefreq>${page === '/' ? 'daily' : 'monthly'}</changefreq>
-    <priority>${page === '/' ? '1.0' : '0.5'}</priority>
+    <loc>${esc(origin + page.path)}</loc>
+    <lastmod>${esc(now)}</lastmod>
+    <changefreq>${page.changefreq}</changefreq>
+    <priority>${page.priority}</priority>
   </url>`;
   }
 

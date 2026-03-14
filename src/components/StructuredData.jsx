@@ -67,11 +67,14 @@ export function NewsArticleSchema({ article, author }) {
       'name': 'OpenTuwa'
     },
     'publisher': {
-      '@type': 'Organization',
+      '@type': 'NewsMediaOrganization',
       'name': 'OpenTuwa',
+      'url': 'https://opentuwa.com',
       'logo': {
         '@type': 'ImageObject',
-        'url': 'https://opentuwa.com/assets/ui/web_512.png'
+        'url': 'https://opentuwa.com/assets/ui/web_512.png',
+        'width': 512,
+        'height': 512
       }
     }
   };

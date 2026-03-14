@@ -1,7 +1,7 @@
 export async function onRequestGet(context) {
   const { env, request } = context;
   const origin = new URL(request.url).origin;
-  const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+  const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
   let articles = [];
   try {

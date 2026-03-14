@@ -1,15 +1,64 @@
-# 1. Rules for your main HTML (The "App" loader)
+# Cloudflare Pages _headers — security, caching, SEO signals
+
+# HTML shell — never cache, always fresh
 /index.html
   Cache-Control: no-cache, no-store, must-revalidate
   Pragma: no-cache
   Expires: 0
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: strict-origin-when-cross-origin
 
-# 2. Rules for all Article routes
+# Article pages — no cache (dynamic bot SSR + Next.js edge)
 /articles/*
   Cache-Control: no-cache, no-store, must-revalidate
-  # This tells Cloudflare "Edge" to check for a new version every time
   Cloudflare-CDN-Cache-Control: no-cache
+  X-Robots-Tag: index, follow, max-image-preview:large, max-snippet:-1
 
-# 3. Rules for static assets (CSS/JS) - These CAN be cached for speed
+# Static assets — immutable long-term cache
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
+  X-Content-Type-Options: nosniff
+
+/img/*
+  Cache-Control: public, max-age=31536000, immutable
+  X-Content-Type-Options: nosniff
+
+/vid/*
+  Cache-Control: public, max-age=86400
+  X-Content-Type-Options: nosniff
+
+/vtt/*
+  Cache-Control: public, max-age=86400
+  X-Content-Type-Options: nosniff
+
+# Sitemaps — short cache so they stay fresh
+/sitemap.xml
+  Cache-Control: public, max-age=3600
+  Content-Type: application/xml; charset=utf-8
+
+/sitemap-index.xml
+  Cache-Control: public, max-age=3600
+  Content-Type: application/xml; charset=utf-8
+
+/news-sitemap.xml
+  Cache-Control: public, max-age=900
+  Content-Type: application/xml; charset=utf-8
+
+# RSS feed
+/feed.xml
+  Cache-Control: public, max-age=1800
+  Content-Type: application/rss+xml; charset=utf-8
+
+# robots.txt — short cache
+/robots.txt
+  Cache-Control: public, max-age=3600
+  Content-Type: text/plain; charset=utf-8
+
+# Security headers for all pages
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  X-XSS-Protection: 1; mode=block
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()

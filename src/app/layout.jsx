@@ -69,6 +69,10 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${inter.variable} ${plusJakartaSans.variable}`}>
       <head>
+        {/* Preconnect for Google Fonts and Analytics — reduces render-blocking latency */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
         <OrganizationSchema />
         <WebSiteSchema />
       </head>
