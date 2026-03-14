@@ -1,7 +1,7 @@
 import { getRequestContext } from '@cloudflare/next-on-pages';
 import ArticleCard from '../../components/ArticleCard';
-import { fetchCandidates, RecommendationEngine } from '../../../utils/algorithm';
-import { HomeSEOHead, OrganizationSchema, WebSiteSchema, BreadcrumbSchema } from '../../../components/StructuredData';
+import { fetchCandidates, RecommendationEngine } from '../../utils/algorithm';
+import { OrganizationSchema, WebSiteSchema, BreadcrumbSchema } from '../../components/StructuredData';
 
 export const runtime = 'edge';
 
@@ -16,24 +16,15 @@ export default async function HomePage({ searchParams }) {
 
   try {
     const { env } = getRequestContext();
-
-    console.log('[HomePage] Fetching articles with params:', { q, author, tag });
-
-    // Pass author and tag to fetchCandidates
     const rawResults = await fetchCandidates(env, 100, q, author, tag);
-    console.log('[HomePage] Raw results count:', rawResults?.length || 0);
-
     const engine = new RecommendationEngine(rawResults);
     articles = engine.getTrending(100);
-    console.log('[HomePage] Trending articles count:', articles?.length || 0);
-
   } catch (err) {
     console.error('[HomePage] Error fetching articles:', err.message, err.stack);
   }
 
   return (
     <>
-      <HomeSEOHead />
       <OrganizationSchema />
       <WebSiteSchema />
       <BreadcrumbSchema isArticle={false} />

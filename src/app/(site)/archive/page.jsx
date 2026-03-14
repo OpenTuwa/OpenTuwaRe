@@ -1,6 +1,7 @@
 import { getRequestContext } from '@cloudflare/next-on-pages';
 import ArchiveContent from '../../../components/ArchiveContent';
-import { ArchiveSEOHead, OrganizationSchema, WebSiteSchema, CollectionPageSchema } from '../../../components/StructuredData';
+import { ArchiveSEOHead } from '../../../components/SEOHead';
+import { OrganizationSchema, WebSiteSchema, CollectionPageSchema } from '../../../components/StructuredData';
 
 export const runtime = 'edge';
 

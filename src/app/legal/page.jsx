@@ -1,5 +1,6 @@
 import LegalContent from '../../components/LegalContent';
-import { LegalSEOHead, OrganizationSchema, WebSiteSchema, BreadcrumbSchema } from '../../components/StructuredData';
+import { LegalSEOHead } from '../../components/SEOHead';
+import { OrganizationSchema, WebSiteSchema, BreadcrumbSchema } from '../../components/StructuredData';
 
 export const metadata = {
   title: 'Legal | OpenTuwa',
