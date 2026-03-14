@@ -139,11 +139,10 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
 
     const cleanupFns = [];
     let isMounted = true; 
-    cleanupFns.push(() => { isMounted = false; }); // Safeguard against async unmount leaks
+    cleanupFns.push(() => { isMounted = false; }); 
 
     const querySelectorStr = 'video, audio, iframe, .tuwa-subtitle-box';
 
-    // Scrub Next.js cached DOM nodes
     if (articleRef.current) {
       const staleElements = articleRef.current.querySelectorAll(querySelectorStr);
       staleElements.forEach(el => el.removeAttribute('data-vtt-processed'));
@@ -151,7 +150,6 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
       staleOverlays.forEach(overlay => overlay.remove()); 
     }
 
-    // --- helpers ---
     const parseVttTime = (timeStr) => {
       if (!timeStr) return 0;
       const clean = timeStr.trim().split(/\s+/)[0].replace(',', '.');
@@ -293,16 +291,16 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
           }, 2000);
         };
 
+        // Added 150ms timeout to ensure iframe is visually painted by the browser before YT API takes over
         if (window.YT && window.YT.Player) {
-          setupYT();
+          setTimeout(setupYT, 150);
         } else {
           if (!window.ytQueue) window.ytQueue = [];
-          window.ytQueue.push(setupYT);
+          window.ytQueue.push(() => setTimeout(setupYT, 150));
         }
       }
     };
 
-    // --- main per-element init ---
     const initSingleSubtitle = async (targetEl) => {
       if (!isMounted) return;
       if (targetEl.dataset.vttProcessed === 'true' || targetEl.dataset.vttProcessed === 'pending' || targetEl.dataset.vttProcessed === 'ignored') return;
@@ -320,7 +318,6 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
         vttUrl   = targetEl.dataset.vtt   || null;
         mediaEl = targetEl.querySelector('video, audio, iframe');
 
-        // Look outside the box if media isn't strictly nested
         if (!mediaEl && mediaId) {
           mediaEl = (articleRef.current ? articleRef.current.querySelector(`#${CSS.escape(mediaId)}`) : null)
                  || document.getElementById(mediaId)
@@ -348,17 +345,15 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
         return;
       }
       
-      // If the media element hasn't loaded into the DOM yet, leave it blank so the Poller catches it next tick
       if (!mediaEl) return; 
 
       if (!container) container = mediaEl.parentElement;
 
-      // Only lock the state to pending once we actually have the media element ready
       targetEl.dataset.vttProcessed = 'pending';
 
       try {
         const response = await fetch(vttUrl);
-        if (!isMounted) return; // Drop execution cleanly if user navigated away during fetch
+        if (!isMounted) return; 
         
         if (!response.ok) {
           targetEl.dataset.vttProcessed = 'error';
@@ -385,27 +380,22 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
       }
     };
 
-    // --- scan ---
     const scanAndInit = () => {
       if (!isMounted || !articleRef.current) return;
       const elements = articleRef.current.querySelectorAll(querySelectorStr);
       elements.forEach(el => initSingleSubtitle(el));
     };
 
-    // POLLING ENGINE: Check DOM gently every 1 second for the first 10 seconds.
-    // This perfectly catches lazy-loaded iframes or React Suspense delayed elements.
     scanAndInit();
     const pollInterval = setInterval(scanAndInit, 1000);
     setTimeout(() => clearInterval(pollInterval), 10000);
     cleanupFns.push(() => clearInterval(pollInterval));
 
-    // Fallback mutation observer
     const mutationObserver = new MutationObserver(() => scanAndInit());
     if (articleRef.current) {
       mutationObserver.observe(articleRef.current, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
     }
 
-    // Safely inject YouTube IFrame API without overwriting external scripts
     if (!window.tuwaYTInitialized) {
       window.tuwaYTInitialized = true;
       const originalYTReady = window.onYouTubeIframeAPIReady;
@@ -559,7 +549,8 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
           </div>
         </section>
 
-        <article ref={articleRef} className="max-w-[720px] mx-auto px-6 py-20 prose prose-invert prose-xl text-tuwa-text prose-a:text-tuwa-accent hover:prose-a:text-blue-400 prose-img:rounded-xl">
+        {/* 🚨 THE MAGIC FIX IS HERE: key={article.slug} forcefully destroys the old HTML! */}
+        <article key={article.slug} ref={articleRef} className="max-w-[720px] mx-auto px-6 py-20 prose prose-invert prose-xl text-tuwa-text prose-a:text-tuwa-accent hover:prose-a:text-blue-400 prose-img:rounded-xl">
           <ArticleContent html={article.content_html} />
         </article>
 
