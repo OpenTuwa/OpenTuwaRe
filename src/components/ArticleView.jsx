@@ -283,7 +283,9 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
 
         const setupYT = () => {
           if (!isMounted) return;
-          const ytPlayer = new window.YT.Player(mediaEl.id, {
+          // IMPORTANT FIX: Passing the direct DOM element (mediaEl) instead of mediaEl.id
+          // This prevents YT API from fetching stale destroyed iframes from previous routes
+          const ytPlayer = new window.YT.Player(mediaEl, {
             events: { onReady: (e) => startYTPolling(e.target) }
           });
           setTimeout(() => {
@@ -291,12 +293,11 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
           }, 2000);
         };
 
-        // Added 150ms timeout to ensure iframe is visually painted by the browser before YT API takes over
         if (window.YT && window.YT.Player) {
-          setTimeout(setupYT, 150);
+          setupYT();
         } else {
           if (!window.ytQueue) window.ytQueue = [];
-          window.ytQueue.push(() => setTimeout(setupYT, 150));
+          window.ytQueue.push(setupYT);
         }
       }
     };
@@ -318,10 +319,11 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
         vttUrl   = targetEl.dataset.vtt   || null;
         mediaEl = targetEl.querySelector('video, audio, iframe');
 
+        // STRICTLY SCOPE fallback searches to the current articleRef
+        // Prevents latching onto stale/cached media nodes from previous pages
         if (!mediaEl && mediaId) {
           mediaEl = (articleRef.current ? articleRef.current.querySelector(`#${CSS.escape(mediaId)}`) : null)
-                 || document.getElementById(mediaId)
-                 || document.querySelector(`[data-media-id="${CSS.escape(mediaId)}"]`);
+                 || (articleRef.current ? articleRef.current.querySelector(`[data-media-id="${CSS.escape(mediaId)}"]`) : null);
         }
       } else {
         mediaEl   = targetEl;
@@ -549,8 +551,8 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
           </div>
         </section>
 
-        {/* 🚨 THE MAGIC FIX IS HERE: key={article.slug} forcefully destroys the old HTML! */}
-        <article key={article.slug} ref={articleRef} className="max-w-[720px] mx-auto px-6 py-20 prose prose-invert prose-xl text-tuwa-text prose-a:text-tuwa-accent hover:prose-a:text-blue-400 prose-img:rounded-xl">
+        {/* IMPORTANT FIX: key={slug} added to ensure fresh DOM unmount/mount on client navigations */}
+        <article key={slug} ref={articleRef} className="max-w-[720px] mx-auto px-6 py-20 prose prose-invert prose-xl text-tuwa-text prose-a:text-tuwa-accent hover:prose-a:text-blue-400 prose-img:rounded-xl">
           <ArticleContent html={article.content_html} />
         </article>
 
