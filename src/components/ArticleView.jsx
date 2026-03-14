@@ -140,6 +140,18 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
     const cleanupFns = [];
     const querySelectorStr = 'video, audio, iframe, .tuwa-subtitle-box';
 
+    // 🚨 GHOST BUG FIX: Forcefully scrub Next.js DOM caching artifacts!
+    // If the user navigates back to this page, Next.js reuses the DOM nodes but the event listeners
+    // are dead. We MUST clear all 'processed' flags and dead overlays so they can correctly re-initialize.
+    if (articleRef.current) {
+      const staleElements = articleRef.current.querySelectorAll(querySelectorStr);
+      staleElements.forEach(el => {
+        el.removeAttribute('data-vtt-processed'); 
+      });
+      const staleOverlays = articleRef.current.querySelectorAll('.tuwa-subtitle-overlay');
+      staleOverlays.forEach(overlay => overlay.remove()); 
+    }
+
     // --- helpers ---
 
     const parseVttTime = (timeStr) => {
@@ -292,7 +304,6 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
     // --- main per-element init ---
 
     const initSingleSubtitle = async (targetEl) => {
-      // FIX: Replace WeakSet with explicit dataset markers to allow retries
       if (targetEl.dataset.vttProcessed === 'true' || targetEl.dataset.vttProcessed === 'pending' || targetEl.dataset.vttProcessed === 'ignored') return;
       targetEl.dataset.vttProcessed = 'pending';
 
@@ -313,6 +324,9 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
         if (!mediaEl && mediaId) {
           for (let attempt = 0; attempt < 3 && !mediaEl; attempt++) {
             if (attempt > 0) await new Promise(r => setTimeout(r, 500));
+            // Prevent attempting to mount if component unmounted during the sleep
+            if (!articleRef.current) break;
+            
             mediaEl = (articleRef.current ? articleRef.current.querySelector(`#${CSS.escape(mediaId)}`) : null)
                    || document.getElementById(mediaId)
                    || document.querySelector(`[data-media-id="${CSS.escape(mediaId)}"]`);
@@ -341,7 +355,6 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
         return;
       }
       if (!mediaEl) {
-        // FIX: Reset so the observer can try again when the DOM actually catches up
         targetEl.dataset.vttProcessed = 'false';
         console.warn(`[SubEngine] Could not find media element for id="${mediaId}" — retrying later.`);
         return;
