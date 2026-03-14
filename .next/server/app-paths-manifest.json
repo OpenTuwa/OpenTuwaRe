@@ -1,3 +1,5 @@
 {
+  "/api/track-interaction/route": "app/api/track-interaction/route.js",
+  "/articles/[slug]/page": "app/articles/[slug]/page.js",
   "/(site)/page": "app/(site)/page.js"
 }

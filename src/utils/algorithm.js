@@ -184,7 +184,7 @@ export class RecommendationEngine {
           relevance += scoreBreakdown.gravity;
         }
 
-        // 3. Emotional Arousal
+        // 3. Emotional Arousal (if available)
         const arousal = article.arousal_score || 0; 
         scoreBreakdown.emotion = (arousal * SCORING_WEIGHTS.EMOTIONAL_RESONANCE);
         relevance += scoreBreakdown.emotion;
@@ -239,8 +239,6 @@ export async function fetchCandidates(env, limit = 100, searchQuery = null, auth
            COALESCE(a.avg_time_spent, 0) as avg_time_spent,
            COALESCE(a.total_views, 0) as _raw_views,
            COALESCE(a.trending_velocity, 0) as trending_velocity,
-           COALESCE(a.arousal_score, 0) as arousal_score,
-           COALESCE(a.entropy_score, 0) as entropy_score,
            a.neural_vector, a.visual_vector
     FROM articles a
   `;
