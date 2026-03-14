@@ -1,6 +1,7 @@
 import { GoogleAnalytics } from '@next/third-parties/google';
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
+import { OrganizationSchema, WebSiteSchema } from '../components/StructuredData';
 
 const inter = Inter({ 
   subsets: ['latin'], 
@@ -51,6 +52,10 @@ export const viewport = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${inter.variable} ${plusJakartaSans.variable}`}>
+      <head>
+        <OrganizationSchema />
+        <WebSiteSchema />
+      </head>
       <body className="font-sans antialiased bg-[#0a0a0b] text-tuwa-text">
         {children}
       </body>

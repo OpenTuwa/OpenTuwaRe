@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /search
+Disallow: /api/
+Disallow: /_next/
+Disallow: /node_modules/
+Disallow: /public/
+
+Sitemap: https://opentuwa.com/sitemap-index.xml
+
+Crawl-delay: 10

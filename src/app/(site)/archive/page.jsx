@@ -1,5 +1,6 @@
 import { getRequestContext } from '@cloudflare/next-on-pages';
 import ArchiveContent from '../../../components/ArchiveContent';
+import { ArchiveSEOHead, OrganizationSchema, WebSiteSchema, CollectionPageSchema } from '../../../components/StructuredData';
 
 export const runtime = 'edge';
 
@@ -36,5 +37,13 @@ async function getArchive() {
 
 export default async function ArchivePage() {
   const archiveData = await getArchive();
-  return <ArchiveContent archiveData={archiveData} />;
+  return (
+    <>
+      <ArchiveSEOHead />
+      <OrganizationSchema />
+      <WebSiteSchema />
+      <CollectionPageSchema />
+      <ArchiveContent archiveData={archiveData} />
+    </>
+  );
 }

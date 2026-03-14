@@ -2,6 +2,8 @@ import { getRequestContext } from '@cloudflare/next-on-pages';
 import { notFound } from 'next/navigation';
 import ArticleView from '../../../components/ArticleView';
 import { fetchCandidates, RecommendationEngine } from '../../../utils/algorithm';
+import { NewsArticleSchema, OrganizationSchema, WebSiteSchema, BreadcrumbSchema } from '../../../components/StructuredData';
+import { ArticleSEOHead } from '../../../components/SEOHead';
 
 export const runtime = 'edge';
 
@@ -41,10 +43,10 @@ async function getRecommendations(article, env) {
     if (!candidates || candidates.length === 0) return [];
 
     const engine = new RecommendationEngine(candidates);
-    
+
     // Use new API: pass userVector directly, engine does in-memory cosine similarity
     const recommendations = engine.getHybridRecommendations(userVector, 8, article.slug, 0);
-    
+
     return recommendations;
   } catch (e) {
     console.error('Error fetching recommendations:', e);
@@ -70,7 +72,7 @@ export async function generateMetadata({ params }) {
 
   const seoTitle = `${article.title} | OpenTuwa`;
   const seoDesc = article.seo_description || article.subtitle || article.excerpt || article.title;
-  
+
   return {
     title: seoTitle,
     description: seoDesc,
@@ -94,23 +96,30 @@ export async function generateMetadata({ params }) {
 export default async function ArticlePage({ params }) {
   const { slug } = await params;
   const { env } = getRequestContext();
-  
+
   const article = await getArticle(slug, env);
-  
+
   if (!article) {
     notFound();
   }
-  
+
   const [authorInfo, recommended] = await Promise.all([
     getAuthor(article.author, env),
     getRecommendations(article, env)
   ]);
-  
+
   return (
-    <ArticleView 
-      article={article} 
-      recommended={recommended} 
-      authorInfo={authorInfo} 
-    />
+    <>
+      <ArticleSEOHead article={article} author={authorInfo} canonicalUrl={`https://opentuwa.com/articles/${slug}`} />
+      <NewsArticleSchema article={article} author={authorInfo} />
+      <OrganizationSchema />
+      <WebSiteSchema />
+      <BreadcrumbSchema article={article} isArticle={true} />
+      <ArticleView
+        article={article}
+        recommended={recommended}
+        authorInfo={authorInfo}
+      />
+    </>
   );
 }

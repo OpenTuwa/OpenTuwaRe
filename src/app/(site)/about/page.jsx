@@ -1,5 +1,6 @@
 import { getRequestContext } from '@cloudflare/next-on-pages';
 import AboutPageContent from '../../../components/AboutPageContent';
+import { AboutSEOHead, OrganizationSchema, WebSiteSchema, BreadcrumbSchema } from '../../../components/StructuredData';
 
 export const runtime = 'edge';
 
@@ -33,5 +34,13 @@ async function getAuthors() {
 
 export default async function AboutPage() {
   const authors = await getAuthors();
-  return <AboutPageContent authors={authors} />;
+  return (
+    <>
+      <AboutSEOHead />
+      <OrganizationSchema />
+      <WebSiteSchema />
+      <BreadcrumbSchema isArticle={false} />
+      <AboutPageContent authors={authors} />
+    </>
+  );
 }

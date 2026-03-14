@@ -14,12 +14,15 @@ export async function onRequestGet(context) {
 
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">`;
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
+        xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">`;
 
   for (const page of staticPages) {
+    const lastmod = page === '/' ? new Date().toISOString() : null;
     xml += `
   <url>
-    <loc>${esc(origin + page)}</loc>
+    <loc>${esc(origin + page)}</loc>${lastmod ? `
+    <lastmod>${esc(lastmod)}</lastmod>` : ''}
     <changefreq>${page === '/' ? 'daily' : 'monthly'}</changefreq>
     <priority>${page === '/' ? '1.0' : '0.5'}</priority>
   </url>`;
@@ -27,15 +30,18 @@ export async function onRequestGet(context) {
 
   for (const a of articles) {
     const lastmod = toISO(a.published_at);
+    const imageUrl = a.image_url
+      ? (a.image_url.startsWith('http') ? a.image_url : origin + a.image_url)
+      : '';
+    
     xml += `
   <url>
     <loc>${esc(origin + '/articles/' + a.slug)}</loc>${lastmod ? `
     <lastmod>${esc(lastmod)}</lastmod>` : ''}
     <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-    ${a.image_url ? `
+    <priority>0.8</priority>${imageUrl ? `
     <image:image>
-      <image:loc>${esc(a.image_url.startsWith('http') ? a.image_url : origin + a.image_url)}</image:loc>
+      <image:loc>${esc(imageUrl)}</image:loc>
       <image:title>${esc(a.title || '')}</image:title>
     </image:image>` : ''}
   </url>`;
