@@ -1,67 +1,71 @@
 // The Neural Brain - Hybrid AI Recommendation Engine for OpenTuwa
+// REFACTORED: Uses manual D1 vectors, no on-the-fly AI generation.
 
 export const SCORING_WEIGHTS = {
   VIEW: 1, 
   READ: 5, 
   SHARE: 10, 
   TIME_SPENT_FACTOR: 0.1,
-  TIER_1_CONTENT_MATCH: 35,    // Increased: Text relevance 
-  TIER_1_VISUAL_TRIGGER: 35,   // Increased: Amygdala/Visual hijack 
+  TIER_1_CONTENT_MATCH: 35,    
+  TIER_1_VISUAL_TRIGGER: 35,   
   TIER_2_SESSION_HABIT: 15,   
   TIER_3_WORLDWIDE_VOTE: 15,
-  NOVELTY_BONUS: 10,           // Updated: Dopamine exploration reward
-  EMOTIONAL_RESONANCE: 10      // NEW: Emotional intensity weight
+  NOVELTY_BONUS: 15,           
+  EMOTIONAL_RESONANCE: 15      
 };
 
 // =================================================================================================
-//  MODULE 1: NEURAL AI ENGINE (Cloudflare Workers AI + Vectorize)
+//  MODULE 1: NEURAL ENGINE (In-Memory Math & KV Memory)
 // =================================================================================================
 export class NeuralEngine {
-  static async getTextEmbedding(env, text) {
-    if (!text) return null; // FIX: Return null instead of zeros to prevent placebo AI
-    const cleanText = text.replace(/<[^>]*>?/gm, ' ').substring(0, 3000);
+  
+  // Fast in-memory distance calculation since vectors are pulled directly from D1
+  static cosineSimilarity(vecA, vecB) {
+    if (!vecA || !vecB || vecA.length !== vecB.length) return 0;
+    let dotProduct = 0;
+    let normA = 0;
+    let normB = 0;
+    for (let i = 0; i < vecA.length; i++) {
+      dotProduct += vecA[i] * vecB[i];
+      normA += vecA[i] * vecA[i];
+      normB += vecB[i] * vecB[i];
+    }
+    if (normA === 0 || normB === 0) return 0;
+    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+  }
+
+  // Stateful Hebbian Learning: Updates and persists the user's brain vector in KV
+  static async updateUserVectorKV(env, userId, articleVector, actionWeight = 0.1, dimensions = 768) {
+    if (!userId || !articleVector) return;
+    
     try {
-      const response = await env.AI.run('@cf/baai/bge-base-en-v1.5', { text: cleanText });
-      return response.data[0];
+      const kvKey = `user_vector:${userId}`;
+      let currentVector = await env.BRAIN_KV.get(kvKey, "json");
+      
+      if (!currentVector || currentVector.length !== dimensions) {
+        currentVector = new Array(dimensions).fill(0);
+      }
+
+      const alpha = Math.max(0.01, Math.min(0.2 * Math.log10(actionWeight * 10 + 1), 0.8)); 
+      
+      const newVector = currentVector.map((val, i) => 
+        (alpha * (articleVector[i] || 0)) + ((1 - alpha) * val)
+      );
+
+      env.waitUntil(env.BRAIN_KV.put(kvKey, JSON.stringify(newVector)));
+      return newVector;
     } catch (e) {
-      console.error("[AI ERROR] Text Embedding failed:", e.message);
-      return null; // FIX: Explicit failure
+      console.error("[KV ERROR] Failed to update user vector:", e.message);
     }
   }
 
-  static async getVisualEmbedding(env, imageArrayBuffer) {
-    if (!imageArrayBuffer) return null; // FIX: Return null instead of zeros
-    try {
-      const response = await env.AI.run('@cf/openai/clip-vit-base-patch32', { image: [...new Uint8Array(imageArrayBuffer)] });
-      // Safely extract the vector array whether it's nested (e.g. data[0]) or flat
-      return Array.isArray(response.data[0]) ? response.data[0] : response.data;
-    } catch (e) {
-      console.error("[AI ERROR] Visual Embedding failed:", e.message);
-      return null; // FIX: Explicit failure
-    }
-  }
-
-  // ENHANCED: Applies a non-linear learning curve based on Hebbian principles
-  static updateBrainVector(currentVector, newVector, actionWeight = 0.1, dimensions = 768) {
-    if (!currentVector || currentVector.length !== dimensions) return newVector;
-    if (!newVector || newVector.length !== dimensions) return currentVector;
-    
-    // Logarithmic scaling (Weber-Fechner Law) for learning rate
-    const alpha = Math.max(0.01, Math.min(0.2 * Math.log10(actionWeight * 10 + 1), 0.8)); 
-    
-    return currentVector.map((val, i) => 
-      (alpha * (newVector[i] || 0)) + ((1 - alpha) * val)
-    );
-  }
-
-  // NEW: Neural Action Potential Threshold
   static sigmoid(x) {
     return 1 / (1 + Math.exp(-x));
   }
 }
 
 // =================================================================================================
-//  MODULE 2: TEMPORAL GRAVITY ENGINE (Physics)
+//  MODULE 2: TEMPORAL GRAVITY ENGINE (Dynamic Physics)
 // =================================================================================================
 export class TemporalGravity {
   static newtonianCooling(initialTemperature, ageInHours, k = 0.1) {
@@ -69,14 +73,14 @@ export class TemporalGravity {
     return ambientTemperature + (initialTemperature - ambientTemperature) * Math.exp(-k * ageInHours);
   }
 
-  // ENHANCED: Slightly sharper decay to prioritize fresh dopamine triggers
-  static hackerNewsGravity(points, hoursSinceSubmit, gravity = 1.85) {
-    return (points - 1) / Math.pow((hoursSinceSubmit + 1.5), gravity);
+  static dynamicGravity(points, hoursSinceSubmit, baseGravity = 1.85, velocity = 0) {
+    const dynamicG = Math.max(1.1, baseGravity - (velocity * 0.05));
+    return (points - 1) / Math.pow((hoursSinceSubmit + 1.5), dynamicG);
   }
 }
 
 // =================================================================================================
-//  MODULE 3: CONTENT DEPTH & FAIRNESS METRICS
+//  MODULE 3: CONTENT DEPTH METRICS (Background Queue Processing Only)
 // =================================================================================================
 export class ContentIQ {
   static countSyllables(word) {
@@ -114,58 +118,14 @@ export class ContentIQ {
     }
     return entropy;
   }
-
-  static analyzeSentiment(text) {
-    if (!text) return { valence: 0, intensity: 0 };
-    // Sentiment Model: captures both very positive and very negative valence
-    const lexicon = {
-      'amazing': 4, 'brilliant': 4, 'excellent': 3, 'fantastic': 4, 'incredible': 4,
-      'miracle': 4, 'perfect': 3, 'spectacular': 4, 'wonderful': 4, 'glorious': 4,
-      'ecstatic': 4, 'thrilled': 4, 'delighted': 3, 'love': 3, 'beautiful': 3,
-      'gorgeous': 3, 'astonishing': 4, 'joy': 3, 'happy': 3, 'great': 3, 'good': 2,
-      'terrible': -4, 'awful': -4, 'horrible': -4, 'tragic': -4, 'devastating': -4,
-      'appalling': -4, 'disgusting': -4, 'hideous': -4, 'ruined': -3, 'outrageous': -3,
-      'catastrophe': -4, 'frightening': -3, 'sorrow': -3, 'terrified': -4, 'panic': -3,
-      'angry': -3, 'furious': -4, 'hate': -3, 'disaster': -4, 'bad': -2, 'sad': -2,
-      'fear': -3, 'worst': -4, 'dead': -3, 'murder': -4, 'destroy': -3, 'fail': -2
-    };
-    const words = text.toLowerCase().split(/\W+/);
-    let totalValence = 0;
-    let wordCount = 0;
-    
-    for (const w of words) {
-      if (w.length > 2) {
-        wordCount++;
-        if (lexicon[w]) {
-          totalValence += lexicon[w];
-        }
-      }
-    }
-    
-    if (wordCount === 0) return { valence: 0, intensity: 0 };
-    
-    const avgValence = totalValence / Math.max(1, wordCount * 0.05); 
-    const intensity = Math.min(1, Math.abs(avgValence) / 4);
-    
-    return { valence: avgValence, intensity };
-  }
 }
 
 // =================================================================================================
-//  MODULE 4: THE HYBRID SCORER (AI + Physics)
+//  MODULE 4: THE HYBRID SCORER (Math + Physics + Operant Conditioning)
 // =================================================================================================
 export class RecommendationEngine {
   constructor(articles) {
     this.articles = articles || [];
-  }
-
-  _hash(str) {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      hash = ((hash << 5) - hash) + str.charCodeAt(i);
-      hash |= 0; 
-    }
-    return Math.abs(hash);
   }
 
   getTrending(limit = 100) {
@@ -174,7 +134,7 @@ export class RecommendationEngine {
         let score = 0;
         if (article.engagement_score) {
           const hoursOld = Math.max(0, (Date.now() - new Date(article.published_at || Date.now())) / 3600000);
-          score = TemporalGravity.hackerNewsGravity(article.engagement_score, hoursOld, 1.85);
+          score = TemporalGravity.dynamicGravity(article.engagement_score, hoursOld, 1.85, article.trending_velocity || 0);
         }
         const chronScore = new Date(article.published_at || Date.now()).getTime() / 10000000000;
         return { ...article, _trending_score: score + chronScore };
@@ -183,71 +143,67 @@ export class RecommendationEngine {
       .slice(0, limit);
   }
 
-  getHybridRecommendations(textMatches, visualMatches, limit = 6, currentSlug = null) {
-    // FIX: Verify if AI actually returned any meaningful array of matches
-    const safeTextMatches = textMatches || [];
-    const safeVisualMatches = visualMatches || [];
-    
-    // Flag to prove to the frontend if AI was genuinely used
-    const isAiActive = safeTextMatches.length > 0 || safeVisualMatches.length > 0;
+  // Refactored to accept userVector instead of pre-computed Vectorize matches
+  getHybridRecommendations(userVector, limit = 6, currentSlug = null, sessionPullCount = 0) {
+    const isAiActive = !!userVector && userVector.length > 0;
 
     return this.articles
       .map(article => {
         if (currentSlug && article.slug === currentSlug) return null;
 
         let relevance = 0;
+        const scoreBreakdown = { text_ai: 0, visual_ai: 0, gravity: 0, emotion: 0, novelty: 0 };
         
-        // FIX: Track exactly where the score comes from
-        const scoreBreakdown = {
-          text_ai: 0,
-          visual_ai: 0,
-          gravity: 0,
-          emotion: 0,
-          novelty: 0
-        };
-        
-        // Apply Non-Linear Thresholding to Text Matches
-        const aiTextMatch = safeTextMatches.find(v => v.id === article.slug);
-        if (aiTextMatch) {
-           const activatedScore = NeuralEngine.sigmoid(aiTextMatch.score * 5 - 2.5);
-           scoreBreakdown.text_ai = (activatedScore * SCORING_WEIGHTS.TIER_1_CONTENT_MATCH);
-           relevance += scoreBreakdown.text_ai;
+        let textSimilarity = 0;
+        let visualSimilarity = 0;
+
+        // 1. Vector Distance Matching (Calculated on the fly against D1 JSON vectors)
+        if (isAiActive) {
+          if (article.neural_vector) {
+            textSimilarity = NeuralEngine.cosineSimilarity(userVector, article.neural_vector);
+            const activatedScore = NeuralEngine.sigmoid(textSimilarity * 5 - 2.5);
+            scoreBreakdown.text_ai = (activatedScore * SCORING_WEIGHTS.TIER_1_CONTENT_MATCH);
+            relevance += scoreBreakdown.text_ai;
+          }
+
+          if (article.visual_vector) {
+            visualSimilarity = NeuralEngine.cosineSimilarity(userVector, article.visual_vector);
+            const activatedScore = NeuralEngine.sigmoid(visualSimilarity * 5 - 2.5);
+            scoreBreakdown.visual_ai = (activatedScore * SCORING_WEIGHTS.TIER_1_VISUAL_TRIGGER);
+            relevance += scoreBreakdown.visual_ai;
+          }
         }
 
-        // Apply Non-Linear Thresholding to Visual Matches
-        const aiVisualMatch = safeVisualMatches.find(v => v.id === article.slug);
-        if (aiVisualMatch) {
-           const activatedScore = NeuralEngine.sigmoid(aiVisualMatch.score * 5 - 2.5);
-           scoreBreakdown.visual_ai = (activatedScore * SCORING_WEIGHTS.TIER_1_VISUAL_TRIGGER);
-           relevance += scoreBreakdown.visual_ai;
-        }
-
-        // Apply Temporal Gravity (Traditional Fallback/Addition)
+        // 2. Dynamic Temporal Gravity
         if (article.engagement_score) {
           const hoursOld = Math.max(0, (Date.now() - new Date(article.published_at || Date.now())) / 3600000);
-          const gravityScore = TemporalGravity.hackerNewsGravity(article.engagement_score, hoursOld, 1.85);
+          const velocity = article.trending_velocity || 0;
+          const gravityScore = TemporalGravity.dynamicGravity(article.engagement_score, hoursOld, 1.85, velocity);
           const normalizedGravity = Math.min(1, Math.log10(gravityScore + 1.5) / 2);
           scoreBreakdown.gravity = (normalizedGravity * SCORING_WEIGHTS.TIER_3_WORLDWIDE_VOTE); 
           relevance += scoreBreakdown.gravity;
         }
 
-        // Explicitly measure and weight emotional intensity of content
-        const sentiment = ContentIQ.analyzeSentiment(article.content_html || article.seo_description || article.title || '');
-        scoreBreakdown.emotion = (sentiment.intensity * SCORING_WEIGHTS.EMOTIONAL_RESONANCE);
+        // 3. Emotional Arousal
+        const arousal = article.arousal_score || 0; 
+        scoreBreakdown.emotion = (arousal * SCORING_WEIGHTS.EMOTIONAL_RESONANCE);
         relevance += scoreBreakdown.emotion;
 
-        // Novelty / Dopamine Reward
+        // 4. Intermittent Variable Rewards
         if (currentSlug) {
-          let novelty = 1.0;
-          if (aiTextMatch) {
-             novelty = Math.max(0, 1 - aiTextMatch.score); 
+          const isSlotMachineTriggered = (Math.random() < 0.3) && (sessionPullCount > 2);
+          
+          if (isSlotMachineTriggered) {
+             scoreBreakdown.novelty = SCORING_WEIGHTS.NOVELTY_BONUS; 
+          } else {
+             let novelty = 1.0;
+             if (isAiActive) novelty = Math.max(0, 1 - textSimilarity); 
+             const invertedU = Math.exp(-Math.pow(novelty - 0.3, 2) / 0.05);
+             scoreBreakdown.novelty = invertedU * (SCORING_WEIGHTS.NOVELTY_BONUS * 0.4); 
           }
-          const invertedU = Math.exp(-Math.pow(novelty - 0.3, 2) / 0.05);
-          scoreBreakdown.novelty = invertedU * SCORING_WEIGHTS.NOVELTY_BONUS;
           relevance += scoreBreakdown.novelty;
         }
 
-        // FIX: Expose transparent telemetry variables
         return { 
           ...article, 
           _relevance: relevance,
@@ -260,8 +216,8 @@ export class RecommendationEngine {
       .slice(0, limit);
   }
 
-  getHybridVideoRecommendations(textMatches, visualMatches, limit = 6, currentSlug = null) {
-    const deepPool = this.getHybridRecommendations(textMatches, visualMatches, limit * 4, currentSlug);
+  getHybridVideoRecommendations(userVector, limit = 6, currentSlug = null, sessionPullCount = 0) {
+    const deepPool = this.getHybridRecommendations(userVector, limit * 4, currentSlug, sessionPullCount);
 
     const videoArticles = deepPool.filter(article => 
       article.content_html && (article.content_html.includes('<video') || article.content_html.includes('iframe'))
@@ -283,6 +239,8 @@ export async function fetchCandidates(env, limit = 100, searchQuery = null, auth
            COALESCE(a.avg_time_spent, 0) as avg_time_spent,
            COALESCE(a.total_views, 0) as _raw_views,
            COALESCE(a.trending_velocity, 0) as trending_velocity,
+           COALESCE(a.arousal_score, 0) as arousal_score,
+           COALESCE(a.entropy_score, 0) as entropy_score,
            a.neural_vector, a.visual_vector
     FROM articles a
   `;
@@ -313,5 +271,17 @@ export async function fetchCandidates(env, limit = 100, searchQuery = null, auth
     // Return empty array to allow graceful degradation (e.g. show "No articles found" instead of crash)
     return [];
   }
-  return results;
+
+  // Parse the stringified JSON vectors from D1 back into actual arrays
+  return results.map(row => {
+    try {
+      row.neural_vector = row.neural_vector ? JSON.parse(row.neural_vector) : null;
+    } catch(e) { row.neural_vector = null; }
+    
+    try {
+      row.visual_vector = row.visual_vector ? JSON.parse(row.visual_vector) : null;
+    } catch(e) { row.visual_vector = null; }
+    
+    return row;
+  });
 }

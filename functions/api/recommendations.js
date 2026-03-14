@@ -5,111 +5,65 @@ export async function onRequestGet(context) {
   const url = new URL(context.request.url);
   const currentSlug = url.searchParams.get('slug');
   const sessionId = url.searchParams.get('session_id');
-  const videoOnly = url.searchParams.get('video_only') === 'true'; // <-- NEW
+  const videoOnly = url.searchParams.get('video_only') === 'true';
 
   if (!currentSlug) return new Response(JSON.stringify({ error: "Slug is required" }), { status: 400 });
 
   try {
-    let userBrainVector = null;
-    let userVisualVector = null;
+    let userVector = null;
 
+    // Try to get user vector from KV (Hebbian memory)
     if (sessionId) {
-      const sessionData = await env.DB.prepare(`SELECT lexical_history, visual_history FROM algo_user_sessions WHERE session_id = ?`).bind(sessionId).first();
-      if (sessionData) {
-        if (sessionData.lexical_history) {
-            try { 
-                const parsed = JSON.parse(sessionData.lexical_history); 
-                if (Array.isArray(parsed) && parsed.length === 768) userBrainVector = parsed;
-            } catch(e) {}
-        }
-        if (sessionData.visual_history) {
-            try {
-                const parsed = JSON.parse(sessionData.visual_history);
-                if (Array.isArray(parsed) && parsed.length === 512) userVisualVector = parsed;
-            } catch(e) {}
-        }
+      const kvKey = `user_vector:${sessionId}`;
+      try {
+        userVector = await env.BRAIN_KV.get(kvKey, "json");
+      } catch(e) {
+        console.error("KV fetch failed:", e);
       }
     }
 
-    // Fallback to the current article's vectors if the user session has no AI data yet
-    if (currentSlug && (!userBrainVector || !userVisualVector)) {
-        const articleData = await env.DB.prepare(`SELECT neural_vector, visual_vector FROM articles WHERE slug = ?`).bind(currentSlug).first();
-        if (articleData) {
-            if (!userBrainVector && articleData.neural_vector) {
-                try {
-                    const parsed = typeof articleData.neural_vector === 'string' ? JSON.parse(articleData.neural_vector) : articleData.neural_vector;
-                    if (Array.isArray(parsed) && parsed.length === 768) userBrainVector = parsed;
-                } catch(e) {}
-            }
-            if (!userVisualVector && articleData.visual_vector) {
-                try {
-                    const parsed = typeof articleData.visual_vector === 'string' ? JSON.parse(articleData.visual_vector) : articleData.visual_vector;
-                    if (Array.isArray(parsed) && parsed.length === 512) userVisualVector = parsed;
-                } catch(e) {}
-            }
-        }
+    // Fallback to the current article's neural_vector if no user vector exists
+    if (!userVector && currentSlug) {
+      const articleData = await env.DB.prepare(`SELECT neural_vector FROM articles WHERE slug = ?`).bind(currentSlug).first();
+      if (articleData && articleData.neural_vector) {
+        try {
+          const parsed = typeof articleData.neural_vector === 'string' ? JSON.parse(articleData.neural_vector) : articleData.neural_vector;
+          if (Array.isArray(parsed) && parsed.length === 768) userVector = parsed;
+        } catch(e) {}
+      }
     }
 
-    let aiTextMatches = [];
-    let aiVisualMatches = [];
-
-    // Execute neural searches concurrently to prevent latency drop-off
-    const vectorTasks = [];
-    
-    if (userBrainVector && env.VECTORIZE_TEXT) {
-        vectorTasks.push(env.VECTORIZE_TEXT.query(userBrainVector, { topK: 20 })
-            .then(res => aiTextMatches = res.matches || [])
-            .catch(err => {
-                console.error("Text vectorize failed:", err);
-                return []; // Return empty matches on failure
-            }));
-    }
-    
-    if (userVisualVector && env.VECTORIZE_VISION) {
-        vectorTasks.push(env.VECTORIZE_VISION.query(userVisualVector, { topK: 20 })
-            .then(res => aiVisualMatches = res.matches || [])
-            .catch(err => {
-                console.error("Visual vectorize failed:", err);
-                return [];
-            }));
-    }
-
-    await Promise.all(vectorTasks);
-
-    // Fetch candidates (now robust against DB errors, returns [] on failure)
+    // Fetch candidates from D1 (includes pre-computed neural_vector and visual_vector as JSON)
     const candidates = await fetchCandidates(env, 100, null);
     
-    // Fallback: If no candidates found (DB down?), return empty array gracefully
     if (!candidates || candidates.length === 0) {
-        return new Response(JSON.stringify([]), { headers: { "Content-Type": "application/json" } });
+      return new Response(JSON.stringify([]), { headers: { "Content-Type": "application/json" } });
     }
 
     const engine = new RecommendationEngine(candidates);
 
-    // <-- UPDATED: Route to the new algorithm set if requested
+    // Use new API: pass userVector directly, engine does in-memory cosine similarity
     let recommendations = [];
     try {
-        recommendations = videoOnly 
-            ? engine.getHybridVideoRecommendations(aiTextMatches, aiVisualMatches, 24, currentSlug)
-            : engine.getHybridRecommendations(aiTextMatches, aiVisualMatches, 24, currentSlug);
+      recommendations = videoOnly 
+        ? engine.getHybridVideoRecommendations(userVector, 24, currentSlug, 0)
+        : engine.getHybridRecommendations(userVector, 24, currentSlug, 0);
     } catch (engineError) {
-        console.error("Recommendation Engine Logic Error:", engineError);
-        // Fallback to raw candidates sorted by date if engine fails
-        recommendations = candidates.sort((a, b) => new Date(b.published_at) - new Date(a.published_at)).slice(0, 24);
+      console.error("Recommendation Engine Logic Error:", engineError);
+      recommendations = candidates.sort((a, b) => new Date(b.published_at) - new Date(a.published_at)).slice(0, 24);
     }
 
-    // Strip heavy vector arrays to save bandwidth before sending to frontend
+    // Strip heavy vector arrays to save bandwidth
     const finalFeed = recommendations.slice(0, 24).map(article => {
-        // eslint-disable-next-line no-unused-vars
-        const { neural_vector, visual_vector, ...cleanArticle } = article;
-        return cleanArticle;
+      // eslint-disable-next-line no-unused-vars
+      const { neural_vector, visual_vector, ...cleanArticle } = article;
+      return cleanArticle;
     });
 
     return new Response(JSON.stringify(finalFeed), { headers: { "Content-Type": "application/json" } });
 
   } catch (err) {
     console.error("Recs API Critical Error:", err);
-    // Ultimate Fallback: Return empty list instead of 500 to prevent frontend crash
     return new Response(JSON.stringify([]), { headers: { "Content-Type": "application/json" } });
   }
 }

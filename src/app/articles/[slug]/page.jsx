@@ -27,47 +27,23 @@ async function getAuthor(name, env) {
 
 async function getRecommendations(article, env) {
   try {
-    let aiTextMatches = [];
-    let aiVisualMatches = [];
-    
-    // Get article vectors
-    let userBrainVector = null;
-    let userVisualVector = null;
-    
+    // Parse article's neural_vector to use as user vector
+    let userVector = null;
     if (article.neural_vector) {
-        try {
-            const parsed = typeof article.neural_vector === 'string' ? JSON.parse(article.neural_vector) : article.neural_vector;
-            if (Array.isArray(parsed) && parsed.length === 768) userBrainVector = parsed;
-        } catch(e) {}
-    }
-    if (article.visual_vector) {
-        try {
-            const parsed = typeof article.visual_vector === 'string' ? JSON.parse(article.visual_vector) : article.visual_vector;
-            if (Array.isArray(parsed) && parsed.length === 512) userVisualVector = parsed;
-        } catch(e) {}
+      try {
+        const parsed = typeof article.neural_vector === 'string' ? JSON.parse(article.neural_vector) : article.neural_vector;
+        if (Array.isArray(parsed) && parsed.length === 768) userVector = parsed;
+      } catch(e) {}
     }
 
-    // Query Vectorize
-    const vectorTasks = [];
-    if (userBrainVector && env.VECTORIZE_TEXT) {
-        vectorTasks.push(env.VECTORIZE_TEXT.query(userBrainVector, { topK: 20 })
-            .then(res => aiTextMatches = res.matches || [])
-            .catch(err => []));
-    }
-    if (userVisualVector && env.VECTORIZE_VISION) {
-        vectorTasks.push(env.VECTORIZE_VISION.query(userVisualVector, { topK: 20 })
-            .then(res => aiVisualMatches = res.matches || [])
-            .catch(err => []));
-    }
-    await Promise.all(vectorTasks);
-
-    // Get candidates
+    // Fetch candidates from D1 (includes pre-computed vectors as JSON)
     const candidates = await fetchCandidates(env, 100, null);
     if (!candidates || candidates.length === 0) return [];
 
     const engine = new RecommendationEngine(candidates);
     
-    const recommendations = engine.getHybridRecommendations(aiTextMatches, aiVisualMatches, 8, article.slug);
+    // Use new API: pass userVector directly, engine does in-memory cosine similarity
+    const recommendations = engine.getHybridRecommendations(userVector, 8, article.slug, 0);
     
     return recommendations;
   } catch (e) {
