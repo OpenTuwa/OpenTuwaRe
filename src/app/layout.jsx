@@ -28,14 +28,17 @@ export const metadata = {
     type: 'website',
     title: 'OpenTuwa | Independent Journalism & Documentaries',
     description: 'Independent news and journalism covering stories that matter.',
-    images: [{ url: '/assets/ui/web_512.png', width: 512, height: 512, alt: 'OpenTuwa' }],
+    images: [
+      { url: '/assets/ui/web_512.png', width: 512, height: 512, alt: 'OpenTuwa' },
+      { url: '/assets/ui/web_1200.png', width: 1200, height: 630, alt: 'OpenTuwa - Independent Journalism' }
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     site: '@opentuwa',
     title: 'OpenTuwa | Independent Journalism & Documentaries',
     description: 'Independent news and journalism covering stories that matter.',
-    images: ['/assets/ui/web_512.png'],
+    images: ['/assets/ui/web_1200.png'],
   },
   icons: {
     icon: [
@@ -57,6 +60,14 @@ export const metadata = {
     follow: true,
     googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1 },
   },
+  // Additional SEO metadata
+  keywords: 'news, journalism, documentaries, independent media, deep dive, analysis, OpenTuwa',
+  authors: [{ name: 'OpenTuwa' }],
+  creator: 'OpenTuwa',
+  publisher: 'OpenTuwa',
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 export const viewport = {
@@ -73,8 +84,22 @@ export default function RootLayout({ children }) {
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+        {/* Preload critical assets */}
+        <link rel="preload" href="/assets/ui/web_512.png" as="image" />
+        <link rel="preload" href="/assets/ui/web_1200.png" as="image" />
+        {/* Preload fonts for better performance */}
+        <link rel="preload" href="/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossOrigin />
+        <link rel="preload" href="/fonts/plus-jakarta-sans-var-latin.woff2" as="font" type="font/woff2" crossOrigin />
+        {/* Structured Data */}
         <OrganizationSchema />
         <WebSiteSchema />
+        {/* Additional SEO meta tags */}
+        <meta name="referrer" content="strict-origin-when-cross-origin" />
+        <meta name="theme-color" content="#0a0a0b" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="mask-icon" href="/assets/ui/web.svg" color="#0a0a0b" />
       </head>
       <body className="font-sans antialiased bg-[#0a0a0b] text-tuwa-text">
         {children}

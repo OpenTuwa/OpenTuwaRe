@@ -10,13 +10,16 @@ export const metadata = {
   description: 'Independent news and journalism covering stories that matter. Deep dives, documentaries, and analysis.',
   keywords: 'news, journalism, documentaries, independent media, deep dive, analysis, OpenTuwa',
   alternates: { canonical: 'https://opentuwa.com' }, // SEO: Req 13.1, 13.6 — canonical URL, no trailing slash
-  robots: { index: true, follow: true },
+  robots: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1 },
   openGraph: {
     title: 'OpenTuwa | Independent Journalism & Documentaries',
     description: 'Independent news and journalism covering stories that matter. Deep dives, documentaries, and analysis.',
     type: 'website',
     url: 'https://opentuwa.com',
-    images: [{ url: 'https://opentuwa.com/assets/ui/web_512.png', width: 512, height: 512, alt: 'OpenTuwa - Independent Journalism' }],
+    images: [
+      { url: 'https://opentuwa.com/assets/ui/web_512.png', width: 512, height: 512, alt: 'OpenTuwa' },
+      { url: 'https://opentuwa.com/assets/ui/web_1200.png', width: 1200, height: 630, alt: 'OpenTuwa - Independent Journalism' }
+    ],
     siteName: 'OpenTuwa',
     locale: 'en_US',
   },
@@ -24,8 +27,15 @@ export const metadata = {
     card: 'summary_large_image',
     title: 'OpenTuwa | Independent Journalism & Documentaries',
     description: 'Independent news and journalism covering stories that matter.',
-    images: ['https://opentuwa.com/assets/ui/web_512.png'],
+    images: ['https://opentuwa.com/assets/ui/web_1200.png'],
     site: '@opentuwa',
+  },
+  // Additional SEO metadata
+  authors: [{ name: 'OpenTuwa' }],
+  creator: 'OpenTuwa',
+  publisher: 'OpenTuwa',
+  formatDetection: {
+    telephone: false,
   },
 };
 

@@ -6,7 +6,7 @@ export async function GET() {
   try {
     const { env } = getRequestContext();
     
-    // Get all articles
+    // Get all articles with proper date handling
     const { results: articles } = await env.DB.prepare(
       `SELECT slug, updated_at, published_at FROM articles WHERE published_at IS NOT NULL ORDER BY updated_at DESC`
     ).all();
@@ -46,9 +46,29 @@ export async function GET() {
     
     // Add articles
     for (const article of articles) {
-      const lastMod = article.updated_at 
-        ? new Date(article.updated_at).toISOString().split('T')[0] 
-        : new Date(article.published_at).toISOString().split('T')[0];
+      // Use updated_at if available and valid, otherwise use published_at, fallback to now
+      let lastMod = now;
+      if (article.updated_at) {
+        try {
+          const updatedDate = new Date(article.updated_at);
+          if (!isNaN(updatedDate.getTime())) {
+            lastMod = updatedDate.toISOString().split('T')[0];
+          }
+        } catch (e) {
+          // fallback to published_at
+        }
+      }
+      
+      if (lastMod === now && article.published_at) {
+        try {
+          const publishedDate = new Date(article.published_at);
+          if (!isNaN(publishedDate.getTime())) {
+            lastMod = publishedDate.toISOString().split('T')[0];
+          }
+        } catch (e) {
+          // keep fallback
+        }
+      }
       
       xml += `
   <url>

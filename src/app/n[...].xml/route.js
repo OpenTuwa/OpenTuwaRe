@@ -10,19 +10,33 @@ export async function GET() {
     const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     
     const { results: articles } = await env.DB.prepare(
-      `SELECT slug, title, published_at, updated_at FROM articles 
-       WHERE published_at >= ? AND published_at IS NOT NULL 
-       ORDER BY published_at DESC LIMIT 1000`
+      `SELECT slug, title, published_at, updated_at, image_url, section FROM articles 
+        WHERE published_at >= ? AND published_at IS NOT NULL 
+        ORDER BY published_at DESC LIMIT 1000`
     ).bind(twoDaysAgo).all();
     
     // Generate XML
     let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">`;
+        xmlns:news="http://www.google.com/schemas/sitemap-news/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">`;
     
     for (const article of articles) {
       const pubDate = new Date(article.published_at).toISOString();
       const pubDateFormatted = pubDate.substring(0, 10) + 'T' + pubDate.substring(11, 19) + 'Z';
+      
+      // Process image for news sitemap
+      let imageXml = '';
+      if (article.image_url) {
+        const imageUrl = article.image_url.startsWith('/') 
+          ? `https://opentuwa.com${article.image_url}` 
+          : article.image_url;
+        imageXml = `
+      <image:image>
+        <image:loc>${imageUrl}</image:loc>
+        <image:title><![CDATA[${article.title}]]></image:title>
+      </image:image>`;
+      }
       
       xml += `
   <url>
@@ -36,7 +50,9 @@ export async function GET() {
       <news:publication_date>${pubDateFormatted}</news:publication_date>
       <news:title><![CDATA[${article.title}]]></news:title>
       <news:keywords>news, journalism, OpenTuwa</news:keywords>
+      ${article.section ? `<news:geo_locations><![CDATA[${article.section}]]></news:geo_locations>` : ''}
     </news:news>
+    ${imageXml}
   </url>`;
     }
     
