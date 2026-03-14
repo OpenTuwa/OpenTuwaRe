@@ -138,7 +138,6 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
     if (!article || !article.content_html) return;
 
     const cleanupFns = [];
-    const processedElements = new WeakSet();
     const querySelectorStr = 'video, audio, iframe, .tuwa-subtitle-box';
 
     // --- helpers ---
@@ -190,8 +189,6 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
       return cues;
     };
 
-    // BUG FIX #4: Ensure overlay has real dimensions and is always
-    // styled as a block-level element, whether standalone or overlaid.
     const createOverlay = (container, isStandaloneBox) => {
       const existing = container.querySelector('.tuwa-subtitle-overlay');
       if (existing) return existing;
@@ -201,17 +198,15 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
       overlay.style.zIndex = '9999';
       overlay.style.padding = '0 20px';
       overlay.style.boxSizing = 'border-box';
-      overlay.style.minHeight = '44px';    // always reserve space — fixes zero-height collapse
+      overlay.style.minHeight = '44px';
       overlay.style.display = 'block';
       overlay.style.width = '100%';
       overlay.style.textAlign = 'center';
 
       if (isStandaloneBox) {
-        // Standalone box: flow below the video, not absolutely positioned
         overlay.style.position = 'relative';
         overlay.style.marginTop = '10px';
       } else {
-        // Overlaid on a media container
         const computedStyle = window.getComputedStyle(container);
         if (computedStyle.position === 'static') container.style.position = 'relative';
         overlay.style.position = 'absolute';
@@ -224,8 +219,6 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
       return overlay;
     };
 
-    // BUG FIX #2: Track active cue text with a variable instead of
-    // comparing innerHTML — browser serialisation is not stable.
     const attachSubtitleUpdater = (overlay, cues, mediaEl, cleanupFns) => {
       let lastCueText = null;
 
@@ -299,8 +292,9 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
     // --- main per-element init ---
 
     const initSingleSubtitle = async (targetEl) => {
-      if (processedElements.has(targetEl)) return;
-      processedElements.add(targetEl);
+      // FIX: Replace WeakSet with explicit dataset markers to allow retries
+      if (targetEl.dataset.vttProcessed === 'true' || targetEl.dataset.vttProcessed === 'pending' || targetEl.dataset.vttProcessed === 'ignored') return;
+      targetEl.dataset.vttProcessed = 'pending';
 
       let mediaEl = null;
       let container = null;
@@ -314,10 +308,8 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
         mediaId  = targetEl.dataset.video || targetEl.dataset.youtube || null;
         vttUrl   = targetEl.dataset.vtt   || null;
 
-        // 1) Check inside the box first
         mediaEl = targetEl.querySelector('video, audio, iframe');
 
-        // BUG FIX #3: If not found, retry up to ~1.5 s to handle late hydration.
         if (!mediaEl && mediaId) {
           for (let attempt = 0; attempt < 3 && !mediaEl; attempt++) {
             if (attempt > 0) await new Promise(r => setTimeout(r, 500));
@@ -328,7 +320,6 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
         }
 
       } else {
-        // Native media tag — only handle if it carries its own data-vtt
         mediaEl   = targetEl;
         mediaId   = targetEl.id || targetEl.dataset.mediaId || null;
         vttUrl    = targetEl.dataset.vtt || null;
@@ -346,11 +337,13 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
       }
 
       if (!vttUrl) {
-        // Not every media element needs a subtitle — not an error
+        targetEl.dataset.vttProcessed = 'ignored';
         return;
       }
       if (!mediaEl) {
-        console.warn(`[SubEngine] Could not find media element for id="${mediaId}" — check that the element exists in the DOM.`);
+        // FIX: Reset so the observer can try again when the DOM actually catches up
+        targetEl.dataset.vttProcessed = 'false';
+        console.warn(`[SubEngine] Could not find media element for id="${mediaId}" — retrying later.`);
         return;
       }
       if (!container) {
@@ -360,6 +353,7 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
       try {
         const response = await fetch(vttUrl);
         if (!response.ok) {
+          targetEl.dataset.vttProcessed = 'error';
           console.error(`[SubEngine] VTT fetch failed (HTTP ${response.status}) → ${vttUrl}`);
           return;
         }
@@ -367,14 +361,18 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
         const cues = parseVtt(vttText);
 
         if (cues.length === 0) {
+          targetEl.dataset.vttProcessed = 'error';
           console.warn(`[SubEngine] VTT parsed 0 cues from ${vttUrl} — check file format.`);
           return;
         }
 
         const overlay = createOverlay(container, isStandaloneBox);
         attachSubtitleUpdater(overlay, cues, mediaEl, cleanupFns);
+        
+        targetEl.dataset.vttProcessed = 'true';
 
       } catch (error) {
+        targetEl.dataset.vttProcessed = 'error';
         console.error('[SubEngine] Critical Error:', error);
       }
     };
@@ -387,12 +385,9 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
       elements.forEach(el => initSingleSubtitle(el));
     };
 
-    // BUG FIX #1: Defer the first scan by one rAF so React has fully
-    // committed all dangerouslySetInnerHTML children to the DOM.
     const rafId = requestAnimationFrame(() => scanAndInit());
     cleanupFns.push(() => cancelAnimationFrame(rafId));
 
-    // Watch for dynamically injected elements (e.g. lazy-loaded content)
     const mutationObserver = new MutationObserver((mutations) => {
       const hasNewNodes = mutations.some(m => m.addedNodes.length > 0);
       if (hasNewNodes) scanAndInit();

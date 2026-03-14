@@ -1,10 +1,22 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
-const SkeletonImage = ({ src, alt, className, ...props }) => {
+const SkeletonImage = ({ src, alt, className = '', ...props }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState(false);
+  const imgRef = useRef(null);
+
+  // Fix: Check if the image is already complete (cached by browser)
+  // to avoid missing the onLoad event entirely.
+  useEffect(() => {
+    setIsLoaded(false);
+    setError(false);
+    
+    if (imgRef.current && imgRef.current.complete) {
+      setIsLoaded(true);
+    }
+  }, [src]);
 
   // If no src is provided, show placeholder immediately
   if (!src) {
@@ -24,12 +36,9 @@ const SkeletonImage = ({ src, alt, className, ...props }) => {
         </div>
       )}
       
-      {/* 
-         Use key={src} to force re-mount if src changes, ensuring state reset.
-         Use loading="lazy" for performance, but "eager" if it's high priority (passed via props).
-      */}
       {!error && (
         <img
+          ref={imgRef}
           key={src} 
           src={src}
           alt={alt}
