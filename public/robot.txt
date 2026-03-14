@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+# The "Trio" for Google News & SEO
+Sitemap: https://opentuwa.com/sitemap.xml
+Sitemap: https://opentuwa.com/news-sitemap.xml
+Sitemap: https://opentuwa.com/feed.xml
+
+# Specific crawl delay (optional, keeps your D1 database safe from aggressive scrapers)
+Crawl-delay: 10
