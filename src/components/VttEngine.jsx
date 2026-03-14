@@ -309,11 +309,19 @@ export default function VttEngine({ articleRef, slug, htmlContent }) {
       elements.forEach(el => initSingleSubtitle(el));
     };
 
-    // Use requestAnimationFrame to ensure DOM is ready after navigation
-    requestAnimationFrame(() => {
-      if (!isActive) return;
-      scanAndInit();
-    });
+    // Wait for content to be actually rendered in the DOM
+    // Use a combination of requestAnimationFrame and a small timeout
+    // to ensure dangerouslySetInnerHTML has completed
+    const initializeVtt = () => {
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          if (!isActive) return;
+          scanAndInit();
+        }, 50); // Small delay to ensure DOM is fully updated
+      });
+    };
+
+    initializeVtt();
     
     const pollInterval = setInterval(scanAndInit, 1000);
     setTimeout(() => clearInterval(pollInterval), 10000);

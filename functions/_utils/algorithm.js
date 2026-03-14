@@ -1,4 +1,5 @@
 // The Neural Brain - Hybrid AI Recommendation Engine for OpenTuwa
+// REFACTORED: Uses manual D1 vectors, no on-the-fly AI generation.
 
 export const SCORING_WEIGHTS = {
   VIEW: 1, 
@@ -9,57 +10,28 @@ export const SCORING_WEIGHTS = {
   TIER_1_VISUAL_TRIGGER: 35,   
   TIER_2_SESSION_HABIT: 15,   
   TIER_3_WORLDWIDE_VOTE: 15,
-  NOVELTY_BONUS: 15,           // Increased for the slot-machine variance reward
-  EMOTIONAL_RESONANCE: 15      // Shifted to prioritize Arousal over simple Valence
+  NOVELTY_BONUS: 15,           
+  EMOTIONAL_RESONANCE: 15      
 };
 
 // =================================================================================================
-//  MODULE 1: NEURAL AI ENGINE (Cloudflare Workers AI, Vectorize, KV)
+//  MODULE 1: NEURAL ENGINE (In-Memory Math & KV Memory)
 // =================================================================================================
 export class NeuralEngine {
-  static async getTextEmbedding(env, text) {
-    if (!text) return null; 
-    const cleanText = text.replace(/<[^>]*>?/gm, ' ').substring(0, 3000);
-    try {
-      const response = await env.AI.run('@cf/baai/bge-base-en-v1.5', { text: cleanText });
-      return response.data[0];
-    } catch (e) {
-      console.error("[AI ERROR] Text Embedding failed:", e.message);
-      return null; 
+  
+  // Fast in-memory distance calculation since vectors are pulled directly from D1
+  static cosineSimilarity(vecA, vecB) {
+    if (!vecA || !vecB || vecA.length !== vecB.length) return 0;
+    let dotProduct = 0;
+    let normA = 0;
+    let normB = 0;
+    for (let i = 0; i < vecA.length; i++) {
+      dotProduct += vecA[i] * vecB[i];
+      normA += vecA[i] * vecA[i];
+      normB += vecB[i] * vecB[i];
     }
-  }
-
-  static async getVisualEmbedding(env, imageArrayBuffer) {
-    if (!imageArrayBuffer) return null; 
-    try {
-      const response = await env.AI.run('@cf/openai/clip-vit-base-patch32', { image: [...new Uint8Array(imageArrayBuffer)] });
-      return Array.isArray(response.data[0]) ? response.data[0] : response.data;
-    } catch (e) {
-      console.error("[AI ERROR] Visual Embedding failed:", e.message);
-      return null; 
-    }
-  }
-
-  // AI Arousal & Sentiment (Called during Ingestion/Queue, NOT Read Path)
-  static async getArousalClassification(env, text) {
-    if (!text) return { valence: 0, arousal: 0 };
-    try {
-      // Using a lightweight classification model to map to Circumplex Model of Emotion
-      const response = await env.AI.run('@cf/huggingface/distilbert-base-uncased-finetuned-sst-2-english', { text: text.substring(0, 512) });
-      // Example mapping: Transform raw model scores into high-arousal negative/positive states
-      const isPositive = response[0].label === 'POSITIVE';
-      const confidence = response[0].score; // 0.0 to 1.0
-      
-      // We prioritize arousal (intensity) over valence for viral coefficient
-      const arousalScore = Math.min(1.0, confidence * 1.5); 
-      return { 
-        valence: isPositive ? confidence : -confidence,
-        arousal: arousalScore 
-      };
-    } catch (e) {
-      console.error("[AI ERROR] Arousal Classification failed:", e.message);
-      return { valence: 0, arousal: 0 };
-    }
+    if (normA === 0 || normB === 0) return 0;
+    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
   }
 
   // Stateful Hebbian Learning: Updates and persists the user's brain vector in KV
@@ -74,14 +46,12 @@ export class NeuralEngine {
         currentVector = new Array(dimensions).fill(0);
       }
 
-      // Logarithmic scaling (Weber-Fechner Law) for learning rate
       const alpha = Math.max(0.01, Math.min(0.2 * Math.log10(actionWeight * 10 + 1), 0.8)); 
       
       const newVector = currentVector.map((val, i) => 
         (alpha * (articleVector[i] || 0)) + ((1 - alpha) * val)
       );
 
-      // Fire and forget write back to KV
       env.waitUntil(env.BRAIN_KV.put(kvKey, JSON.stringify(newVector)));
       return newVector;
     } catch (e) {
@@ -103,9 +73,7 @@ export class TemporalGravity {
     return ambientTemperature + (initialTemperature - ambientTemperature) * Math.exp(-k * ageInHours);
   }
 
-  // ENHANCED: Dynamic gravity based on real-time trending velocity
   static dynamicGravity(points, hoursSinceSubmit, baseGravity = 1.85, velocity = 0) {
-    // High velocity flattens the gravity curve, keeping viral content alive longer
     const dynamicG = Math.max(1.1, baseGravity - (velocity * 0.05));
     return (points - 1) / Math.pow((hoursSinceSubmit + 1.5), dynamicG);
   }
@@ -115,9 +83,6 @@ export class TemporalGravity {
 //  MODULE 3: CONTENT DEPTH METRICS (Background Queue Processing Only)
 // =================================================================================================
 export class ContentIQ {
-  // NOTE: These functions are strictly for the asynchronous ingestion queue.
-  // They are no longer called in the read path to preserve O(1) latency.
-
   static countSyllables(word) {
     word = word.toLowerCase();
     if (word.length <= 3) return 1;
@@ -156,20 +121,11 @@ export class ContentIQ {
 }
 
 // =================================================================================================
-//  MODULE 4: THE HYBRID SCORER (AI + Physics + Operant Conditioning)
+//  MODULE 4: THE HYBRID SCORER (Math + Physics + Operant Conditioning)
 // =================================================================================================
 export class RecommendationEngine {
   constructor(articles) {
     this.articles = articles || [];
-  }
-
-  _hash(str) {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      hash = ((hash << 5) - hash) + str.charCodeAt(i);
-      hash |= 0; 
-    }
-    return Math.abs(hash);
   }
 
   getTrending(limit = 100) {
@@ -187,37 +143,35 @@ export class RecommendationEngine {
       .slice(0, limit);
   }
 
-  getHybridRecommendations(textMatches, visualMatches, limit = 6, currentSlug = null, sessionPullCount = 0) {
-    const safeTextMatches = textMatches || [];
-    const safeVisualMatches = visualMatches || [];
-    const isAiActive = safeTextMatches.length > 0 || safeVisualMatches.length > 0;
+  // Refactored to accept userVector instead of pre-computed Vectorize matches
+  getHybridRecommendations(userVector, limit = 6, currentSlug = null, sessionPullCount = 0) {
+    const isAiActive = !!userVector && userVector.length > 0;
 
     return this.articles
       .map(article => {
         if (currentSlug && article.slug === currentSlug) return null;
 
         let relevance = 0;
-        const scoreBreakdown = {
-          text_ai: 0,
-          visual_ai: 0,
-          gravity: 0,
-          emotion: 0,
-          novelty: 0
-        };
+        const scoreBreakdown = { text_ai: 0, visual_ai: 0, gravity: 0, emotion: 0, novelty: 0 };
         
-        // 1. Vector Distance Matching
-        const aiTextMatch = safeTextMatches.find(v => v.id === article.slug);
-        if (aiTextMatch) {
-           const activatedScore = NeuralEngine.sigmoid(aiTextMatch.score * 5 - 2.5);
-           scoreBreakdown.text_ai = (activatedScore * SCORING_WEIGHTS.TIER_1_CONTENT_MATCH);
-           relevance += scoreBreakdown.text_ai;
-        }
+        let textSimilarity = 0;
+        let visualSimilarity = 0;
 
-        const aiVisualMatch = safeVisualMatches.find(v => v.id === article.slug);
-        if (aiVisualMatch) {
-           const activatedScore = NeuralEngine.sigmoid(aiVisualMatch.score * 5 - 2.5);
-           scoreBreakdown.visual_ai = (activatedScore * SCORING_WEIGHTS.TIER_1_VISUAL_TRIGGER);
-           relevance += scoreBreakdown.visual_ai;
+        // 1. Vector Distance Matching (Calculated on the fly against D1 JSON vectors)
+        if (isAiActive) {
+          if (article.neural_vector) {
+            textSimilarity = NeuralEngine.cosineSimilarity(userVector, article.neural_vector);
+            const activatedScore = NeuralEngine.sigmoid(textSimilarity * 5 - 2.5);
+            scoreBreakdown.text_ai = (activatedScore * SCORING_WEIGHTS.TIER_1_CONTENT_MATCH);
+            relevance += scoreBreakdown.text_ai;
+          }
+
+          if (article.visual_vector) {
+            visualSimilarity = NeuralEngine.cosineSimilarity(userVector, article.visual_vector);
+            const activatedScore = NeuralEngine.sigmoid(visualSimilarity * 5 - 2.5);
+            scoreBreakdown.visual_ai = (activatedScore * SCORING_WEIGHTS.TIER_1_VISUAL_TRIGGER);
+            relevance += scoreBreakdown.visual_ai;
+          }
         }
 
         // 2. Dynamic Temporal Gravity
@@ -230,25 +184,22 @@ export class RecommendationEngine {
           relevance += scoreBreakdown.gravity;
         }
 
-        // 3. Emotional Arousal (Pre-computed in DB via Queue)
-        // We use the pre-computed arousal_score (0 to 1.0) rather than real-time string parsing
+        // 3. Emotional Arousal
         const arousal = article.arousal_score || 0; 
         scoreBreakdown.emotion = (arousal * SCORING_WEIGHTS.EMOTIONAL_RESONANCE);
         relevance += scoreBreakdown.emotion;
 
-        // 4. Intermittent Variable Rewards (Skinner Box Mechanics)
+        // 4. Intermittent Variable Rewards
         if (currentSlug) {
-          // 30% chance of a high-variance outlier to trigger dopamine, but only if they've pulled a few times
           const isSlotMachineTriggered = (Math.random() < 0.3) && (sessionPullCount > 2);
           
           if (isSlotMachineTriggered) {
-             scoreBreakdown.novelty = SCORING_WEIGHTS.NOVELTY_BONUS; // Max out the dopamine reward
+             scoreBreakdown.novelty = SCORING_WEIGHTS.NOVELTY_BONUS; 
           } else {
-             // Standard predictable novelty
              let novelty = 1.0;
-             if (aiTextMatch) novelty = Math.max(0, 1 - aiTextMatch.score); 
+             if (isAiActive) novelty = Math.max(0, 1 - textSimilarity); 
              const invertedU = Math.exp(-Math.pow(novelty - 0.3, 2) / 0.05);
-             scoreBreakdown.novelty = invertedU * (SCORING_WEIGHTS.NOVELTY_BONUS * 0.4); // Suppressed
+             scoreBreakdown.novelty = invertedU * (SCORING_WEIGHTS.NOVELTY_BONUS * 0.4); 
           }
           relevance += scoreBreakdown.novelty;
         }
@@ -265,8 +216,8 @@ export class RecommendationEngine {
       .slice(0, limit);
   }
 
-  getHybridVideoRecommendations(textMatches, visualMatches, limit = 6, currentSlug = null, sessionPullCount = 0) {
-    const deepPool = this.getHybridRecommendations(textMatches, visualMatches, limit * 4, currentSlug, sessionPullCount);
+  getHybridVideoRecommendations(userVector, limit = 6, currentSlug = null, sessionPullCount = 0) {
+    const deepPool = this.getHybridRecommendations(userVector, limit * 4, currentSlug, sessionPullCount);
 
     const videoArticles = deepPool.filter(article => 
       article.content_html && (article.content_html.includes('<video') || article.content_html.includes('iframe'))
@@ -280,47 +231,14 @@ export class RecommendationEngine {
 }
 
 // =================================================================================================
-//  MODULE 5: DATA INGESTION & NATIVE VECTOR FILTERING
+//  MODULE 5: DATA INGESTION & PARSING
 // =================================================================================================
 
-// ENHANCED: Searches Vectorize natively FIRST, then fetches D1 data
-export async function fetchCandidatesFromVectorize(env, userVector, limit = 100) {
-  if (!userVector) return [];
-  
-  try {
-    // 1. Query Vectorize natively (C++ speed, offloads V8 memory)
-    const vectorMatches = await env.VECTORIZE_INDEX.query(userVector, { topK: limit });
-    const matchIds = vectorMatches.matches.map(m => m.id);
-    
-    if (matchIds.length === 0) return [];
-
-    // 2. Fetch rich data from D1 using the Vectorize IDs
-    const placeholders = matchIds.map(() => '?').join(',');
-    const sql = `
-      SELECT slug, title, subtitle, author, published_at, read_time_minutes, image_url, tags, seo_description,
-             content_html, 
-             COALESCE(engagement_score, 0) as engagement_score,
-             COALESCE(avg_time_spent, 0) as avg_time_spent,
-             COALESCE(total_views, 0) as _raw_views,
-             COALESCE(trending_velocity, 0) as trending_velocity,
-             COALESCE(arousal_score, 0) as arousal_score,
-             COALESCE(entropy_score, 0) as entropy_score
-      FROM articles 
-      WHERE slug IN (${placeholders})
-    `;
-    
-    const { results } = await env.DB.prepare(sql).bind(...matchIds).all();
-    return results || [];
-    
-  } catch (err) {
-    console.error("[VECTORIZE/DB ERROR] fetchCandidatesFromVectorize failed:", err.message);
-    return [];
-  }
-}
-
-// Fallback / Standard chronological & trending fetch
+// Fetch everything from D1, including your manual vectors
 export async function fetchCandidates(env, limit = 100, searchQuery = null) {
   let results = [];
+  
+  // Explicitly selecting neural_vector and visual_vector from the D1 database
   const selectClause = `
     SELECT a.slug, a.title, a.subtitle, a.author, a.published_at, a.read_time_minutes, a.image_url, a.tags, a.seo_description,
            a.content_html, 
@@ -329,7 +247,9 @@ export async function fetchCandidates(env, limit = 100, searchQuery = null) {
            COALESCE(a.total_views, 0) as _raw_views,
            COALESCE(a.trending_velocity, 0) as trending_velocity,
            COALESCE(a.arousal_score, 0) as arousal_score, 
-           COALESCE(a.entropy_score, 0) as entropy_score
+           COALESCE(a.entropy_score, 0) as entropy_score,
+           a.neural_vector,
+           a.visual_vector
     FROM articles a
   `;
 
@@ -349,5 +269,17 @@ export async function fetchCandidates(env, limit = 100, searchQuery = null) {
     console.error("[DB ERROR] fetchCandidates failed:", err.message);
     return [];
   }
-  return results;
+
+  // Parse the stringified JSON vectors from D1 back into actual arrays
+  return results.map(row => {
+    try {
+      row.neural_vector = row.neural_vector ? JSON.parse(row.neural_vector) : null;
+    } catch(e) { row.neural_vector = null; }
+    
+    try {
+      row.visual_vector = row.visual_vector ? JSON.parse(row.visual_vector) : null;
+    } catch(e) { row.visual_vector = null; }
+    
+    return row;
+  });
 }
