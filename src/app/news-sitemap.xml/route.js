@@ -14,19 +14,17 @@ function toISO(val) {
 }
 
 export async function GET() {
-  // Use SQLite datetime() to normalize comparison — published_at may be stored without T/Z
   const cutoff2d = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().replace('T', ' ').replace('Z', '');
   const cutoff30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().replace('T', ' ').replace('Z', '');
   let articles = [];
   try {
     const { env } = getRequestContext();
-    // Try last 2 days first; fall back to 30 days if empty
     let { results } = await env.DB.prepare(
-      "SELECT slug, title, published_at, image_url, section, tags FROM articles WHERE DATETIME(published_at) >= DATETIME(?) ORDER BY published_at DESC LIMIT 1000"
+      'SELECT slug, title, published_at, image_url, tags FROM articles WHERE DATETIME(published_at) >= DATETIME(?) ORDER BY published_at DESC LIMIT 1000'
     ).bind(cutoff2d).all();
     if (!results || results.length === 0) {
       ({ results } = await env.DB.prepare(
-        "SELECT slug, title, published_at, image_url, section, tags FROM articles WHERE DATETIME(published_at) >= DATETIME(?) ORDER BY published_at DESC LIMIT 1000"
+        'SELECT slug, title, published_at, image_url, tags FROM articles WHERE DATETIME(published_at) >= DATETIME(?) ORDER BY published_at DESC LIMIT 1000'
       ).bind(cutoff30d).all());
     }
     articles = results || [];
