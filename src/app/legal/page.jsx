@@ -1,5 +1,5 @@
 import LegalContent from '../../components/LegalContent';
-import { OrganizationSchema, WebSiteSchema, BreadcrumbSchema } from '../../components/StructuredData';
+import { BreadcrumbSchema } from '../../components/StructuredData';
 
 export const metadata = {
   title: 'Legal | OpenTuwa',
@@ -20,15 +20,13 @@ export const metadata = {
     images: ['https://opentuwa.com/assets/ui/web_512.png'],
     site: '@opentuwa',
   },
-  alternates: { canonical: 'https://opentuwa.com/legal' },
+  alternates: { canonical: 'https://opentuwa.com/legal' }, // SEO: Req 13.4, 13.6 — canonical URL, no trailing slash
   robots: { index: true, follow: true },
 };
 
 export default function LegalPage() {
   return (
     <>
-      <OrganizationSchema />
-      <WebSiteSchema />
       <BreadcrumbSchema page="legal" />
       <LegalContent />
     </>

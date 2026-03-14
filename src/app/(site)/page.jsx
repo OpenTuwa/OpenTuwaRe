@@ -1,7 +1,7 @@
 import { getRequestContext } from '@cloudflare/next-on-pages';
 import ArticleCard from '../../components/ArticleCard';
 import { fetchCandidates, RecommendationEngine } from '../../utils/algorithm';
-import { OrganizationSchema, WebSiteSchema, BreadcrumbSchema } from '../../components/StructuredData';
+import { BreadcrumbSchema } from '../../components/StructuredData';
 
 export const runtime = 'edge';
 
@@ -9,7 +9,7 @@ export const metadata = {
   title: 'OpenTuwa | Independent Journalism & Documentaries',
   description: 'Independent news and journalism covering stories that matter. Deep dives, documentaries, and analysis.',
   keywords: 'news, journalism, documentaries, independent media, deep dive, analysis, OpenTuwa',
-  alternates: { canonical: 'https://opentuwa.com' },
+  alternates: { canonical: 'https://opentuwa.com' }, // SEO: Req 13.1, 13.6 — canonical URL, no trailing slash
   robots: { index: true, follow: true },
   openGraph: {
     title: 'OpenTuwa | Independent Journalism & Documentaries',
@@ -44,8 +44,6 @@ export default async function HomePage({ searchParams }) {
 
   return (
     <>
-      <OrganizationSchema />
-      <WebSiteSchema />
       <BreadcrumbSchema isArticle={false} />
       <main className="max-w-7xl mx-auto px-6 py-24 min-h-screen">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

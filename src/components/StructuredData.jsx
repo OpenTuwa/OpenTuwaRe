@@ -2,14 +2,61 @@ import React from 'react';
 
 // JSON-LD Structured Data for NewsArticle
 export function NewsArticleSchema({ article, author }) {
+  // 2.4: Ensure image URL is absolute
+  const rawImageUrl = article.image_url || null;
+  const absoluteImageUrl = rawImageUrl
+    ? (rawImageUrl.startsWith('/') ? `https://opentuwa.com${rawImageUrl}` : rawImageUrl)
+    : null;
+
+  // 2.3: Guard dateModified — never earlier than datePublished
+  const datePublished = article.published_at;
+  const dateModified = (() => {
+    if (!article.updated_at) return datePublished;
+    try {
+      const updated = new Date(article.updated_at);
+      const published = new Date(datePublished);
+      return (!isNaN(updated.getTime()) && !isNaN(published.getTime()) && updated >= published)
+        ? article.updated_at
+        : datePublished;
+    } catch (e) {
+      return datePublished;
+    }
+  })();
+
+  // 2.2: Parse tags defensively — try JSON.parse first, fall back to comma-split
+  let tagsArray = [];
+  if (article.tags) {
+    try {
+      if (typeof article.tags === 'string') {
+        try {
+          const parsed = JSON.parse(article.tags);
+          if (Array.isArray(parsed)) tagsArray = parsed;
+        } catch (e) {
+          tagsArray = article.tags.split(',');
+        }
+      } else if (Array.isArray(article.tags)) {
+        tagsArray = article.tags;
+      }
+    } catch (e) {}
+    tagsArray = tagsArray.map(t => String(t).trim()).filter(Boolean);
+  }
+
+  // 2.1: Derive mainEntityOfPage from slug or url
+  const slug = article.slug || (article.url ? article.url.replace(/^.*\/articles\//, '') : null);
+  const mainEntityOfPage = slug
+    ? { '@type': 'WebPage', '@id': `https://opentuwa.com/articles/${slug}` }
+    : undefined;
+
   const schema = {
     '@context': 'https://schema.org',
     '@type': 'NewsArticle',
     'headline': article.title,
     'description': article.seo_description || article.subtitle || article.excerpt || article.title,
-    'image': article.image_url ? [article.image_url] : [],
-    'datePublished': article.published_at,
-    'dateModified': article.updated_at || article.published_at,
+    'image': absoluteImageUrl ? [absoluteImageUrl] : [],
+    'datePublished': datePublished,
+    'dateModified': dateModified,
+    ...(mainEntityOfPage && { 'mainEntityOfPage': mainEntityOfPage }),
+    ...(tagsArray.length > 0 && { 'keywords': tagsArray.join(', ') }),
     'author': author ? {
       '@type': 'Person',
       'name': author.name,

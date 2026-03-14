@@ -10,7 +10,8 @@
     "/feed.xml",
     "/sitemap.xml",
     "/news-sitemap.xml",
-    "/robots.txt"
+    "/robots.txt",
+    "/sitemap-index.xml"
   ],
   "exclude":[
     "/assets/*",

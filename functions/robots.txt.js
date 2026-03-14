@@ -4,6 +4,7 @@ export async function onRequestGet(context) {
   
   const robotsTxt = `User-agent: *
 Allow: /
+Allow: /feed.xml
 Disallow: /api/
 Disallow: /_next/
 

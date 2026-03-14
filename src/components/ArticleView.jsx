@@ -287,6 +287,7 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
           </section>
 
           {/* key={slug} ensures a fresh DOM unmount/mount on every client navigation */}
+          {/* SEO: Req 14.1, 14.2 — article element and h1 for semantic HTML */}
           <article key={slug} ref={articleRef} className="max-w-[720px] mx-auto px-6 py-20 prose prose-invert prose-xl text-tuwa-text prose-a:text-tuwa-accent hover:prose-a:text-blue-400 prose-img:rounded-xl">
             <ArticleContent html={article.content_html} />
           </article>

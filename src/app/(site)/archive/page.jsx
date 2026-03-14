@@ -1,6 +1,6 @@
 import { getRequestContext } from '@cloudflare/next-on-pages';
 import ArchiveContent from '../../../components/ArchiveContent';
-import { OrganizationSchema, WebSiteSchema, CollectionPageSchema, BreadcrumbSchema } from '../../../components/StructuredData';
+import { CollectionPageSchema, BreadcrumbSchema } from '../../../components/StructuredData';
 
 export const runtime = 'edge';
 
@@ -23,7 +23,7 @@ export const metadata = {
     images: ['https://opentuwa.com/assets/ui/web_512.png'],
     site: '@opentuwa',
   },
-  alternates: { canonical: 'https://opentuwa.com/archive' },
+  alternates: { canonical: 'https://opentuwa.com/archive' }, // SEO: Req 13.2, 13.6 — canonical URL, no trailing slash
   robots: { index: true, follow: true },
 };
 
@@ -57,8 +57,6 @@ export default async function ArchivePage() {
   const archiveData = await getArchive();
   return (
     <>
-      <OrganizationSchema />
-      <WebSiteSchema />
       <CollectionPageSchema />
       <BreadcrumbSchema page="archive" />
       <ArchiveContent archiveData={archiveData} />

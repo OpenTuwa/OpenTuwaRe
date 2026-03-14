@@ -1,54 +1,88 @@
-export async function onRequestGet(context) {
-  const { env } = context;
-  const title = 'Archive | OpenTuwa';
-  const description = 'A complete timeline of all articles, documentaries, and stories published on OpenTuwa.';
+import { isBot } from './_utils/bot-detector.js';
 
+const PAGE_TITLE = 'Archive | OpenTuwa';
+const PAGE_DESC = 'A complete timeline of all articles, documentaries, and stories published on OpenTuwa.';
+const OG_IMAGE = 'https://opentuwa.com/assets/ui/web_512.png';
+const CANONICAL = 'https://opentuwa.com/archive';
+
+export async function onRequestGet(context) {
+  const { request, env } = context;
+
+  // Pass through to Next.js for real users
+  if (!isBot(request)) {
+    return context.next();
+  }
+
+  // Bot SSR: query all articles ordered by recency
   let articles = [];
   try {
     const { results } = await env.DB.prepare(
-      "SELECT title, slug, published_at FROM articles ORDER BY published_at DESC"
+      'SELECT title, slug, published_at FROM articles ORDER BY published_at DESC'
     ).all();
     articles = results || [];
-  } catch (err) { articles = []; }
-
-  const grouped = articles.reduce((acc, article) => {
-    const date = new Date(article.published_at || Date.now());
-    const year = date.getFullYear();
-    if (!acc[year]) acc[year] = [];
-    acc[year].push(article);
-    return acc;
-  }, {});
-  const years = Object.keys(grouped).sort((a, b) => b - a);
-
-  const innerHtml = `
-    <main style="max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem;">
-      <h1 style="color:#fff; border-bottom:1px solid #222; padding-bottom:1.5rem;">Archive</h1>
-      <p style="color:#ccc; font-size:1.2rem; margin-bottom:2rem;">${description}</p>
-      ${years.map(year => `
-        <section style="margin-bottom:3rem;">
-          <h2 style="color:#888; font-size:2rem; margin-bottom:1rem; border-bottom:1px solid #222;">${year}</h2>
-          <ul style="list-style:none; padding:0;">
-            ${grouped[year].map(article => `
-              <li style="padding:0.75rem 0; border-bottom:1px solid #1a1a1a; display:flex; justify-content:space-between;">
-                <a href="/articles/${article.slug}" style="color:#fff; text-decoration:none; font-size:1.1rem;">${article.title}</a>
-                <small style="color:#666; font-family:monospace;">${new Date(article.published_at).toLocaleDateString()}</small>
-              </li>
-            `).join('')}
-          </ul>
-        </section>
-      `).join('')}
-    </main>
-  `;
-
-  const response = await context.next();
-
-  if (!response.headers.get('content-type')?.includes('text/html')) {
-    return new Response(innerHtml, { headers: { 'content-type': 'text/html' } });
+  } catch (err) {
+    articles = [];
   }
 
-  return new HTMLRewriter()
-    .on('title', { element(e) { e.setInnerContent(title); } })
-    .on('meta[name="description"]', { element(e) { e.setAttribute('content', description); } })
-    .on('div#root', { element(e) { e.setInnerContent(innerHtml, { html: true }); } })
-    .transform(response);
+  const articleLinks = articles.map(a =>
+    `<li style="padding:0.75rem 0; border-bottom:1px solid #1a1a1a; display:flex; justify-content:space-between; align-items:center;">
+      <a href="/articles/${escapeHtml(a.slug)}" style="color:#fff; text-decoration:none; font-size:1.1rem;">${escapeHtml(a.title)}</a>
+      <small style="color:#666; font-family:monospace; margin-left:1rem;">${a.published_at ? new Date(a.published_at).toLocaleDateString() : ''}</small>
+    </li>`
+  ).join('');
+
+  const botHtml = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>${escapeHtml(PAGE_TITLE)}</title>
+  <meta name="description" content="${escapeHtml(PAGE_DESC)}">
+  <link rel="canonical" href="${CANONICAL}">
+  <meta property="og:title" content="${escapeHtml(PAGE_TITLE)}">
+  <meta property="og:description" content="${escapeHtml(PAGE_DESC)}">
+  <meta property="og:image" content="${OG_IMAGE}">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="512">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="${CANONICAL}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${escapeHtml(PAGE_TITLE)}">
+  <meta name="twitter:description" content="${escapeHtml(PAGE_DESC)}">
+  <meta name="twitter:image" content="${OG_IMAGE}">
+  <style>
+    :root { --bg: #0a0a0b; --text: #e5e5e5; --muted: #a1a1aa; --accent: #3b82f6; }
+    body { background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; margin: 0; padding: 2rem; }
+    main { max-width: 900px; margin: 0 auto; }
+    h1 { color: #fff; font-size: 2.5rem; margin-bottom: 1rem; border-bottom: 1px solid #222; padding-bottom: 1.5rem; }
+    h2 { color: #888; font-size: 2rem; margin-bottom: 1rem; border-bottom: 1px solid #222; }
+    ul { list-style: none; padding: 0; }
+    nav a { color: #fff; font-weight: bold; text-decoration: none; font-size: 1.5rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <nav><a href="/">OpenTuwa</a></nav>
+    <h1>Archive</h1>
+    <p style="color:#ccc; font-size:1.2rem; margin-bottom:2rem;">${escapeHtml(PAGE_DESC)}</p>
+    <ul>${articleLinks}</ul>
+    <footer style="margin-top:4rem; font-size:0.8rem; color:var(--muted);">
+      <p>&copy; ${new Date().getFullYear()} OpenTuwa Media. <a href="/legal" style="color:var(--muted);">Legal</a> | <a href="/about" style="color:var(--muted);">About</a></p>
+    </footer>
+  </main>
+</body>
+</html>`;
+
+  return new Response(botHtml, {
+    headers: { 'content-type': 'text/html; charset=utf-8' }
+  });
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }

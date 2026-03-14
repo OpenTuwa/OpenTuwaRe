@@ -25,6 +25,7 @@ function ArchiveYearSection({ yearGroup }) {
             ? article.tags.split(',')[0].trim() 
             : 'Article';
 
+          // SEO: Req 8.1, 8.3 — article titles rendered as crawlable <a> links
           return (
             <Link
               key={index}

@@ -2,7 +2,7 @@ import { getRequestContext } from '@cloudflare/next-on-pages';
 import { notFound } from 'next/navigation';
 import ArticleView from '../../../components/ArticleView';
 import { fetchCandidates, RecommendationEngine } from '../../../utils/algorithm';
-import { NewsArticleSchema, OrganizationSchema, WebSiteSchema, BreadcrumbSchema } from '../../../components/StructuredData';
+import { NewsArticleSchema, BreadcrumbSchema } from '../../../components/StructuredData';
 
 export const runtime = 'edge';
 
@@ -70,6 +70,8 @@ export async function generateMetadata({ params }) {
   const seoTitle = `${article.title} | OpenTuwa`;
   const seoDesc = article.seo_description || article.subtitle || article.excerpt || article.title;
   const imageUrl = article.image_url || 'https://opentuwa.com/assets/ui/web_512.png';
+  const imageWidth = article.image_url ? 1200 : 512;
+  const imageHeight = article.image_url ? 630 : 512;
   const canonicalUrl = `https://opentuwa.com/articles/${slug}`;
 
   let tagsArray = [];
@@ -82,13 +84,13 @@ export async function generateMetadata({ params }) {
     keywords: [...tagsArray, 'news', 'journalism', 'documentary', 'OpenTuwa'].join(', '),
     authors: [{ name: article.author || 'OpenTuwa' }],
     alternates: { canonical: canonicalUrl },
-    robots: { index: true, follow: true, googleBot: { index: true, follow: true } },
+    robots: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1, googleBot: { index: true, follow: true } },
     openGraph: {
       title: article.title,
       description: seoDesc,
       type: 'article',
       url: canonicalUrl,
-      images: [{ url: imageUrl, alt: article.title }],
+      images: [{ url: imageUrl, alt: article.title, width: imageWidth, height: imageHeight }],
       siteName: 'OpenTuwa',
       locale: 'en_US',
       publishedTime: article.published_at,
@@ -125,8 +127,6 @@ export default async function ArticlePage({ params }) {
   return (
     <>
       <NewsArticleSchema article={article} author={authorInfo} />
-      <OrganizationSchema />
-      <WebSiteSchema />
       <BreadcrumbSchema article={article} isArticle={true} />
       <ArticleView
         article={article}

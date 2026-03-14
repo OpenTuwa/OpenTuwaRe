@@ -46,6 +46,8 @@ export const metadata = {
     apple: '/assets/ui/web.png'
   },
   alternates: {
+    // SEO: Req 12.1, 12.2 — RSS feed auto-discovery link
+    // Next.js emits <link rel="alternate" type="application/rss+xml" href="/feed.xml"> in <head>
     types: {
       'application/rss+xml': '/feed.xml'
     }

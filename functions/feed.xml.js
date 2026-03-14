@@ -1,3 +1,11 @@
+// SEO: Req 11.1-11.7 — all required RSS feed fields present
+// Req 11.1: <title>, <link>, <guid isPermaLink="true">, <pubDate>, <description>, <dc:creator> per item
+// Req 11.2: <media:content> with absolute image URL and medium="image" when image_url present
+// Req 11.3: <atom:link rel="self"> in channel
+// Req 11.4: <language>en-us</language> in channel
+// Req 11.5: <category> elements per tag
+// Req 11.6: Content-Type: application/rss+xml; charset=utf-8 response header
+// Req 11.7: LIMIT 50 most recently published articles
 export async function onRequestGet(context) {
   const { env, request } = context;
   const origin = new URL(request.url).origin;
@@ -43,7 +51,10 @@ export async function onRequestGet(context) {
     const pubDate = toRFC822(a.published_at || a.created_at || a.date_published) || now;
     const desc = a.seo_description || a.subtitle || a.excerpt || 'Read the full article on OpenTuwa.';
     const author = a.author_name || a.author || 'OpenTuwa';
-    const imageUrl = a.image_url || '';
+    // Resolve image_url to absolute URL (Req 11.2)
+    const imageUrl = a.image_url
+      ? (a.image_url.startsWith('http') ? a.image_url : origin + a.image_url)
+      : '';
     const content = a.content_html || desc;
     const readTime = a.read_time_minutes || 5;
     

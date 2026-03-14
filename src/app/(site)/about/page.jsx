@@ -1,6 +1,6 @@
 import { getRequestContext } from '@cloudflare/next-on-pages';
 import AboutPageContent from '../../../components/AboutPageContent';
-import { OrganizationSchema, WebSiteSchema, BreadcrumbSchema } from '../../../components/StructuredData';
+import { BreadcrumbSchema } from '../../../components/StructuredData';
 
 export const runtime = 'edge';
 
@@ -23,7 +23,7 @@ export const metadata = {
     images: ['https://opentuwa.com/assets/ui/web_512.png'],
     site: '@opentuwa',
   },
-  alternates: { canonical: 'https://opentuwa.com/about' },
+  alternates: { canonical: 'https://opentuwa.com/about' }, // SEO: Req 13.3, 13.6 — canonical URL, no trailing slash
   robots: { index: true, follow: true },
 };
 
@@ -49,8 +49,6 @@ export default async function AboutPage() {
   const authors = await getAuthors();
   return (
     <>
-      <OrganizationSchema />
-      <WebSiteSchema />
       <BreadcrumbSchema page="about" />
       <AboutPageContent authors={authors} />
     </>
