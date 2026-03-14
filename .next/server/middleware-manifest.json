@@ -2,35 +2,6 @@
   "version": 3,
   "middleware": {},
   "functions": {
-    "/(site)/archive/page": {
-      "files": [
-        "server/server-reference-manifest.js",
-        "server/app/(site)/archive/page_client-reference-manifest.js",
-        "server/middleware-build-manifest.js",
-        "server/middleware-react-loadable-manifest.js",
-        "server/next-font-manifest.js",
-        "server/interception-route-rewrite-manifest.js",
-        "server/edge-runtime-webpack.js",
-        "server/app/(site)/archive/page.js"
-      ],
-      "name": "app/(site)/archive/page",
-      "page": "/(site)/archive/page",
-      "matchers": [
-        {
-          "regexp": "^/archive$",
-          "originalSource": "/archive"
-        }
-      ],
-      "wasm": [],
-      "assets": [],
-      "env": {
-        "__NEXT_BUILD_ID": "development",
-        "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "bgxnjfgMnjB0aMOeNN+GVQPFoPcoAks71vRD0uo4Gj4=",
-        "__NEXT_PREVIEW_MODE_ID": "3da1d4f9713d5ed4ea534247e2f8a645",
-        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "6b6de1bc443ee509b7715d44cedec6dc9516253619976608763bc119689bc55f",
-        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "fcb8a5639d83b85553878b31f59723dcafea37de28e441751b90efaecafa7064"
-      }
-    },
     "/(site)/page": {
       "files": [
         "server/server-reference-manifest.js",
@@ -55,9 +26,9 @@
       "env": {
         "__NEXT_BUILD_ID": "development",
         "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY": "bgxnjfgMnjB0aMOeNN+GVQPFoPcoAks71vRD0uo4Gj4=",
-        "__NEXT_PREVIEW_MODE_ID": "3da1d4f9713d5ed4ea534247e2f8a645",
-        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "6b6de1bc443ee509b7715d44cedec6dc9516253619976608763bc119689bc55f",
-        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "fcb8a5639d83b85553878b31f59723dcafea37de28e441751b90efaecafa7064"
+        "__NEXT_PREVIEW_MODE_ID": "4109aecb75d3959537ffdbabb293993c",
+        "__NEXT_PREVIEW_MODE_SIGNING_KEY": "77d2bdd1d5d38f75cb7c0ee089015ef68b3d2f624b7d4db4092f7d9fcbfb2086",
+        "__NEXT_PREVIEW_MODE_ENCRYPTION_KEY": "76fc1b62369e04b7b45aa3c8a053f3492fee759a35aef091c889a81315c21575"
       }
     }
   },

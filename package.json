@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
+    "dev:remote": "npm run pages:build && wrangler pages dev .vercel/output/static --remote",
     "build": "next build",
     "cf-build": "next build && npx @cloudflare/next-on-pages",
     "start": "next start",

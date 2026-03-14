@@ -1,8 +1,10 @@
 import { setupDevPlatform } from '@cloudflare/next-on-pages/next-dev';
 
-// This allows you to use D1, Vectorize, and AI locally when running `npm run dev`
+// Configure development to use remote Cloudflare resources
 if (process.env.NODE_ENV === 'development') {
-  await setupDevPlatform();
+  await setupDevPlatform({
+    persist: { path: '.wrangler/state/v3' },
+  });
 }
 
 /** @type {import('next').NextConfig} */

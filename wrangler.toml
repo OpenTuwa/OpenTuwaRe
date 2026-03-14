@@ -12,6 +12,8 @@ binding = "AI"
 [[kv_namespaces]]
 binding = "BRAIN_KV"
 id = "b77c25b5918a49eaae7bdb666d11c23d"
+# Use remote KV in development
+remote = true
 
 # Vectorize bindings removed - now using pre-computed vectors in D1
 
@@ -19,4 +21,5 @@ id = "b77c25b5918a49eaae7bdb666d11c23d"
 binding = "DB"
 database_name = "articles"
 database_id = "5494913d-dde9-48ae-82a4-5774ed2b11a6"
-# Removed preview_database_id to use remote database in development
+# Use remote database in development
+remote = true
