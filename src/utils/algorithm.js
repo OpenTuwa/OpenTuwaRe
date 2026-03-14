@@ -184,7 +184,7 @@ export class RecommendationEngine {
           relevance += scoreBreakdown.gravity;
         }
 
-        // 3. Emotional Arousal (if available)
+        // 3. Emotional Arousal
         const arousal = article.arousal_score || 0; 
         scoreBreakdown.emotion = (arousal * SCORING_WEIGHTS.EMOTIONAL_RESONANCE);
         relevance += scoreBreakdown.emotion;
@@ -230,8 +230,15 @@ export class RecommendationEngine {
   }
 }
 
-export async function fetchCandidates(env, limit = 100, searchQuery = null, author = null, tag = null) {
+// =================================================================================================
+//  MODULE 5: DATA INGESTION & PARSING
+// =================================================================================================
+
+// Fetch everything from D1, including your manual vectors
+export async function fetchCandidates(env, limit = 100, searchQuery = null) {
   let results = [];
+  
+  // Explicitly selecting neural_vector and visual_vector from the D1 database
   const selectClause = `
     SELECT a.slug, a.title, a.subtitle, a.author, a.published_at, a.read_time_minutes, a.image_url, a.tags, a.seo_description,
            a.content_html, 
@@ -239,7 +246,10 @@ export async function fetchCandidates(env, limit = 100, searchQuery = null, auth
            COALESCE(a.avg_time_spent, 0) as avg_time_spent,
            COALESCE(a.total_views, 0) as _raw_views,
            COALESCE(a.trending_velocity, 0) as trending_velocity,
-           a.neural_vector, a.visual_vector
+           COALESCE(a.arousal_score, 0) as arousal_score, 
+           COALESCE(a.entropy_score, 0) as entropy_score,
+           a.neural_vector,
+           a.visual_vector
     FROM articles a
   `;
 
@@ -250,15 +260,6 @@ export async function fetchCandidates(env, limit = 100, searchQuery = null, auth
       const sql = `${selectClause} WHERE (a.title LIKE ? ESCAPE '\\' OR a.subtitle LIKE ? ESCAPE '\\' OR a.seo_description LIKE ? ESCAPE '\\') ORDER BY a.published_at DESC LIMIT ?`;
       const { results: raw } = await env.DB.prepare(sql).bind(wildcard, wildcard, wildcard, limit).all();
       results = raw || [];
-    } else if (author) {
-      const sql = `${selectClause} WHERE a.author = ? ORDER BY a.published_at DESC LIMIT ?`;
-      const { results: raw } = await env.DB.prepare(sql).bind(author, limit).all();
-      results = raw || [];
-    } else if (tag) {
-      const wildcard = `%${tag.replace(/%/g, '\\%').replace(/_/g, '\\_')}%`;
-      const sql = `${selectClause} WHERE a.tags LIKE ? ESCAPE '\\' ORDER BY a.published_at DESC LIMIT ?`;
-      const { results: raw } = await env.DB.prepare(sql).bind(wildcard, limit).all();
-      results = raw || [];
     } else {
       const sql = `${selectClause} ORDER BY a.engagement_score DESC, a.published_at DESC LIMIT ?`;
       const { results: raw } = await env.DB.prepare(sql).bind(limit).all();
@@ -266,7 +267,6 @@ export async function fetchCandidates(env, limit = 100, searchQuery = null, auth
     }
   } catch (err) {
     console.error("[DB ERROR] fetchCandidates failed:", err.message);
-    // Return empty array to allow graceful degradation (e.g. show "No articles found" instead of crash)
     return [];
   }
 
