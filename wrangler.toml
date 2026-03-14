@@ -13,16 +13,10 @@ binding = "AI"
 binding = "BRAIN_KV"
 id = "b77c25b5918a49eaae7bdb666d11c23d"
 
-[[vectorize]]
-binding = "VECTORIZE_TEXT"
-index_name = "tuwa-brain"
-
-[[vectorize]]
-binding = "VECTORIZE_VISION"
-index_name = "tuwa-vision"
+# Vectorize bindings removed - now using pre-computed vectors in D1
 
 [[d1_databases]]
 binding = "DB"
 database_name = "articles"
 database_id = "5494913d-dde9-48ae-82a4-5774ed2b11a6"
-preview_database_id = "5494913d-dde9-48ae-82a4-5774ed2b11a6"
+# Removed preview_database_id to use remote database in development
