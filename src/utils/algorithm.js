@@ -233,7 +233,9 @@ export class RecommendationEngine {
 export async function fetchCandidates(env, limit = 100, searchQuery = null, author = null, tag = null) {
   let results = [];
   const selectClause = `
-    SELECT a.slug, a.title, a.subtitle, a.author, a.published_at, a.read_time_minutes, a.image_url, a.tags, a.seo_description,
+    SELECT a.slug, a.title, a.subtitle, a.author, a.author_name, a.published_at, a.read_time_minutes,
+           a.image_url, a.tags, a.seo_description,
+           a.section, a.category,
            a.content_html, 
            COALESCE(a.engagement_score, 0) as engagement_score,
            COALESCE(a.avg_time_spent, 0) as avg_time_spent,

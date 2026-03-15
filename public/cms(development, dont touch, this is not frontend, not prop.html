@@ -431,6 +431,22 @@
             </div>
 
             <div class="form-group">
+                <label>
+                    Special Issue / Event
+                    <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:0.65rem;">
+                        — optional · freeform · maps to <code style="font-family:'JetBrains Mono',monospace;background:var(--bg-hover);padding:1px 4px;border-radius:3px;font-size:0.62rem;">schema:about</code> &amp; <code style="font-family:'JetBrains Mono',monospace;background:var(--bg-hover);padding:1px 4px;border-radius:3px;font-size:0.62rem;">article:tag</code>
+                    </span>
+                </label>
+                <input type="text" id="special_issue"
+                    placeholder="e.g. War on Iran, 2026 US Election, Gaza Ceasefire, OpenAI Antitrust…"
+                    oninput="handleInput()"
+                    style="border-style: dashed;">
+                <span style="font-size:0.63rem; color:var(--text-muted); margin-top:0.1rem; line-height:1.5;">
+                    Leave blank if not applicable. When filled, this populates <strong style="color:var(--text-main);">keywords</strong>, <strong style="color:var(--text-main);">og:article:tag</strong>, and <strong style="color:var(--text-main);">schema.org/about</strong> — all supported by Google News and Google Discover.
+                </span>
+            </div>
+
+            <div class="form-group">
                 <label>Body Content</label>
                 <div class="editor-container">
                     <div class="toolbar">
@@ -698,6 +714,7 @@ async function loadArticle(slug) {
         document.getElementById('section').value         = art.section          || '';
         document.getElementById('category').value        = art.category         || '';
         document.getElementById('category_slug').value   = art.category_slug    || '';
+        document.getElementById('special_issue').value   = art.special_issue    || '';
 
         document.getElementById('content_html').value = (art.content_html || '').replace(/^<p>/gm,'').replace(/<\/p>$/gm,'').trim();
 
@@ -731,15 +748,16 @@ async function saveToD1() {
         document.getElementById('tags').value,
         document.getElementById('section').value  || null,
         document.getElementById('category').value || null,
+        document.getElementById('special_issue').value.trim() || null,
         formatSmartHTML(document.getElementById('content_html').value)
     ];
 
     try {
         if (editingSlug) {
-            await queryD1(`UPDATE articles SET slug=?, title=?, subtitle=?, author=?, read_time_minutes=?, image_url=?, image_copyright=?, seo_description=?, tags=?, section=?, category=?, content_html=? WHERE slug=?`, [...data, editingSlug]);
+            await queryD1(`UPDATE articles SET slug=?, title=?, subtitle=?, author=?, read_time_minutes=?, image_url=?, image_copyright=?, seo_description=?, tags=?, section=?, category=?, special_issue=?, content_html=? WHERE slug=?`, [...data, editingSlug]);
             alert("Changes published.");
         } else {
-            await queryD1(`INSERT INTO articles (slug, title, subtitle, author, read_time_minutes, image_url, image_copyright, seo_description, tags, section, category, content_html, published_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`, data);
+            await queryD1(`INSERT INTO articles (slug, title, subtitle, author, read_time_minutes, image_url, image_copyright, seo_description, tags, section, category, special_issue, content_html, published_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`, data);
             alert("Article published.");
         }
         editingSlug = slug;
@@ -844,9 +862,10 @@ function clearForm(skipConfirm = false) {
     document.getElementById('edit-badge').style.display = 'none';
     ['title','slug','subtitle','author','read_time','image_url','image_copyright','seo_description','tags','category_slug']
         .forEach(id => { document.getElementById(id).value = ''; });
-    document.getElementById('section').value  = '';
-    document.getElementById('category').value = '';
-    document.getElementById('content_html').value = '';
+    document.getElementById('section').value      = '';
+    document.getElementById('category').value     = '';
+    document.getElementById('special_issue').value = '';
+    document.getElementById('content_html').value  = '';
     document.querySelectorAll('.article-card').forEach(c => c.classList.remove('active'));
     updatePreview();
 }
@@ -881,6 +900,7 @@ function saveDraft() {
         section: document.getElementById('section').value,
         category: document.getElementById('category').value,
         category_slug: document.getElementById('category_slug').value,
+        special_issue: document.getElementById('special_issue').value,
         content_html: document.getElementById('content_html').value,
     };
     localStorage.setItem('tuwa_cms_draft', JSON.stringify(d));
@@ -905,6 +925,7 @@ function restoreDraft() {
     document.getElementById('section').value         = d.section         || '';
     document.getElementById('category').value        = d.category        || '';
     document.getElementById('category_slug').value   = d.category_slug   || '';
+    document.getElementById('special_issue').value   = d.special_issue   || '';
     document.getElementById('content_html').value    = d.content_html    || '';
     if (editingSlug) {
         document.getElementById('editor-title').innerText   = 'Edit Article';
