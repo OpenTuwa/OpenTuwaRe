@@ -102,7 +102,23 @@ export default async function AuthorPage({ params }) {
         )}
         <h1 className="text-3xl font-bold text-white mb-2">{author.name}</h1>
         {author.author_bio && (
-          <p className="text-tuwa-muted mb-6">{author.author_bio}</p>
+          <div itemprop="description" className="text-tuwa-muted mb-6">{author.author_bio}</div>
+        )}
+        {(author.author_twitter || author.author_linkedin || author.author_facebook || author.author_youtube) && (
+          <div className="flex gap-4 mb-6 text-sm">
+            {author.author_twitter && (
+              <a itemprop="sameAs" href={`https://twitter.com/${author.author_twitter.replace('@', '')}`} rel="noopener noreferrer" className="text-tuwa-accent hover:text-white transition-colors">Twitter/X</a>
+            )}
+            {author.author_linkedin && (
+              <a itemprop="sameAs" href={author.author_linkedin} rel="noopener noreferrer" className="text-tuwa-accent hover:text-white transition-colors">LinkedIn</a>
+            )}
+            {author.author_facebook && (
+              <a itemprop="sameAs" href={author.author_facebook} rel="noopener noreferrer" className="text-tuwa-accent hover:text-white transition-colors">Facebook</a>
+            )}
+            {author.author_youtube && (
+              <a itemprop="sameAs" href={author.author_youtube} rel="noopener noreferrer" className="text-tuwa-accent hover:text-white transition-colors">YouTube</a>
+            )}
+          </div>
         )}
         <h2 className="text-xl font-semibold text-white mt-8 mb-4">Articles</h2>
         {articles.length > 0 ? (

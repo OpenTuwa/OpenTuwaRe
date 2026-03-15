@@ -102,6 +102,47 @@ function authorSlug(name) {
     .replace(/[^a-z0-9-]/g, '');
 }
 
+/**
+ * Builds a Schema.org Person node with enriched fields.
+ *
+ * @param {object} opts
+ * @param {string}   opts.id          - Full @id URI for the person
+ * @param {string}   opts.name        - Author display name
+ * @param {string}   opts.url         - Author page URL
+ * @param {string}   opts.orgId       - @id of the publisher org node
+ * @param {string}   [opts.bio]       - Author bio / description
+ * @param {string}   [opts.image]     - Author avatar URL
+ * @param {string}   [opts.twitter]
+ * @param {string}   [opts.linkedin]
+ * @param {string}   [opts.facebook]
+ * @param {string}   [opts.youtube]
+ * @param {string[]} [opts.knowsAbout] - Topics derived from article category / tags
+ * @returns {object} Schema.org Person node
+ */
+function buildPersonNode({ id, name, url, orgId, bio, image, twitter, linkedin, facebook, youtube, knowsAbout }) {
+  const sameAsLinks = [
+    twitter  ? `https://twitter.com/${twitter.replace('@', '')}` : null,
+    linkedin ?? null,
+    facebook ?? null,
+    youtube  ?? null,
+  ].filter(Boolean);
+
+  return {
+    '@type': 'Person',
+    '@id': id,
+    name: name || '',
+    jobTitle: 'Journalist',
+    url,
+    knowsLanguage: ['en-US'],
+    nationality: { '@type': 'Country', name: 'Malaysia' },
+    worksFor: { '@id': orgId },
+    ...(bio   ? { description: bio } : {}),
+    ...(image ? { image: { '@type': 'ImageObject', url: image } } : {}),
+    ...(knowsAbout?.length ? { knowsAbout } : {}),
+    ...(sameAsLinks.length ? { sameAs: sameAsLinks } : {}),
+  };
+}
+
 // ─── Graph builders ───────────────────────────────────────────────────────────
 
 /**
@@ -178,30 +219,19 @@ export function buildArticleGraph(article, origin = SITE_URL) {
 
   // Person (author) node — enriched with DB fields when available
   const authorData = article?._author ?? {};
-  const personNode = {
-    '@type': 'Person',
-    '@id': `${base}/authors/${aSlug}#person`,
+  const personNode = buildPersonNode({
+    id: `${base}/authors/${aSlug}#person`,
     name: authorName,
-    jobTitle: 'Journalist',
     url: `${base}/authors/${aSlug}`,
-    ...(authorData?.author_bio ? { description: authorData.author_bio } : {}),
-    ...(authorData?.author_image
-      ? { image: { '@type': 'ImageObject', url: authorData.author_image } }
-      : {}),
-    ...((authorData?.author_twitter || authorData?.author_linkedin ||
-         authorData?.author_facebook || authorData?.author_youtube)
-      ? {
-          sameAs: [
-            authorData?.author_twitter
-              ? `https://twitter.com/${authorData.author_twitter.replace('@', '')}`
-              : null,
-            authorData?.author_linkedin ?? null,
-            authorData?.author_facebook ?? null,
-            authorData?.author_youtube ?? null,
-          ].filter(Boolean),
-        }
-      : {}),
-  };
+    orgId: `${base}/#organization`,
+    bio: authorData?.author_bio,
+    image: authorData?.author_image,
+    twitter: authorData?.author_twitter,
+    linkedin: authorData?.author_linkedin,
+    facebook: authorData?.author_facebook,
+    youtube: authorData?.author_youtube,
+    knowsAbout: article?.section ? [article.section] : undefined,
+  });
 
   // BreadcrumbList node
   const breadcrumbItems = [
@@ -329,30 +359,18 @@ export function buildAuthorGraph(author, authorSlugStr, origin = SITE_URL) {
   const base = origin || SITE_URL;
   const authorUrl = `${base}/authors/${authorSlugStr}`;
 
-  const personNode = {
-    '@type': 'Person',
-    '@id': `${authorUrl}#person`,
-    name: author.name,
-    jobTitle: 'Journalist',
+  const personNode = buildPersonNode({
+    id: `${authorUrl}#person`,
+    name: author?.name ?? '',
     url: authorUrl,
-    ...(author.author_bio ? { description: author.author_bio } : {}),
-    ...(author.author_image
-      ? { image: { '@type': 'ImageObject', url: author.author_image } }
-      : {}),
-    ...((author.author_twitter || author.author_linkedin ||
-         author.author_facebook || author.author_youtube)
-      ? {
-          sameAs: [
-            author.author_twitter
-              ? `https://twitter.com/${author.author_twitter.replace('@', '')}`
-              : null,
-            author.author_linkedin || null,
-            author.author_facebook || null,
-            author.author_youtube || null,
-          ].filter(Boolean),
-        }
-      : {}),
-  };
+    orgId: `${base}/#organization`,
+    bio: author?.author_bio,
+    image: author?.author_image,
+    twitter: author?.author_twitter,
+    linkedin: author?.author_linkedin,
+    facebook: author?.author_facebook,
+    youtube: author?.author_youtube,
+  });
 
   const breadcrumbNode = {
     '@type': 'BreadcrumbList',
