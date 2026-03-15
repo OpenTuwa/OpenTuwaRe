@@ -2,6 +2,7 @@ import { GoogleAnalytics } from '@next/third-parties/google';
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
 import Script from 'next/script';
 import './globals.css';
+import './consent.css';
 import GraphSchema from '../components/GraphSchema';
 import ConsentManager from '../components/ConsentManager';
 
@@ -101,8 +102,6 @@ export default function RootLayout({ children }) {
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <link rel="manifest" href="/manifest.json" />
         <link rel="mask-icon" href="/assets/ui/web.svg" color="#0a0a0b" />
-        {/* Silktide Consent Manager CSS */}
-        <link rel="stylesheet" href="/legal/cookieconsent.css" />
       </head>
       <body className="font-sans antialiased bg-[#0a0a0b] text-tuwa-text">
         {children}
@@ -120,7 +119,7 @@ export default function RootLayout({ children }) {
         });
       `}</Script>
       <GoogleAnalytics gaId="G-QLR0GR5SE8" />
-      {/* Silktide Consent Manager — self-hosted, init runs via onLoad to guarantee library is ready */}
+      {/* Custom consent manager — no third-party dependencies */}
       <ConsentManager />
     </html>
   );
