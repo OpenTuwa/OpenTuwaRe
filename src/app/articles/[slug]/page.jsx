@@ -105,10 +105,14 @@ export async function generateMetadata({ params }) {
   if (Array.isArray(article.tags)) tagsArray = article.tags;
   else if (typeof article.tags === 'string') tagsArray = article.tags.split(',').map(t => t.trim()).filter(Boolean);
 
+  // Merge special_issue into keywords and OG tags
+  const specialIssue = article.special_issue?.trim() || null;
+  const allTags = specialIssue ? [...tagsArray, specialIssue] : tagsArray;
+
   return {
     title: seoTitle,
     description: seoDesc,
-    keywords: [...tagsArray, 'news', 'journalism', 'documentary', 'OpenTuwa'].join(', '),
+    keywords: [...allTags, 'news', 'journalism', 'documentary', 'OpenTuwa'].join(', '),
     authors: [{ name: article.author || 'OpenTuwa' }],
     alternates: {
       canonical: canonicalUrl,
@@ -126,7 +130,7 @@ export async function generateMetadata({ params }) {
       publishedTime: article.published_at,
       modifiedTime: article.updated_at || article.published_at,
       section: article.section || 'Articles',
-      tags: tagsArray,
+      tags: allTags,
     },
     twitter: {
       card: 'summary_large_image',

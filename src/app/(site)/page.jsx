@@ -4,6 +4,7 @@ import GraphSchema from '../../components/GraphSchema';
 import { buildHreflangLanguages } from '../../../functions/_utils/hreflang.js';
 import HeroStory from '../../components/HeroStory';
 import SectionGrid from '../../components/SectionGrid';
+import SpecialIssueStrip from '../../components/SpecialIssueStrip';
 import { groupBySection } from '../../utils/sections';
 
 export const runtime = 'edge';
@@ -95,7 +96,15 @@ export default async function HomePage({ searchParams }) {
         )}
 
         {articles.length > 0 && (
-          <SectionGrid sections={sections} />
+          <div className="space-y-12">
+            {sections.map((block, i) =>
+              block.type === 'special_issue' ? (
+                <SpecialIssueStrip key={`si-${block.label}-${i}`} label={block.label} articles={block.articles} />
+              ) : (
+                <SectionGrid key={`sec-${block.label}-${i}`} sections={[block]} />
+              )
+            )}
+          </div>
         )}
       </div>
     </>

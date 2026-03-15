@@ -228,6 +228,9 @@ export function buildArticleGraph(article, origin = SITE_URL, relatedLinks = [])
     mainEntityOfPage: { '@id': articleUrl },
     ...(keywords ? { keywords } : {}),
     ...(article?.section ? { articleSection: article.section } : {}),
+    ...(article?.special_issue ? {
+      about: { '@type': 'Thing', name: article.special_issue },
+    } : {}),
     ...(citations.length > 0 ? { citation: citations } : {}),
     ...(relatedLinks?.length ? { relatedLink: relatedLinks } : {}),
     inLanguage: 'en-US',
