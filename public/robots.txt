@@ -3,21 +3,12 @@ Sitemap: https://opentuwa.com/sitemap.xml
 Sitemap: https://opentuwa.com/news-sitemap.xml
 Sitemap: https://opentuwa.com/feed.xml
 
-# Robots.txt for OpenTuwa - Independent Journalism & Documentaries
-# Following best practices from BBC, Reuters, The Guardian, Al Jazeera
-
-# Allow all user agents to crawl the site
 User-agent: *
 Allow: /
-
-# Disallow admin and private paths
 Disallow: /admin/
 Disallow: /private/
 Disallow: /api/
-Disallow: /_next/
 Disallow: /node_modules/
-
-# Allow specific API endpoints that might be needed for functionality
 Allow: /api/article/
 Allow: /api/articles/
 Allow: /api/author/
@@ -26,19 +17,14 @@ Allow: /api/recommendations/
 Allow: /api/subscribe/
 Allow: /api/track-interaction/
 
-# Googlebot specific rules
 User-agent: Googlebot
 Allow: /
 Disallow: /api/
-Disallow: /_next/
 
-# Bingbot specific rules
 User-agent: bingbot
 Allow: /
 Disallow: /api/
-Disallow: /_next/
 
-# AI crawlers - allowing them to index content for better visibility
 User-agent: GPTBot
 Allow: /
 

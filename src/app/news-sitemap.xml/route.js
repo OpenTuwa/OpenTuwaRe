@@ -63,6 +63,7 @@ export async function GET() {
     <image:image>
       <image:loc>${esc(imageUrl)}</image:loc>
       <image:title>${esc(a.title || '')}</image:title>
+      <image:caption>${esc(a.title || '')}</image:caption>
     </image:image>` : ''}
   </url>`;
   }
