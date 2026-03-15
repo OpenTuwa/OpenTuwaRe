@@ -2,11 +2,7 @@ import { isBot } from '../_utils/bot-detector.js';
 import { buildArticleGraph } from '../_utils/schema.js';
 import { buildHreflangTags } from '../_utils/hreflang.js';
 import { buildHead } from '../_utils/head.js';
-
-const SITE_NAME = 'OpenTuwa';
-const SITE_URL = 'https://opentuwa.com';
-const LOGO_URL = 'https://opentuwa.com/assets/ui/web_512.png';
-const FEED_URL = 'https://opentuwa.com/feed.xml';
+import { SITE_NAME, SITE_URL, LOGO_URL } from '../_utils/constants.js';
 
 export async function onRequest(context) {
   const { env, request, params } = context;

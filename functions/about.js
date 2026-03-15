@@ -2,13 +2,11 @@ import { isBot } from './_utils/bot-detector.js';
 import { buildAboutGraph } from './_utils/schema.js';
 import { buildHreflangTags } from './_utils/hreflang.js';
 import { buildHead } from './_utils/head.js';
+import { SITE_URL, OG_IMAGE } from './_utils/constants.js';
 
 const PAGE_TITLE = 'About OpenTuwa | Independent Journalism';
 const PAGE_DESC = 'OpenTuwa is an independent platform for long-form articles, research, and media exploring foundational ideas. Built for deep thought, not fast cycles.';
-const OG_IMAGE = 'https://opentuwa.com/assets/ui/web_1200.png';
 const CANONICAL = 'https://opentuwa.com/about';
-const SITE_URL = 'https://opentuwa.com';
-const FEED_URL = 'https://opentuwa.com/feed.xml';
 
 export async function onRequestGet(context) {
   const { request } = context;

@@ -49,3 +49,8 @@ coverage/
 # Specific scripts with hardcoded secrets
 # (Remove this ignore ONLY AFTER you move the Cloudflare API keys to your .env file)
 ping-google.js
+
+# Backup directories — not for deployment
+src/functions.bak/
+*.BAK
+*.bak

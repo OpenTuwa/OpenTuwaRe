@@ -2,12 +2,9 @@ import { isBot } from './_utils/bot-detector.js';
 import { buildHomepageGraph } from './_utils/schema.js';
 import { buildHreflangTags } from './_utils/hreflang.js';
 import { buildHead } from './_utils/head.js';
+import { SITE_NAME, SITE_URL, OG_IMAGE } from './_utils/constants.js';
 
-const SITE_NAME = 'OpenTuwa';
-const SITE_URL = 'https://opentuwa.com';
 const SITE_DESC = 'Discover stories, documentaries, and articles on OpenTuwa. Substantive journalism and rigorous intellectual inquiry.';
-const OG_IMAGE = 'https://opentuwa.com/assets/ui/web_1200.png';
-const FEED_URL = 'https://opentuwa.com/feed.xml';
 
 export async function onRequestGet(context) {
   const { request, env } = context;

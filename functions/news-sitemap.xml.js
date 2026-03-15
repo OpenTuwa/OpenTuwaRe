@@ -1,4 +1,4 @@
-const SITE_URL = 'https://opentuwa.com';
+import { SITE_URL } from './_utils/constants.js';
 
 export async function onRequestGet(context) {
   const { env } = context;

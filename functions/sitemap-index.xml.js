@@ -1,4 +1,4 @@
-const SITE_URL = 'https://opentuwa.com';
+import { SITE_URL } from './_utils/constants.js';
 
 export async function onRequest() {
   const xml = `<?xml version="1.0" encoding="UTF-8"?>

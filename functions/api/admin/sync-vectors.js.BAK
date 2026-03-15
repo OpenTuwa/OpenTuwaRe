@@ -4,9 +4,10 @@ import { NeuralEngine } from '../../_utils/algorithm.js';
 export async function onRequestGet(context) {
   const { env, request } = context;
 
-  // 1. Simple security check
-  const url = new URL(request.url);
-  if (url.searchParams.get('secret') !== 'opentuwa-activate') {
+  // 1. Auth check — requires Authorization: Bearer <ADMIN_SECRET> header
+  const authHeader = request.headers.get('Authorization') || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  if (!token || token !== (env.ADMIN_SECRET || '')) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
 

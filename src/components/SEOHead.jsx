@@ -52,7 +52,11 @@ export function ArticleSEOHead({ article, author, canonicalUrl }) {
       <meta name="twitter:image" content={imageUrl} />
       <meta name="twitter:image:alt" content={article.title} />
       <meta name="twitter:site" content="@opentuwa" />
-      <meta name="twitter:creator" content={author?.name || article.author || '@opentuwa'} />
+      <meta name="twitter:creator" content={
+        author?.author_twitter
+          ? (author.author_twitter.startsWith('@') ? author.author_twitter : `@${author.author_twitter}`)
+          : '@opentuwa'
+      } />
       
       {/* Additional SEO Meta Tags */}
       <meta name="robots" content="index, follow" />

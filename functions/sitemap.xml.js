@@ -1,4 +1,4 @@
-const SITE_URL = 'https://opentuwa.com';
+import { SITE_URL } from './_utils/constants.js';
 
 // Known last-modified dates for static pages — update on each deploy that changes them.
 // Using real dates prevents Googlebot from wasting crawl budget re-fetching unchanged pages.

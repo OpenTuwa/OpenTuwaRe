@@ -134,7 +134,9 @@ export async function generateMetadata({ params }) {
       description: seoDesc,
       images: [{ url: imageUrl, alt: article.title }],
       site: '@opentuwa',
-      creator: article.author ? `@${article.author}` : '@opentuwa',
+      creator: article.author_twitter
+        ? (article.author_twitter.startsWith('@') ? article.author_twitter : `@${article.author_twitter}`)
+        : '@opentuwa',
     },
   };
 }

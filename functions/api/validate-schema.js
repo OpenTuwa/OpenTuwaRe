@@ -9,8 +9,7 @@
  * TEMPORARY — remove after validation is complete.
  */
 import { buildArticleGraph } from '../_utils/schema.js';
-
-const SITE_URL = 'https://opentuwa.com';
+import { SITE_URL } from '../_utils/constants.js';
 
 export async function onRequest({ env, request }) {
   // Only allow in non-production or with a secret token to avoid public exposure
