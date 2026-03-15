@@ -2,7 +2,6 @@ import { getRequestContext } from '@cloudflare/next-on-pages';
 import { fetchCandidates, RecommendationEngine } from '../../utils/algorithm';
 import GraphSchema from '../../components/GraphSchema';
 import { buildHreflangLanguages } from '../../../functions/_utils/hreflang.js';
-import BreakingNewsTicker from '../../components/BreakingNewsTicker';
 import HeroStory from '../../components/HeroStory';
 import SectionGrid from '../../components/SectionGrid';
 import { groupBySection } from '../../utils/sections';
@@ -80,11 +79,6 @@ export default async function HomePage({ searchParams }) {
     console.error('[HomePage] Error fetching articles:', err.message, err.stack);
   }
 
-  // Derive ticker: 5 most recently published
-  const tickerArticles = [...articles]
-    .sort((a, b) => new Date(b.published_at || 0) - new Date(a.published_at || 0))
-    .slice(0, 5);
-
   // Hero: top 5 algorithm-ranked articles for auto-rotating banner
   const heroArticles = articles.slice(0, 5);
 
@@ -94,7 +88,6 @@ export default async function HomePage({ searchParams }) {
   return (
     <>
       <GraphSchema type="homepage" />
-      <BreakingNewsTicker articles={tickerArticles} />
       <HeroStory articles={heroArticles} />
       <div className="max-w-7xl mx-auto px-4 md:px-6 pt-10 pb-24 min-h-screen">
         {articles.length === 0 && (

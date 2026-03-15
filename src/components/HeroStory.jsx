@@ -18,88 +18,78 @@ export default function HeroStory({ articles }) {
   if (!articles || articles.length === 0) return null;
 
   return (
-    <div className="relative w-full h-[calc(100vh-119px)] min-h-[480px] max-h-[700px] overflow-hidden bg-tuwa-gray">
+    <div className="relative w-full overflow-hidden bg-[#0a0a0b]" style={{ height: 'calc(100vh - 80px)', minHeight: 480, maxHeight: 640 }}>
       {articles.map((article, i) => {
         const hasImage = Boolean(article.image_url);
-        const primaryTag = article.tags?.split(',')[0]?.trim();
+        const section = article.section || article.category || null;
+        const author = article.author_name || article.author || null;
+        const date = article.published_at
+          ? new Date(article.published_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+          : null;
 
         return (
           <div
             key={article.slug}
-            className="absolute inset-0 transition-opacity duration-1000"
+            className="absolute inset-0 transition-opacity duration-700"
             style={{ opacity: i === index ? 1 : 0, pointerEvents: i === index ? 'auto' : 'none' }}
           >
-            {/* Background image or fallback */}
-            {hasImage ? (
-              <SkeletonImage
-                src={article.image_url}
-                alt={article.title}
-                className="absolute inset-0 w-full h-full object-cover"
-              />
-            ) : (
-              <div className="absolute inset-0 bg-tuwa-gray" />
-            )}
-
-            {/* Gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
-
-            {/* Text + link — inside each slide so it fades with the image */}
-            <Link
-              href={`/articles/${article.slug}`}
-              className="absolute inset-0 flex flex-col justify-end p-6 md:p-12"
-              tabIndex={i === index ? 0 : -1}
-            >
-              <div className="max-w-3xl">
-                {primaryTag && (
-                  <span className="inline-block mb-3 px-2 py-0.5 bg-tuwa-accent text-white text-xs font-bold uppercase tracking-wider rounded">
-                    {primaryTag}
+            <Link href={`/articles/${article.slug}`} className="flex h-full" tabIndex={i === index ? 0 : -1}>
+              {/* Left: text panel */}
+              <div className="relative z-10 flex flex-col justify-end w-full md:w-[45%] bg-[#0a0a0b] px-8 md:px-12 py-10 shrink-0">
+                {section && (
+                  <span className="text-tuwa-accent text-xs font-bold uppercase tracking-widest mb-3">
+                    {section}
                   </span>
                 )}
-                <h1 className="text-3xl md:text-5xl font-heading font-bold text-white leading-tight mb-3">
+                <h1 className="text-white text-2xl md:text-3xl font-bold leading-snug mb-3 line-clamp-4">
                   {article.title}
                 </h1>
                 {article.subtitle && (
-                  <p className="text-white/70 text-base md:text-lg line-clamp-2 mb-4">
+                  <p className="text-white/60 text-sm leading-relaxed line-clamp-2 mb-4">
                     {article.subtitle}
                   </p>
                 )}
-                {(article.author_name || article.author || article.published_at) && (
-                  <p className="text-white/60 text-sm">
-                    {(article.author_name || article.author) && (
-                      <span>{article.author_name || article.author}</span>
-                    )}
-                    {(article.author_name || article.author) && article.published_at && (
-                      <span className="mx-2 opacity-50">·</span>
-                    )}
-                    {article.published_at && (
-                      <span>
-                        {new Date(article.published_at).toLocaleDateString('en-GB', {
-                          day: 'numeric',
-                          month: 'long',
-                          year: 'numeric',
-                        })}
-                      </span>
-                    )}
-                  </p>
+                <p className="text-white/40 text-xs">
+                  {author && <span>{author}</span>}
+                  {author && date && <span className="mx-2">·</span>}
+                  {date && <span>{date}</span>}
+                </p>
+
+                {/* Slide indicators */}
+                {articles.length > 1 && (
+                  <div className="flex gap-1.5 mt-6 pointer-events-none">
+                    {articles.map((_, j) => (
+                      <span
+                        key={j}
+                        className="block h-[2px] rounded-full transition-all duration-500"
+                        style={{
+                          width: j === index ? 24 : 12,
+                          background: j === index ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.2)',
+                        }}
+                      />
+                    ))}
+                  </div>
                 )}
+              </div>
+
+              {/* Right: image */}
+              <div className="hidden md:block flex-1 relative overflow-hidden">
+                {hasImage ? (
+                  <SkeletonImage
+                    src={article.image_url}
+                    alt={article.title}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 bg-tuwa-gray" />
+                )}
+                {/* subtle left-edge fade to blend with text panel */}
+                <div className="absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-[#0a0a0b] to-transparent" />
               </div>
             </Link>
           </div>
         );
       })}
-
-      {/* Progress indicators — read-only, no interaction */}
-      {articles.length > 1 && (
-        <div className="absolute bottom-5 right-6 flex gap-2 pointer-events-none z-10">
-          {articles.map((_, i) => (
-            <span
-              key={i}
-              className="block h-[2px] w-6 rounded-full transition-all duration-700"
-              style={{ background: i === index ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.2)' }}
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
