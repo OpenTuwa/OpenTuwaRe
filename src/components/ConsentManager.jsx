@@ -81,10 +81,15 @@ export default function ConsentManager() {
           },
         });
 
-        // Show the floating cookie icon only on the /legal page
-        if (isLegal) {
-          document.body.classList.add('show-consent-icon');
-        }
+        // Patch showCookieIcon to only show on /legal
+        // The JS sets inline style.display = 'flex' which overrides CSS, so we must intercept here
+        const instance = window.silktideConsentManager.getInstance();
+        const originalShow = instance.showCookieIcon.bind(instance);
+        instance.showCookieIcon = function () {
+          if (window.location.pathname === '/legal') {
+            originalShow();
+          }
+        };
       }}
     />
   );

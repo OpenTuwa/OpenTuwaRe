@@ -475,10 +475,7 @@ Modal - Footer
   fill: var(--iconBackgroundColor);
 }
 
-/* On /legal page, allow the icon to show (class added by ConsentManager) */
-body.show-consent-icon #stcm-icon {
-  display: flex !important;
-}
+/* On /legal page, allow the icon to show — visibility controlled by JS patch in ConsentManager.jsx */
 
 /* --------------------------------
 Backdrop
