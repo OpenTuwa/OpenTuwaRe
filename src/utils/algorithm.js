@@ -249,8 +249,26 @@ export async function fetchCandidates(env, limit = 100, searchQuery = null, auth
     if (searchQuery) {
       const q = searchQuery.trim();
       const wildcard = `%${q.replace(/%/g, '\\%').replace(/_/g, '\\_')}%`;
-      const sql = `${selectClause} WHERE (a.title LIKE ? ESCAPE '\\' OR a.subtitle LIKE ? ESCAPE '\\' OR a.seo_description LIKE ? ESCAPE '\\') ORDER BY a.published_at DESC LIMIT ?`;
-      const { results: raw } = await env.DB.prepare(sql).bind(wildcard, wildcard, wildcard, limit).all();
+      const sql = `${selectClause}
+        WHERE (
+          a.title           LIKE ? ESCAPE '\\'
+          OR a.subtitle     LIKE ? ESCAPE '\\'
+          OR a.seo_description LIKE ? ESCAPE '\\'
+          OR a.author       LIKE ? ESCAPE '\\'
+          OR a.author_name  LIKE ? ESCAPE '\\'
+          OR a.slug         LIKE ? ESCAPE '\\'
+          OR a.tags         LIKE ? ESCAPE '\\'
+          OR a.section      LIKE ? ESCAPE '\\'
+          OR a.category     LIKE ? ESCAPE '\\'
+          OR a.content_html LIKE ? ESCAPE '\\'
+          OR strftime('%Y', a.published_at)       LIKE ? ESCAPE '\\'
+          OR strftime('%m', a.published_at)       LIKE ? ESCAPE '\\'
+          OR strftime('%Y-%m', a.published_at)    LIKE ? ESCAPE '\\'
+        )
+        ORDER BY a.published_at DESC LIMIT ?`;
+      const { results: raw } = await env.DB.prepare(sql)
+        .bind(wildcard, wildcard, wildcard, wildcard, wildcard, wildcard, wildcard, wildcard, wildcard, wildcard, wildcard, wildcard, wildcard, limit)
+        .all();
       results = raw || [];
     } else if (author) {
       const sql = `${selectClause} WHERE a.author = ? ORDER BY a.published_at DESC LIMIT ?`;

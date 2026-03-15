@@ -7,13 +7,30 @@ import SkeletonImage from './SkeletonImage';
 export default function HeroStory({ articles }) {
   const [index, setIndex] = useState(0);
 
+  // Compute per-article dwell times once from trending scores.
+  // Higher score → shorter dwell (2s min), lower score → longer dwell (5s max).
+  const dwellTimes = (() => {
+    if (!articles || articles.length === 0) return [];
+    const scores = articles.map(a => a._trending_score ?? 0);
+    const min = Math.min(...scores);
+    const max = Math.max(...scores);
+    const range = max - min || 1; // avoid div-by-zero when all scores equal
+    return scores.map(s => {
+      // normalise 0→1 (0 = lowest score, 1 = highest)
+      const t = (s - min) / range;
+      // invert: highest score → 2000ms, lowest → 5000ms
+      return Math.round(5000 - t * 3000);
+    });
+  })();
+
   useEffect(() => {
     if (!articles || articles.length <= 1) return;
-    const timer = setInterval(() => {
+    const ms = dwellTimes[index] ?? 4000;
+    const timer = setTimeout(() => {
       setIndex(i => (i + 1) % articles.length);
-    }, 4000);
-    return () => clearInterval(timer);
-  }, [articles]);
+    }, ms);
+    return () => clearTimeout(timer);
+  }, [articles, index]); // re-run each time index changes so the next dwell is applied
 
   if (!articles || articles.length === 0) return null;
 
