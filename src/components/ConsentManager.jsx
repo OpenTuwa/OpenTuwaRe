@@ -1,8 +1,12 @@
 'use client';
 
 import Script from 'next/script';
+import { usePathname } from 'next/navigation';
 
 export default function ConsentManager() {
+  const pathname = usePathname();
+  const isLegal = pathname === '/legal';
+
   return (
     <Script
       src="/legal/cookieconsent.js"
@@ -76,6 +80,11 @@ export default function ConsentManager() {
             },
           },
         });
+
+        // Show the floating cookie icon only on the /legal page
+        if (isLegal) {
+          document.body.classList.add('show-consent-icon');
+        }
       }}
     />
   );
