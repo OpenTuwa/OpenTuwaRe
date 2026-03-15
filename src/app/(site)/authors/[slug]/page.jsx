@@ -1,11 +1,11 @@
 import { getRequestContext } from '@cloudflare/next-on-pages';
 import { notFound } from 'next/navigation';
 import GraphSchema from '../../../../components/GraphSchema';
+import { buildHreflangLanguages } from '../../../../../functions/_utils/hreflang.js';
 
 export const runtime = 'edge';
 
 const SITE_URL = 'https://opentuwa.com';
-const LOCALES = ['en', 'zh-Hans', 'hi', 'es', 'fr', 'ar', 'bn', 'ru', 'pt', 'ur', 'ja', 'tr', 'de'];
 
 async function getAuthorData(slug, env) {
   try {
@@ -49,9 +49,7 @@ export async function generateMetadata({ params }) {
   const imgWidth = author.author_image ? 400 : 512;
   const imgHeight = author.author_image ? 400 : 512;
 
-  const languages = {};
-  LOCALES.forEach(locale => { languages[locale] = authorUrl; });
-  languages['x-default'] = authorUrl;
+  const languages = buildHreflangLanguages(authorUrl);
 
   return {
     title: pageTitle,

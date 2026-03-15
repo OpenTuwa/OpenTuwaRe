@@ -1,6 +1,7 @@
 import { getRequestContext } from '@cloudflare/next-on-pages';
 import AboutPageContent from '../../../components/AboutPageContent';
 import GraphSchema from '../../../components/GraphSchema';
+import { buildHreflangLanguages } from '../../../../functions/_utils/hreflang.js';
 
 export const runtime = 'edge';
 
@@ -25,10 +26,7 @@ export const metadata = {
   },
   alternates: {
     canonical: 'https://opentuwa.com/about',
-    languages: Object.fromEntries(
-      ['en','zh-Hans','hi','es','fr','ar','bn','ru','pt','ur','ja','tr','de','x-default']
-        .map(l => [l, 'https://opentuwa.com/about'])
-    ),
+    languages: buildHreflangLanguages('https://opentuwa.com/about'),
   },
   robots: { index: true, follow: true },
 };

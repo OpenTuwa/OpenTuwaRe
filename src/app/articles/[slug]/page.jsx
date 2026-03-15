@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import ArticleView from '../../../components/ArticleView';
 import { fetchCandidates, RecommendationEngine } from '../../../utils/algorithm';
 import GraphSchema from '../../../components/GraphSchema';
+import { buildHreflangLanguages } from '../../../../functions/_utils/hreflang.js';
 
 export const runtime = 'edge';
 
@@ -74,10 +75,17 @@ export async function generateMetadata({ params }) {
   const imageHeight = article.image_url ? 630 : 512;
   const canonicalUrl = `https://opentuwa.com/articles/${slug}`;
 
-  const locales = ['en', 'zh-Hans', 'hi', 'es', 'fr', 'ar', 'bn', 'ru', 'pt', 'ur', 'ja', 'tr', 'de'];
-  const languages = {};
-  locales.forEach(locale => { languages[locale] = canonicalUrl; });
-  languages['x-default'] = canonicalUrl;
+  // Parse available_translations defensively
+  let availableTranslations = null;
+  if (article.available_translations) {
+    try {
+      availableTranslations = typeof article.available_translations === 'string'
+        ? JSON.parse(article.available_translations)
+        : article.available_translations;
+    } catch (_) {}
+  }
+
+  const languages = buildHreflangLanguages(canonicalUrl, availableTranslations);
 
   let tagsArray = [];
   if (Array.isArray(article.tags)) tagsArray = article.tags;

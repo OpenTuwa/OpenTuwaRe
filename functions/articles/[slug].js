@@ -21,7 +21,8 @@ export async function onRequest(context) {
   try {
     const { results } = await env.DB.prepare(
       `SELECT title, seo_description, subtitle, excerpt, image_url,
-              author, author_name, published_at, updated_at, content_html, tags, section
+              author, author_name, published_at, updated_at, content_html, tags, section,
+              available_translations
        FROM articles WHERE slug = ? LIMIT 1`
     ).bind(slug).all();
     article = results?.[0] || null;
@@ -50,6 +51,18 @@ export async function onRequest(context) {
     }
   }
   const keywords = tagsArray.join(', ');
+
+  // Parse available_translations defensively
+  let availableTranslations = null;
+  if (article.available_translations) {
+    try {
+      availableTranslations = typeof article.available_translations === 'string'
+        ? JSON.parse(article.available_translations)
+        : article.available_translations;
+    } catch (_) {
+      availableTranslations = null;
+    }
+  }
 
   // OG image: use article's own image at 1200×630, fall back to logo at 512×512
   const hasImage = !!image;
@@ -92,7 +105,7 @@ export async function onRequest(context) {
   <meta name="author" content="${esc(authorDisplay)}">
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
   <link rel="canonical" href="${canonicalUrl}">
-  ${buildHreflangTags(`/articles/${slug}`)}
+  ${buildHreflangTags(`/articles/${slug}`, availableTranslations)}
   <link rel="alternate" type="application/rss+xml" title="${SITE_NAME} RSS Feed" href="${FEED_URL}">
   <meta property="og:site_name" content="${SITE_NAME}">
   <meta property="og:title" content="${esc(title)}">

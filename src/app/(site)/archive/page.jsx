@@ -1,6 +1,7 @@
 import { getRequestContext } from '@cloudflare/next-on-pages';
 import ArchiveContent from '../../../components/ArchiveContent';
 import GraphSchema from '../../../components/GraphSchema';
+import { buildHreflangLanguages } from '../../../../functions/_utils/hreflang.js';
 
 export const runtime = 'edge';
 
@@ -25,11 +26,8 @@ export const metadata = {
   },
   alternates: {
     canonical: 'https://opentuwa.com/archive',
-    languages: Object.fromEntries(
-      ['en','zh-Hans','hi','es','fr','ar','bn','ru','pt','ur','ja','tr','de','x-default']
-        .map(l => [l, 'https://opentuwa.com/archive'])
-    ),
-  }, // SEO: Req 13.2, 13.6 — canonical URL, no trailing slash
+    languages: buildHreflangLanguages('https://opentuwa.com/archive'),
+  },
   robots: { index: true, follow: true },
 };
 
