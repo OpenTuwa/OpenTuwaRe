@@ -129,10 +129,33 @@ export function buildArticleGraph(article, origin = SITE_URL) {
   const tagsArray = parseTags(article.tags);
   const keywords = tagsArray.length > 0 ? tagsArray.join(', ') : null;
 
-  // Only emit image node when using the article's own image (not the fallback logo)
-  const articleImage = imageAbsolute && imageAbsolute !== LOGO_URL
-    ? { '@type': 'ImageObject', url: imageAbsolute, width: 1200, height: 630 }
+  // Rich ImageObject — only emit when we have a real image (not the fallback logo)
+  const imageObject = imageAbsolute && imageAbsolute !== LOGO_URL
+    ? {
+        '@type': 'ImageObject',
+        url: imageAbsolute,
+        width: 1200,
+        height: 630,
+        caption: article?.image_alt || title || '',
+        description: article?.image_alt || title || '',
+        representativeOfPage: 'true',
+      }
     : null;
+
+  // Citation extraction — parse external hrefs from article.content
+  const citations = [];
+  if (article?.content) {
+    const hrefRegex = /href="([^"]+)"/g;
+    let match;
+    const seen = new Set();
+    while ((match = hrefRegex.exec(article.content)) !== null) {
+      const url = match[1];
+      if (!url.includes('opentuwa.com') && !seen.has(url)) {
+        seen.add(url);
+        citations.push({ '@type': 'CreativeWork', url });
+      }
+    }
+  }
 
   // NewsArticle node
   const articleNode = {
@@ -140,40 +163,41 @@ export function buildArticleGraph(article, origin = SITE_URL) {
     '@id': `${articleUrl}#article`,
     headline: title,
     description: desc,
-    ...(articleImage ? { image: articleImage } : {}),
+    ...(imageObject ? { image: imageObject } : {}),
     ...(datePublished ? { datePublished } : {}),
     ...(dateModified ? { dateModified } : {}),
     author: { '@id': `${base}/authors/${aSlug}#person` },
     publisher: { '@id': `${base}/#organization` },
     mainEntityOfPage: { '@id': articleUrl },
     ...(keywords ? { keywords } : {}),
-    ...(article.section ? { articleSection: article.section } : {}),
+    ...(article?.section ? { articleSection: article.section } : {}),
+    ...(citations.length > 0 ? { citation: citations } : {}),
     inLanguage: 'en-US',
     isAccessibleForFree: true,
   };
 
   // Person (author) node — enriched with DB fields when available
-  const authorData = article._author || {};
+  const authorData = article?._author ?? {};
   const personNode = {
     '@type': 'Person',
     '@id': `${base}/authors/${aSlug}#person`,
     name: authorName,
     jobTitle: 'Journalist',
     url: `${base}/authors/${aSlug}`,
-    ...(authorData.author_bio ? { description: authorData.author_bio } : {}),
-    ...(authorData.author_image
+    ...(authorData?.author_bio ? { description: authorData.author_bio } : {}),
+    ...(authorData?.author_image
       ? { image: { '@type': 'ImageObject', url: authorData.author_image } }
       : {}),
-    ...((authorData.author_twitter || authorData.author_linkedin ||
-         authorData.author_facebook || authorData.author_youtube)
+    ...((authorData?.author_twitter || authorData?.author_linkedin ||
+         authorData?.author_facebook || authorData?.author_youtube)
       ? {
           sameAs: [
-            authorData.author_twitter
+            authorData?.author_twitter
               ? `https://twitter.com/${authorData.author_twitter.replace('@', '')}`
               : null,
-            authorData.author_linkedin || null,
-            authorData.author_facebook || null,
-            authorData.author_youtube || null,
+            authorData?.author_linkedin ?? null,
+            authorData?.author_facebook ?? null,
+            authorData?.author_youtube ?? null,
           ].filter(Boolean),
         }
       : {}),
