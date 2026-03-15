@@ -36,7 +36,7 @@ export default function Navbar({ showSearch = false, onSearch, sections = [] }) 
       {/* 3px red top strip — hidden on homepage when at top */}
       {!(isHome && !isScrolled) && <div className="bg-red-600 h-[3px] w-full" />}
 
-      <header className={`backdrop-blur-md border-b transition-colors duration-300 ${isHome && !isScrolled ? 'bg-transparent border-transparent' : 'bg-[rgba(10,10,11,0.9)] border-white/5'}`}>
+      <header className={`border-b transition-colors duration-300 ${isHome && !isScrolled ? 'bg-transparent border-transparent' : 'backdrop-blur-md bg-[rgba(10,10,11,0.9)] border-white/5'}`}>
         <nav aria-label="Site navigation" className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center space-x-8">
             <Link className="text-2xl font-extrabold tracking-tighter font-heading text-white" href="/">OpenTuwa</Link>
@@ -63,13 +63,6 @@ export default function Navbar({ showSearch = false, onSearch, sections = [] }) 
           </div>
 
           <div className="flex items-center gap-4">
-
-            {/* Search icon button — always visible on desktop */}
-            <button aria-label="Search" className="hidden md:flex items-center justify-center w-8 h-8 text-tuwa-muted hover:text-white transition-colors">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-              </svg>
-            </button>
 
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}

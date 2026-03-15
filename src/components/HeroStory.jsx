@@ -18,7 +18,7 @@ export default function HeroStory({ articles }) {
   if (!articles || articles.length === 0) return null;
 
   return (
-    <div className="relative w-full h-[calc(100vh-83px)] min-h-[480px] max-h-[700px] overflow-hidden bg-tuwa-gray">
+    <div className="relative w-full h-[calc(100vh-119px)] min-h-[480px] max-h-[700px] overflow-hidden bg-tuwa-gray">
       {articles.map((article, i) => {
         const hasImage = Boolean(article.image_url);
         const primaryTag = article.tags?.split(',')[0]?.trim();

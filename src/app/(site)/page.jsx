@@ -5,7 +5,6 @@ import { buildHreflangLanguages } from '../../../functions/_utils/hreflang.js';
 import BreakingNewsTicker from '../../components/BreakingNewsTicker';
 import HeroStory from '../../components/HeroStory';
 import SectionGrid from '../../components/SectionGrid';
-import TrendingRail from '../../components/TrendingRail';
 import { groupBySection } from '../../utils/sections';
 
 export const runtime = 'edge';
@@ -89,34 +88,21 @@ export default async function HomePage({ searchParams }) {
   // Hero: top 5 algorithm-ranked articles for auto-rotating banner
   const heroArticles = articles.slice(0, 5);
 
-  // Section grids: all articles grouped by section/category (hero articles also appear here)
+  // Section grids: all articles grouped by section/category
   const sections = groupBySection(articles);
-
-  // Trending rail: top 5 by trending score (already sorted)
-  const trendingArticles = articles.slice(0, 5);
 
   return (
     <>
       <GraphSchema type="homepage" />
       <BreakingNewsTicker articles={tickerArticles} />
-      <div className="max-w-7xl mx-auto px-4 md:px-6 pt-4 pb-24 min-h-screen">
-        <HeroStory articles={heroArticles} />
-
+      <HeroStory articles={heroArticles} />
+      <div className="max-w-7xl mx-auto px-4 md:px-6 pt-10 pb-24 min-h-screen">
         {articles.length === 0 && (
           <div className="text-center text-tuwa-muted py-20">No stories found.</div>
         )}
 
         {articles.length > 0 && (
-          <div className="mt-10 grid grid-cols-1 lg:grid-cols-4 gap-8">
-            {/* Main content: section grids */}
-            <div className="lg:col-span-3">
-              <SectionGrid sections={sections} />
-            </div>
-            {/* Sidebar: trending rail */}
-            <div className="lg:col-span-1">
-              <TrendingRail articles={trendingArticles} />
-            </div>
-          </div>
+          <SectionGrid sections={sections} />
         )}
       </div>
     </>
