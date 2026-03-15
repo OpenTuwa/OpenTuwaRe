@@ -283,7 +283,7 @@ export default function Legal() {
               {/* Footer */}
               <div className="mt-20 pt-8 border-t border-white/10 text-sm text-tuwa-muted"> 
                   <span data-i18n="footer_copy">&copy; 2026 OpenTuwa&reg; Labs. All rights reserved.</span> <br/>
-                  <a data-i18n="footer_contact" href="mailto:15155151ae@gmail.com" className="text-tuwa-accent hover:text-white transition-colors underline-offset-4 underline decoration-tuwa-accent/50 mt-2 inline-block">Contact us</a>.
+                  <a data-i18n="footer_contact" href="mailto:founder@opentuwa.com" className="text-tuwa-accent hover:text-white transition-colors underline-offset-4 underline decoration-tuwa-accent/50 mt-2 inline-block">Contact us</a>.
               </div>
               
               <div className="mt-8 flex space-x-6">

@@ -27,6 +27,20 @@ async function getAuthor(name, env) {
   }
 }
 
+async function getSiloArticles(article, env) {
+  try {
+    const categoryFilter = article?.category_slug || article?.category || article?.section;
+    if (!categoryFilter) return [];
+    const col = article.category_slug ? 'category_slug' : (article.category ? 'category' : 'section');
+    const { results } = await env.DB.prepare(
+      `SELECT slug, title, image_url, published_at FROM articles WHERE ${col} = ? AND slug != ? ORDER BY published_at DESC LIMIT 3`
+    ).bind(categoryFilter, article.slug).all();
+    return results || [];
+  } catch (_) {
+    return [];
+  }
+}
+
 async function getRecommendations(article, env) {
   try {
     // Parse article's neural_vector to use as user vector
@@ -135,21 +149,27 @@ export default async function ArticlePage({ params }) {
     notFound();
   }
 
-  const [authorInfo, recommended] = await Promise.all([
+  const [authorInfo, recommended, siloArticles] = await Promise.all([
     getAuthor(article.author, env),
-    getRecommendations(article, env)
+    getRecommendations(article, env),
+    getSiloArticles(article, env),
   ]);
+
+  const relatedLinks = siloArticles
+    .filter(r => r?.slug)
+    .map(r => `https://opentuwa.com/articles/${r.slug}`);
 
   return (
     <>
       {article.image_url && (
         <link rel="preload" as="image" href={article.image_url} fetchPriority="high" />
       )}
-      <GraphSchema type="article" data={article} />
+      <GraphSchema type="article" data={{ ...article, relatedLinks }} />
       <ArticleView
         article={article}
         recommended={recommended}
         authorInfo={authorInfo}
+        furtherReading={siloArticles}
       />
     </>
   );

@@ -1,3 +1,8 @@
+Sitemap: https://opentuwa.com/sitemap-index.xml
+Sitemap: https://opentuwa.com/sitemap.xml
+Sitemap: https://opentuwa.com/news-sitemap.xml
+Sitemap: https://opentuwa.com/feed.xml
+
 # Robots.txt for OpenTuwa - Independent Journalism & Documentaries
 # Following best practices from BBC, Reuters, The Guardian, Al Jazeera
 
@@ -20,15 +25,6 @@ Allow: /api/authors/
 Allow: /api/recommendations/
 Allow: /api/subscribe/
 Allow: /api/track-interaction/
-
-# Sitemap locations
-Sitemap: https://opentuwa.com/sitemap-index.xml
-Sitemap: https://opentuwa.com/sitemap.xml
-Sitemap: https://opentuwa.com/news-sitemap.xml
-Sitemap: https://opentuwa.com/feed.xml
-
-# Crawl-delay for aggressive bots (optional)
-# Crawl-delay: 10
 
 # Googlebot specific rules
 User-agent: Googlebot

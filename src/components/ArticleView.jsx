@@ -25,7 +25,7 @@ const ArticleContent = React.memo(({ html }) => {
   return <div dangerouslySetInnerHTML={{ __html: html || '<p>No content available.</p>' }} />;
 });
 
-export default function ArticleView({ article, recommended = [], authorInfo = {} }) {
+export default function ArticleView({ article, recommended = [], authorInfo = {}, furtherReading = [] }) {
   const router = useRouter();
   const slug = article.slug;
   
@@ -308,6 +308,24 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
           </article>
 
           <VttEngine key={slug} articleRef={articleRef} slug={slug} htmlContent={article?.content_html} />
+
+          {furtherReading.length > 0 && (
+            <nav aria-label="Further reading" className="max-w-[720px] mx-auto px-6 pb-10">
+              <h2 className="text-lg font-bold text-white mb-4 uppercase tracking-widest text-xs text-tuwa-muted">Further Reading</h2>
+              <ul className="space-y-3">
+                {furtherReading.filter(r => r?.slug).map(r => (
+                  <li key={r.slug}>
+                    <Link href={`/articles/${r.slug}`} className="flex items-center gap-4 group rounded-xl p-3 hover:bg-white/5 transition-colors border border-transparent hover:border-white/10">
+                      {r.image_url && (
+                        <SkeletonImage src={r.image_url} alt={r.title || ''} width={72} height={48} className="w-18 h-12 rounded-lg object-cover shrink-0 opacity-80 group-hover:opacity-100 transition-opacity" />
+                      )}
+                      <span className="text-sm font-semibold text-white/80 group-hover:text-white transition-colors line-clamp-2 leading-snug">{r.title || 'Article'}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          )}
 
           {!inRecZone && (
             <aside className={`fixed right-4 top-28 w-64 hidden xl:block transition-all duration-500 z-40 ${showSidebar ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 pointer-events-none'}`}>

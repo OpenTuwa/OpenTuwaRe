@@ -1,6 +1,7 @@
 import { isBot } from '../_utils/bot-detector.js';
 import { buildAuthorGraph } from '../_utils/schema.js';
 import { buildHreflangTags } from '../_utils/hreflang.js';
+import { buildHead } from '../_utils/head.js';
 
 const SITE_NAME = 'OpenTuwa';
 const SITE_URL = 'https://opentuwa.com';
@@ -61,62 +62,31 @@ export async function onRequest(context) {
   const botHtml = `<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <script id="Cookiebot" src="https://consent.cookiebot.com/uc.js" data-cbid="87b34ddf-45f5-47fc-8a13-87fcb9d1aa85" type="text/javascript" async></script>
-  <link rel="icon" type="image/png" sizes="32x32" href="/assets/ui/web_512.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="/assets/ui/web_512.png">
-  <link rel="apple-touch-icon" href="/assets/ui/web_512.png">
-  <meta name="theme-color" content="#0a0a0b">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${esc(pageTitle)}</title>
-  <meta name="description" content="${esc(pageDesc)}">
-  <meta name="robots" content="index, follow">
-  <link rel="canonical" href="${canonicalUrl}">
-  ${buildHreflangTags(`/authors/${slug}`)}
-  <link rel="alternate" type="application/rss+xml" title="${SITE_NAME} RSS Feed" href="${FEED_URL}">
-  <meta property="og:site_name" content="${SITE_NAME}">
-  <meta property="og:title" content="${esc(pageTitle)}">
-  <meta property="og:description" content="${esc(pageDesc)}">
-  <meta property="og:image" content="${esc(ogImage)}">
-  <meta property="og:image:width" content="${ogImgWidth}">
-  <meta property="og:image:height" content="${ogImgHeight}">
-  <meta property="og:type" content="profile">
-  <meta property="og:url" content="${canonicalUrl}">
-  <meta name="twitter:card" content="summary">
-  <meta name="twitter:site" content="@opentuwa">
-  <meta name="twitter:title" content="${esc(pageTitle)}">
-  <meta name="twitter:description" content="${esc(pageDesc)}">
-  <meta name="twitter:image" content="${esc(ogImage)}">
-  <script type="application/ld+json">${jsonLd}</script>
-  <style>
-    :root{--bg:#0a0a0b;--text:#e5e5e5;--muted:#c4c4c4;--accent:#3b82f6}
-    *{box-sizing:border-box}
-    body{background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;line-height:1.8;margin:0;padding:2rem}
-    main{max-width:700px;margin:0 auto}
-    h1{color:#fff;font-size:2rem;margin-bottom:.5rem}
-    h2{color:#fff;font-size:1.25rem;margin-top:2rem}
-    .bio{color:var(--muted);margin-bottom:1.5rem}
-    .avatar{border-radius:50%;width:80px;height:80px;object-fit:cover;margin-bottom:1rem}
-    ul{padding-left:1.5rem}
-    li{margin-bottom:.75rem}
-    .meta{font-size:.8rem;color:var(--muted);margin-left:.5rem}
-    a{color:var(--accent)}
-    nav a{color:#fff;font-weight:700;text-decoration:none}
-    footer{max-width:700px;margin:3rem auto 0;font-size:.8rem;color:var(--muted)}
-    footer a{color:var(--muted)}
-  </style>
+  ${buildHead({
+    title: esc(pageTitle),
+    desc: esc(pageDesc),
+    canonical: canonicalUrl,
+    hreflang: buildHreflangTags(`/authors/${slug}`),
+    ogType: 'profile',
+    ogImage: esc(ogImage),
+    ogImageWidth: ogImgWidth,
+    ogImageHeight: ogImgHeight,
+    twitterCard: 'summary',
+    jsonLd,
+    cssVariant: 'author',
+  })}
 </head>
 <body>
-  <main>
-    <nav aria-label="Site navigation">
-      <a href="/" aria-label="${SITE_NAME} home">${SITE_NAME}</a>
-    </nav>
+  <nav>
+    <a href="/" class="brand" aria-label="${SITE_NAME} home">${SITE_NAME}</a>
+  </nav>
+  <div class="author-wrap">
     ${author.author_image ? `<img src="${esc(author.author_image)}" alt="${esc(authorName)}" class="avatar">` : ''}
     <h1>${esc(authorName)}</h1>
     ${author.author_bio ? `<p class="bio">${esc(author.author_bio)}</p>` : ''}
     <h2>Articles</h2>
     ${articleListHtml}
-  </main>
+  </div>
   <footer>
     <p>&copy; ${new Date().getFullYear()} OpenTuwa Media.
       <a href="/legal">Legal</a> |

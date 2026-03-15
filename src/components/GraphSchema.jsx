@@ -21,10 +21,14 @@ const ORG_NODE = {
   },
   foundingDate: '2024',
   areaServed: 'Worldwide',
+  ethicsPolicy: 'https://opentuwa.com/legal#ethics',
+  masthead: 'https://opentuwa.com/about#team',
+  correctionsPolicy: 'https://opentuwa.com/legal#corrections',
   contactPoint: {
     '@type': 'ContactPoint',
-    contactType: 'editorial',
+    contactType: 'newsroom',
     email: 'founder@opentuwa.com',
+    availableLanguage: ['English'],
   },
   sameAs: [
     'https://twitter.com/opentuwa',
@@ -104,7 +108,7 @@ function buildPersonNode({ id, name, url, orgId, bio, image, twitter, linkedin, 
 
 // ─── Graph builders ───────────────────────────────────────────────────────────
 
-export function buildArticleGraph(article, origin = SITE_URL) {
+export function buildArticleGraph(article, origin = SITE_URL, relatedLinks = []) {
   const base = origin || SITE_URL;
   const slug = article.slug || '';
   const articleUrl = `${base}/articles/${slug}`;
@@ -147,20 +151,36 @@ export function buildArticleGraph(article, origin = SITE_URL) {
     }
   }
 
+  // Article type — LiveBlogPosting for breaking news, NewsArticle otherwise
+  const isBreaking = !!article?.is_breaking;
+  const coverageStart = safeIso(article?.created_at);
+  const coverageEnd   = safeIso(article?.updated_at);
+  const liveBlogUpdate = isBreaking && title
+    ? {
+        '@type': 'BlogPosting',
+        headline: title,
+        ...(safeIso(article?.updated_at) ? { datePublished: safeIso(article.updated_at) } : {}),
+      }
+    : null;
+
   const articleNode = {
-    '@type': 'NewsArticle',
+    '@type': isBreaking ? 'LiveBlogPosting' : 'NewsArticle',
     '@id': `${articleUrl}#article`,
     headline: title,
     description: desc,
     ...(imageObject ? { image: imageObject } : {}),
     ...(datePublished ? { datePublished } : {}),
     ...(dateModified ? { dateModified } : {}),
+    ...(isBreaking && coverageStart ? { coverageStartTime: coverageStart } : {}),
+    ...(isBreaking && coverageEnd   ? { coverageEndTime: coverageEnd } : {}),
+    ...(liveBlogUpdate ? { liveBlogUpdate } : {}),
     author: { '@id': `${base}/authors/${aSlug}#person` },
     publisher: { '@id': `${base}/#organization` },
     mainEntityOfPage: { '@id': articleUrl },
     ...(keywords ? { keywords } : {}),
     ...(article?.section ? { articleSection: article.section } : {}),
     ...(citations.length > 0 ? { citation: citations } : {}),
+    ...(relatedLinks?.length ? { relatedLink: relatedLinks } : {}),
     inLanguage: 'en-US',
     isAccessibleForFree: true,
   };
@@ -181,12 +201,21 @@ export function buildArticleGraph(article, origin = SITE_URL) {
     knowsAbout: article?.section ? [article.section] : undefined,
   });
 
+  // BreadcrumbList node — 3-tier: Home > Category > Article
+  // Omit a tier entirely rather than emit a broken URL
+  const safeCategory     = article?.category || article?.section || null;
+  const safeCategorySlug = article?.category_slug || null;
+  const safeTitle        = article?.title || 'Article';
+  const safeSlug         = article?.slug || null;
+
   const breadcrumbItems = [
     { '@type': 'ListItem', position: 1, name: 'Home', item: base },
-    ...(article.section
-      ? [{ '@type': 'ListItem', position: 2, name: article.section, item: `${base}/archive` }]
-      : [{ '@type': 'ListItem', position: 2, name: 'Archive', item: `${base}/archive` }]),
-    { '@type': 'ListItem', position: 3, name: title, item: articleUrl },
+    ...(safeCategorySlug
+      ? [{ '@type': 'ListItem', position: 2, name: safeCategory || safeCategorySlug, item: `${base}/category/${safeCategorySlug}` }]
+      : []),
+    ...(safeSlug
+      ? [{ '@type': 'ListItem', position: safeCategorySlug ? 3 : 2, name: safeTitle, item: `${base}/articles/${safeSlug}` }]
+      : []),
   ];
 
   const breadcrumbNode = { '@type': 'BreadcrumbList', itemListElement: breadcrumbItems };
@@ -325,7 +354,7 @@ export default function GraphSchema({ type, data }) {
 
   switch (type) {
     case 'article':
-      graph = buildArticleGraph(data || {});
+      graph = buildArticleGraph(data || {}, SITE_URL, data?.relatedLinks);
       break;
     case 'archive':
       graph = buildArchiveGraph();
