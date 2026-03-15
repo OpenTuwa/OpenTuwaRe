@@ -1,75 +1,104 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import useScrollReveal from '../hooks/useScrollReveal';
-
-function ArchiveYearSection({ yearGroup }) {
-  const ref = useScrollReveal();
-
-  return (
-    <section ref={ref} className="reveal relative pl-8">
-      {/* Timeline dot */}
-      <div className="absolute left-0 top-2 w-3 h-3 rounded-full bg-tuwa-accent border-2 border-[#0a0a0b]" />
-
-      <h2 className="text-3xl font-bold font-heading text-white mb-8 border-b border-white/5 pb-4">
-        {yearGroup.year}
-      </h2>
-      <div className="space-y-6">
-        {yearGroup.articles.map((article, index) => {
-          const date = article.published_at 
-            ? new Date(article.published_at) 
-            : new Date();
-          const monthDay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-          const tag = article.tags && typeof article.tags === 'string' 
-            ? article.tags.split(',')[0].trim() 
-            : 'Article';
-
-          // SEO: Req 8.1, 8.3 — article titles rendered as crawlable <a> links
-          return (
-            <Link
-              key={index}
-              href={`/articles/${article.slug}`}
-              className="group flex flex-col md:flex-row md:items-center justify-between gap-2 md:gap-8 hover:bg-white/[0.02] p-4 -mx-4 rounded-xl transition-colors"
-            >
-              <div className="flex items-center gap-6 flex-1">
-                <span className="text-sm text-tuwa-muted w-16 shrink-0 font-medium">{monthDay}</span>
-                <h3 className="text-lg font-medium text-tuwa-text group-hover:text-tuwa-accent transition-colors leading-tight">
-                  {article.title}
-                </h3>
-              </div>
-              <div className="hidden sm:flex text-xs text-tuwa-muted shrink-0 uppercase tracking-widest font-bold">
-                {tag}
-              </div>
-            </Link>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
 
 export default function ArchiveContent({ archiveData = [] }) {
+  const [filterYear, setFilterYear] = useState(null);
+  const [filterCategory, setFilterCategory] = useState(null);
+
+  // Derive filter options from archiveData
+  const years = archiveData.map(g => g.year);
+  const categories = [...new Set(
+    archiveData.flatMap(g =>
+      g.articles.map(a => (a.section || a.category || '').trim()).filter(Boolean)
+    )
+  )];
+
+  // Total article count
+  const totalCount = archiveData.reduce((sum, g) => sum + g.articles.length, 0);
+
+  // Filter logic (client-side, no server fetch)
+  const filteredData = archiveData
+    .filter(g => !filterYear || String(g.year) === String(filterYear))
+    .map(g => ({
+      ...g,
+      articles: filterCategory
+        ? g.articles.filter(a => (a.section || a.category) === filterCategory)
+        : g.articles,
+    }))
+    .filter(g => g.articles.length > 0);
+
   return (
     <main className="max-w-4xl mx-auto px-6 py-24 min-h-screen">
-      <div className="mb-16">
-        <h1 className="text-4xl md:text-5xl font-heading font-extrabold text-white tracking-tight mb-4">
-          Archive
-        </h1>
-        <p className="text-tuwa-muted text-lg">
-          A complete timeline of all articles, documentaries, and stories published on OpenTuwa.
-        </p>
+      {/* Page header */}
+      <div className="border-b border-white/10 pb-8 mb-8">
+        <p className="text-xs uppercase tracking-widest text-tuwa-muted mb-2">OpenTuwa</p>
+        <h1 className="text-4xl md:text-5xl font-heading font-extrabold text-white tracking-tight mb-2">Archive</h1>
+        <p className="text-tuwa-muted">{totalCount} stories</p>
       </div>
 
-      <div className="space-y-16 border-l border-white/10 ml-3 md:ml-0 pl-6 md:pl-0">
-        {archiveData.length === 0 ? (
-           <p className="text-tuwa-muted">No articles found.</p>
-        ) : (
-           archiveData.map(group => (
-             <ArchiveYearSection key={group.year} yearGroup={group} />
-           ))
-        )}
+      {/* Filter bar */}
+      <div className="flex flex-wrap gap-4 mb-8">
+        <select
+          value={filterYear || ''}
+          onChange={e => setFilterYear(e.target.value || null)}
+          className="bg-tuwa-gray border border-white/10 text-tuwa-text text-sm rounded px-3 py-2 focus:outline-none focus:border-tuwa-accent"
+        >
+          <option value="">All years</option>
+          {years.map(y => <option key={y} value={y}>{y}</option>)}
+        </select>
+        <select
+          value={filterCategory || ''}
+          onChange={e => setFilterCategory(e.target.value || null)}
+          className="bg-tuwa-gray border border-white/10 text-tuwa-text text-sm rounded px-3 py-2 focus:outline-none focus:border-tuwa-accent"
+        >
+          <option value="">All categories</option>
+          {categories.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
       </div>
+
+      {/* Article index */}
+      {filteredData.length === 0 ? (
+        <p className="text-tuwa-muted py-12 text-center">No stories found.</p>
+      ) : (
+        filteredData.map(group => (
+          <section key={group.year} className="mb-12">
+            <h2 className="text-2xl font-bold font-heading text-white mb-4 pb-2 border-b border-white/10">
+              {group.year}
+            </h2>
+            <div>
+              {group.articles.map((article, index) => {
+                const monthDay = article.published_at
+                  ? new Date(article.published_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                  : '';
+                const tag = article.section || article.category || article.tags?.split(',')[0]?.trim() || '';
+
+                return (
+                  <div
+                    key={index}
+                    className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-6 py-3 border-b border-white/5 hover:bg-white/[0.02] px-2 -mx-2 rounded transition-colors"
+                  >
+                    <span className="text-xs text-tuwa-muted w-16 shrink-0">{monthDay}</span>
+                    <Link
+                      href={`/articles/${article.slug}`}
+                      className="flex-1 text-tuwa-text hover:text-tuwa-accent transition-colors text-sm font-medium leading-snug"
+                    >
+                      {article.title}
+                    </Link>
+                    <span className="hidden sm:block text-xs text-tuwa-muted shrink-0">
+                      {article.author || article.author_name || ''}
+                    </span>
+                    <span className="hidden sm:block text-xs text-tuwa-muted uppercase tracking-wider shrink-0 w-24 text-right">
+                      {tag}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        ))
+      )}
     </main>
   );
 }

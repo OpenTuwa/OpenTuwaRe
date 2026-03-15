@@ -20,10 +20,15 @@ module.exports = {
         shimmer: {
           '0%': { transform: 'translateX(-100%)' },
           '100%': { transform: 'translateX(100%)' }
+        },
+        'ticker-scroll': {
+          '0%': { transform: 'translateX(0%)' },
+          '100%': { transform: 'translateX(-50%)' }
         }
       },
       animation: {
-        shimmer: 'shimmer 2s infinite'
+        shimmer: 'shimmer 2s infinite',
+        'ticker-scroll': 'ticker-scroll 30s linear infinite'
       }
     }
   },

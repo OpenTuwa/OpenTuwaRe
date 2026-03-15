@@ -38,11 +38,17 @@ export default function AboutPageContent({ authors = [] }) {
 
   return (
     <>
-      <main className="flex-grow pt-32 pb-24 max-w-7xl mx-auto w-full px-6">
-        <div className="py-16 border-b border-white/10">
-          <h1 className="text-4xl md:text-5xl font-heading font-extrabold text-white tracking-tight mb-6">
-            About OpenTuwa
-          </h1>
+      {/* Masthead banner */}
+      <div className="bg-tuwa-black border-b border-white/10 px-6 py-12">
+        <div className="max-w-7xl mx-auto">
+          <p className="text-xs uppercase tracking-widest text-tuwa-muted mb-2">OpenTuwa</p>
+          <h1 className="text-4xl md:text-5xl font-heading font-extrabold text-white tracking-tight mb-3">About</h1>
+          <hr className="border-white/10 mt-6" />
+        </div>
+      </div>
+
+      <main className="flex-grow pt-16 pb-24 max-w-7xl mx-auto w-full px-6">
+        <div className="py-10 border-b border-white/10">
           <div className="prose prose-invert prose-lg max-w-none text-tuwa-muted">
             <p className="lead text-xl text-white font-medium mb-6">
               OpenTuwa is an independent platform for long-form articles, research, and media exploring foundational ideas. 
@@ -67,18 +73,18 @@ export default function AboutPageContent({ authors = [] }) {
           </div>
         </div>
 
-        <div className="mb-12">
+        <div className="mb-12 mt-10">
           <h2 className="text-2xl font-bold font-heading text-white mb-8 flex items-center gap-3">
             <span className="w-8 h-[2px] bg-tuwa-accent"></span>
             Contributors & Editors
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-12 mt-16">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-12">
           <div className="md:col-span-7 lg:col-span-8 space-y-12 text-tuwa-text leading-relaxed">
             <RevealSection>
               <section>
-                <h2 className="text-xl font-heading font-bold text-white mb-4 uppercase tracking-wide text-sm">The Project</h2>
+                <h2 className="text-xs font-bold text-white mb-4 uppercase tracking-widest">The Project</h2>
                 <p className="mb-4 text-tuwa-muted">
                   OpenTuwa started as a personal initiative to cut through the noise. Most of the internet is focused on fast reactions and daily news cycles. This platform is built for the opposite: stepping back and taking the time to write, research, and think deeply about history, society, and philosophy.
                 </p>
@@ -92,7 +98,7 @@ export default function AboutPageContent({ authors = [] }) {
 
             <RevealSection>
               <section>
-                <h2 className="text-xl font-heading font-bold text-white mb-4 uppercase tracking-wide text-sm">An Open Platform</h2>
+                <h2 className="text-xs font-bold text-white mb-4 uppercase tracking-widest">An Open Platform</h2>
                 <p className="mb-4 text-tuwa-muted">
                   The "Open" in OpenTuwa means exactly that. While it began as a solo effort, the architecture of this site is built to host multiple voices.
                 </p>
@@ -105,7 +111,8 @@ export default function AboutPageContent({ authors = [] }) {
 
           <aside className="md:col-span-5 lg:col-span-4 space-y-10">
             <div className="bg-tuwa-black border-l border-white/10 pl-6 lg:pl-10">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-tuwa-muted mb-8 border-b border-white/10 pb-4">
+              <h3 className="text-xs font-bold uppercase tracking-widest text-tuwa-muted mb-8 border-b border-white/10 pb-4 flex items-center gap-2">
+                <span className="w-3 h-[2px] bg-tuwa-accent inline-block" />
                 Contributors
               </h3>
               <div className="space-y-8">
@@ -127,7 +134,7 @@ export default function AboutPageContent({ authors = [] }) {
                           <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="12" fill="#1D9BF0"/><path d="M9.5 12.5L11 14L15 10" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                         )}
                       </h4>
-                      <p className="text-[10px] text-tuwa-muted uppercase tracking-wider mt-1 mb-2">{author.role || 'Contributor'}</p>
+                      <span className="inline-block mt-1 mb-2 px-2 py-0.5 border border-white/20 rounded-full text-[10px] text-tuwa-muted uppercase tracking-wider">{author.role || 'Contributor'}</span>
                       {author.bio && <p className="text-xs text-tuwa-muted leading-relaxed mb-2">{author.bio}</p>}
                       <Link href={`/?author=${encodeURIComponent(author.name)}`} className="text-[11px] editorial-link text-tuwa-muted">View profile →</Link>
                     </div>

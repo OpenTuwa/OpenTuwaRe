@@ -1,8 +1,12 @@
 import { getRequestContext } from '@cloudflare/next-on-pages';
-import ArticleCard from '../../components/ArticleCard';
 import { fetchCandidates, RecommendationEngine } from '../../utils/algorithm';
 import GraphSchema from '../../components/GraphSchema';
 import { buildHreflangLanguages } from '../../../functions/_utils/hreflang.js';
+import BreakingNewsTicker from '../../components/BreakingNewsTicker';
+import HeroStory from '../../components/HeroStory';
+import SectionGrid from '../../components/SectionGrid';
+import TrendingRail from '../../components/TrendingRail';
+import { groupBySection } from '../../utils/sections';
 
 export const runtime = 'edge';
 
@@ -77,21 +81,47 @@ export default async function HomePage({ searchParams }) {
     console.error('[HomePage] Error fetching articles:', err.message, err.stack);
   }
 
+  // Derive ticker: 5 most recently published
+  const tickerArticles = [...articles]
+    .sort((a, b) => new Date(b.published_at || 0) - new Date(a.published_at || 0))
+    .slice(0, 5);
+
+  // Hero: top trending article
+  const heroArticle = articles[0] ?? null;
+
+  // Section grids: remaining articles grouped by section/category
+  const sections = groupBySection(articles.slice(1));
+
+  // Trending rail: top 5 by trending score (already sorted)
+  const trendingArticles = articles.slice(0, 5);
+
+  // Section labels for Navbar
+  const sectionLabels = [...new Set(sections.map(s => s.label))].slice(0, 5);
+
   return (
     <>
       <GraphSchema type="homepage" />
-      <main className="max-w-7xl mx-auto px-6 py-24 min-h-screen">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {articles.map((article, i) => (
-            <ArticleCard key={article.slug} article={article} index={i} />
-          ))}
-        </div>
+      <BreakingNewsTicker articles={tickerArticles} />
+      <div className="max-w-7xl mx-auto px-4 md:px-6 pt-4 pb-24 min-h-screen">
+        <HeroStory article={heroArticle} />
+
         {articles.length === 0 && (
-          <div className="text-center text-tuwa-muted py-20">
-            No stories found.
+          <div className="text-center text-tuwa-muted py-20">No stories found.</div>
+        )}
+
+        {articles.length > 0 && (
+          <div className="mt-10 grid grid-cols-1 lg:grid-cols-4 gap-8">
+            {/* Main content: section grids */}
+            <div className="lg:col-span-3">
+              <SectionGrid sections={sections} />
+            </div>
+            {/* Sidebar: trending rail */}
+            <div className="lg:col-span-1">
+              <TrendingRail articles={trendingArticles} />
+            </div>
           </div>
         )}
-      </main>
+      </div>
     </>
   );
 }

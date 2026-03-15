@@ -72,6 +72,13 @@ export default function LegalContent() {
 
   return (
     <div className="tuwa-upgrade font-sans antialiased bg-[#030303] text-white min-h-screen">
+      <div className="bg-tuwa-black border-b border-white/10 px-6 py-10">
+        <div className="max-w-7xl mx-auto">
+          <p className="text-xs uppercase tracking-widest text-tuwa-muted mb-2">OpenTuwa</p>
+          <h1 className="text-3xl md:text-4xl font-heading font-extrabold text-white tracking-tight">Legal</h1>
+          <p className="text-tuwa-muted text-sm mt-2">Terms, privacy, and cookie policies governing your use of OpenTuwa.</p>
+        </div>
+      </div>
       <nav className="top-nav relative z-50 p-4 border-b border-white/10 flex justify-between items-center">
         <span className="text-2xl font-extrabold tracking-tighter font-heading text-white" data-i18n="header_title">OpenTuwa&reg; Legal</span>
         
@@ -159,9 +166,9 @@ export default function LegalContent() {
 
               <article id="eua" className={`policy-section transition-opacity duration-300 ${activeTab === 'eua' ? 'block opacity-100' : 'hidden opacity-0'}`}>
                   <h1 className="text-4xl md:text-5xl font-extrabold mb-4" data-i18n="eua_title">Tuwa End User Agreement</h1>
-                  <div className="text-sm text-tuwa-muted mb-12" data-i18n="eua_eff">Effective as of: August 26, 2025</div>
+                  <div className="text-xs uppercase tracking-widest text-tuwa-muted border-l-2 border-tuwa-accent pl-3 mb-12" data-i18n="eua_eff">Effective as of: August 26, 2025</div>
 
-                  <div className="glass-panel space-y-10 text-tuwa-text leading-relaxed">
+                  <div className="glass-panel space-y-10 text-tuwa-text leading-relaxed font-serif">
                       <p data-i18n="eua_desc">Hello! Welcome to the Tuwa&trade; End User Agreement ("<strong>Terms</strong>") which apply when you use the Tuwa application, a brand of OpenTuwa&reg;. These Terms govern your use of our distraction-free Quran audio streaming and reading services (the "<strong>Service</strong>").</p>
 
                       <section id="eua-1" className="scroll-mt-32">
@@ -198,13 +205,20 @@ export default function LegalContent() {
                           <p data-i18n="eua_sec5_text"><strong>v. No Withdrawal of Consent Post-Access.</strong> Once you have accessed the website, you cannot retroactively withdraw consent for the data processing that occurred during your visit. Any request to delete data will be handled as specified in our Privacy Policy but does not nullify the legality of processing that occurred prior to such request.</p>
                       </section>
                   </div>
+                  <button
+                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                    className="mt-12 text-xs text-tuwa-muted hover:text-white transition-colors uppercase tracking-widest flex items-center gap-2"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
+                    Back to top
+                  </button>
               </article>
 
               <article id="privacy" className={`policy-section transition-opacity duration-300 ${activeTab === 'privacy' ? 'block opacity-100' : 'hidden opacity-0'}`}>
                   <h1 className="text-4xl md:text-5xl font-extrabold mb-4" data-i18n="priv_title">Tuwa Privacy Policy</h1>
-                  <div className="text-sm text-tuwa-muted mb-12" data-i18n="priv_eff">Effective as of: August 26, 2025</div>
+                  <div className="text-xs uppercase tracking-widest text-tuwa-muted border-l-2 border-tuwa-accent pl-3 mb-12" data-i18n="priv_eff">Effective as of: August 26, 2025</div>
 
-                  <div className="glass-panel space-y-10 text-tuwa-text leading-relaxed">
+                  <div className="glass-panel space-y-10 text-tuwa-text leading-relaxed font-serif">
                       <p data-i18n="priv_desc">At Tuwa&trade;, we believe in data minimization. This Privacy Policy outlines our strict practices regarding the limited information we process to keep our Service running securely.</p>
 
                       <section id="priv-1" className="scroll-mt-32">
@@ -236,13 +250,20 @@ export default function LegalContent() {
                           <p data-i18n="priv_sec4_text">Because we do not maintain a centralized user database, your personal preferences (such as playback history and theme choices) are stored locally on your device. You maintain full control and can delete this data at any time using your browser settings or our in-app wipe feature.</p>
                       </section>
                   </div>
+                  <button
+                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                    className="mt-12 text-xs text-tuwa-muted hover:text-white transition-colors uppercase tracking-widest flex items-center gap-2"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
+                    Back to top
+                  </button>
               </article>
 
               <article id="cookie" className={`policy-section transition-opacity duration-300 ${activeTab === 'cookie' ? 'block opacity-100' : 'hidden opacity-0'}`}>
                   <h1 className="text-4xl md:text-5xl font-extrabold mb-4" data-i18n="cookie_title">Tuwa Cookie Policy</h1>
-                  <div className="text-sm text-tuwa-muted mb-12" data-i18n="cookie_eff">Effective as of: August 26, 2025</div>
+                  <div className="text-xs uppercase tracking-widest text-tuwa-muted border-l-2 border-tuwa-accent pl-3 mb-12" data-i18n="cookie_eff">Effective as of: August 26, 2025</div>
 
-                  <div className="glass-panel space-y-10 text-tuwa-text leading-relaxed">
+                  <div className="glass-panel space-y-10 text-tuwa-text leading-relaxed font-serif">
                       <p data-i18n="cookie_desc">This Cookie Policy explains how Tuwa&trade; uses cookies and local storage technologies to provide a seamless, secure experience.</p>
 
                       <section id="cook-1" className="scroll-mt-32">
@@ -260,6 +281,13 @@ export default function LegalContent() {
                           <p data-i18n="cookie_li3">We utilize lightweight infrastructure cookies to understand aggregate platform health and load balancing, ensuring the Service remains fast and reliable without tracking your personal identity.</p>
                       </section>
                   </div>
+                  <button
+                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                    className="mt-12 text-xs text-tuwa-muted hover:text-white transition-colors uppercase tracking-widest flex items-center gap-2"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
+                    Back to top
+                  </button>
               </article>
 
               <div className="mt-20 pt-8 border-t border-white/10 text-sm text-tuwa-muted"> 
