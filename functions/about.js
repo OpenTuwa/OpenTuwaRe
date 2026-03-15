@@ -34,6 +34,7 @@ export async function onRequestGet(context) {
     ogImage: OG_IMAGE,
     ogImageWidth: '512',
     ogImageHeight: '512',
+    twitterCard: 'summary',
     jsonLd,
     cssVariant: 'list',
   })}

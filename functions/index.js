@@ -88,6 +88,7 @@ export async function onRequestGet(context) {
     ogImage: OG_IMAGE,
     ogImageWidth: '512',
     ogImageHeight: '512',
+    twitterCard: 'summary',
     jsonLd: JSON.stringify({ '@context': 'https://schema.org', '@graph': buildHomepageGraph(SITE_URL) }),
     cssVariant: 'list',
   })}

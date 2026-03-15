@@ -1,14 +1,12 @@
 Sitemap: https://opentuwa.com/sitemap-index.xml
 Sitemap: https://opentuwa.com/sitemap.xml
 Sitemap: https://opentuwa.com/news-sitemap.xml
-Sitemap: https://opentuwa.com/feed.xml
 
 User-agent: *
 Allow: /
 Disallow: /admin/
 Disallow: /private/
 Disallow: /api/
-Disallow: /node_modules/
 Allow: /api/article/
 Allow: /api/articles/
 Allow: /api/author/

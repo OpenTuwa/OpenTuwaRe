@@ -22,7 +22,7 @@ export async function onRequest(context) {
   try {
     const { results } = await env.DB.prepare(
       `SELECT title, seo_description, subtitle, excerpt, image_url,
-              author, author_name, published_at, updated_at, content_html, tags, section,
+              author, author_name, author_twitter, published_at, updated_at, content_html, tags, section,
               category, category_slug, is_breaking, created_at,
               available_translations
        FROM articles WHERE slug = ? LIMIT 1`
@@ -43,7 +43,9 @@ export async function onRequest(context) {
   const updatedAt = article.updated_at && article.updated_at >= pubDate ? article.updated_at : pubDate;
   const content = article.content_html || `<p>${esc(desc)}</p>`;
   const canonicalUrl = `${SITE_URL}/articles/${slug}`;
-  const twitterCreator = article.author ? `@${article.author}` : '@opentuwa';
+  const twitterCreator = article.author_twitter
+    ? (article.author_twitter.startsWith('@') ? article.author_twitter : `@${article.author_twitter}`)
+    : '@opentuwa';
 
   // Parse tags defensively
   let tagsArray = [];
@@ -105,10 +107,12 @@ export async function onRequest(context) {
     relatedHtml = `\n  <section aria-label="Further reading">\n    <h2>Further Reading</h2>\n    <ul>\n${links}\n    </ul>\n  </section>`;
   }
 
+  const authorSlugStr = authorDisplay.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
   const extraMeta = [
     pubDate   ? `<meta property="article:published_time" content="${esc(pubDate)}">` : '',
     updatedAt ? `<meta property="article:modified_time" content="${esc(updatedAt)}">` : '',
     article.section ? `<meta property="article:section" content="${esc(article.section)}">` : '',
+    `<meta property="article:author" content="${esc(`${SITE_URL}/authors/${authorSlugStr}`)}">`,
     ...tagsArray.map(t => `<meta property="article:tag" content="${esc(t)}">`),
     `<meta name="author" content="${esc(authorDisplay)}">`,
   ].filter(Boolean).join('\n  ');

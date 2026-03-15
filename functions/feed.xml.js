@@ -78,8 +78,8 @@ export async function onRequestGet(context) {
       <dc:date>${esc(pubDate)}</dc:date>
       ${categories.map(c => `<category>${esc(c)}</category>`).join('')}
       <content:encoded><![CDATA[${content}]]></content:encoded>
-      ${imageUrl ? `<media:content url="${esc(imageUrl)}" medium="image" type="image/jpeg"/>` : ''}
-      ${imageUrl ? `<media:thumbnail url="${esc(imageUrl)}" width="300" height="169"/>` : ''}
+      ${imageUrl ? `<media:content url="${esc(imageUrl)}" medium="image" type="${imageMime(imageUrl)}"/>` : ''}
+      ${imageUrl ? `<media:thumbnail url="${esc(imageUrl)}"/>` : ''}
     </item>`;
   }
 
@@ -102,4 +102,9 @@ function esc(s) {
 function toRFC822(val) {
   if (!val) return '';
   try { const d = new Date(val); return isNaN(d.getTime()) ? '' : d.toUTCString(); } catch (e) { return ''; }
+}
+
+function imageMime(url) {
+  const ext = String(url).split('?')[0].split('.').pop().toLowerCase();
+  return { png: 'image/png', webp: 'image/webp', gif: 'image/gif', svg: 'image/svg+xml' }[ext] || 'image/jpeg';
 }
