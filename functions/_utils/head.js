@@ -9,11 +9,9 @@
 //   7. RSS alternate
 //   8. JSON-LD
 //   9. Critical inline CSS (above-the-fold styles — nav + first ~1000px)
-//  10. Cookiebot (async, non-blocking)
+// Consent is handled client-side only (Silktide, loaded via layout.jsx).
 
 import { FEED_URL, SITE_NAME } from './constants.js';
-
-const COOKIEBOT_ID = '87b34ddf-45f5-47fc-8a13-87fcb9d1aa85';
 
 // ─── Critical CSS ─────────────────────────────────────────────────────────────
 // Covers: CSS custom properties, reset, body, nav (always above fold),
@@ -157,6 +155,5 @@ export function buildHead({
   ${extraMeta}
   ${jsonLd ? `<script type="application/ld+json">${jsonLd}</script>` : ''}
   <style>${criticalCss}</style>
-  <script id="Cookiebot" src="https://consent.cookiebot.com/uc.js" data-cbid="${COOKIEBOT_ID}" type="text/javascript" async></script>
 `.trimStart();
 }

@@ -47,6 +47,9 @@ Allow: /
 
 User-agent: CCBot
 Allow: /
+
+User-agent: Silktide
+Allow: /
 `;
 
   return new Response(robotsTxt, {
