@@ -18,7 +18,7 @@ async function getAuthorData(slug, env) {
     // authors table has no slug column — scan all and match by name-derived slug
     const { results } = await env.DB.prepare(
       `SELECT name, role, bio, author_bio, avatar_url, author_image,
-              author_twitter, author_linkedin, author_facebook, author_youtube
+              author_twitter, author_linkedin, author_facebook, author_youtube, author_signal
        FROM authors LIMIT 200`
     ).all();
     const match = results?.find(a => nameToSlug(a.name) === slug) || null;
@@ -128,7 +128,7 @@ export default async function AuthorPage({ params }) {
               )}
 
               {/* Social links */}
-              {(author.author_twitter || author.author_linkedin || author.author_facebook || author.author_youtube) && (
+              {(author.author_twitter || author.author_linkedin || author.author_facebook || author.author_youtube || author.author_signal) && (
                 <div className="flex flex-wrap gap-4 mt-4 text-xs font-medium">
                   {author.author_twitter && (
                     <a
@@ -148,6 +148,16 @@ export default async function AuthorPage({ params }) {
                   )}
                   {author.author_youtube && (
                     <a href={author.author_youtube} rel="noopener noreferrer" className="text-tuwa-muted hover:text-white transition-colors">YouTube</a>
+                  )}
+                  {author.author_signal && (
+                    <a
+                      href={author.author_signal}
+                      rel="noopener noreferrer"
+                      className="text-tuwa-muted hover:text-white transition-colors flex items-center gap-1.5"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12c0 2.126.556 4.123 1.528 5.856L.073 23.927l6.071-1.455A11.945 11.945 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 2.182c5.42 0 9.818 4.398 9.818 9.818 0 5.42-4.398 9.818-9.818 9.818a9.775 9.775 0 0 1-4.932-1.328l-.354-.21-3.664.879.893-3.664-.21-.354A9.775 9.775 0 0 1 2.182 12c0-5.42 4.398-9.818 9.818-9.818z"/></svg>
+                      Signal
+                    </a>
                   )}
                 </div>
               )}

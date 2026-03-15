@@ -118,10 +118,11 @@ function authorSlug(name) {
  * @param {string}   [opts.linkedin]
  * @param {string}   [opts.facebook]
  * @param {string}   [opts.youtube]
+ * @param {string}   [opts.signal]    - Signal.me invite URL (https://signal.me/#eu/...)
  * @param {string[]} [opts.knowsAbout] - Topics derived from article category / tags
  * @returns {object} Schema.org Person node
  */
-function buildPersonNode({ id, name, url, orgId, bio, image, twitter, linkedin, facebook, youtube, knowsAbout }) {
+function buildPersonNode({ id, name, url, orgId, bio, image, twitter, linkedin, facebook, youtube, signal, knowsAbout }) {
   const sameAsLinks = [
     twitter  ? `https://twitter.com/${twitter.replace('@', '')}` : null,
     linkedin ?? null,
@@ -140,6 +141,7 @@ function buildPersonNode({ id, name, url, orgId, bio, image, twitter, linkedin, 
     worksFor: { '@id': orgId },
     ...(bio   ? { description: bio } : {}),
     ...(image ? { image: { '@type': 'ImageObject', url: image } } : {}),
+    ...(signal ? { contactPoint: { '@type': 'ContactPoint', contactType: 'messaging', url: signal } } : {}),
     ...(knowsAbout?.length ? { knowsAbout } : {}),
     ...(sameAsLinks.length ? { sameAs: sameAsLinks } : {}),
   };
@@ -250,6 +252,7 @@ export function buildArticleGraph(article, origin = SITE_URL, relatedLinks = [])
     linkedin: authorData?.author_linkedin,
     facebook: authorData?.author_facebook,
     youtube: authorData?.author_youtube,
+    signal: authorData?.author_signal || null,
     knowsAbout: article?.section ? [article.section] : undefined,
   });
 
@@ -392,12 +395,13 @@ export function buildAuthorGraph(author, authorSlugStr, origin = SITE_URL) {
     name: author?.name ?? '',
     url: authorUrl,
     orgId: `${base}/#organization`,
-    bio: author?.author_bio,
-    image: author?.author_image,
+    bio: author?.author_bio || author?._bio,
+    image: author?.author_image || author?._image,
     twitter: author?.author_twitter,
     linkedin: author?.author_linkedin,
     facebook: author?.author_facebook,
     youtube: author?.author_youtube,
+    signal: author?.author_signal || null,
   });
 
   const breadcrumbNode = {

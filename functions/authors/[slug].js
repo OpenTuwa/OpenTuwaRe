@@ -21,7 +21,7 @@ export async function onRequest(context) {
   try {
     const { results } = await env.DB.prepare(
       `SELECT name, role, bio, author_bio, avatar_url, author_image,
-              author_twitter, author_linkedin, author_facebook, author_youtube
+              author_twitter, author_linkedin, author_facebook, author_youtube, author_signal
        FROM authors LIMIT 200`
     ).all();
     const match = results?.find(a => nameToSlug(a.name) === slug) || null;
