@@ -1,5 +1,6 @@
 import { isBot } from './_utils/bot-detector.js';
 import { buildHomepageGraph } from './_utils/schema.js';
+import { buildHreflangTags } from './_utils/hreflang.js';
 
 const SITE_NAME = 'OpenTuwa';
 const SITE_URL = 'https://opentuwa.com';
@@ -77,11 +78,17 @@ export async function onRequestGet(context) {
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <script id="Cookiebot" src="https://consent.cookiebot.com/uc.js" data-cbid="87b34ddf-45f5-47fc-8a13-87fcb9d1aa85" type="text/javascript" async></script>
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/ui/web_512.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/ui/web_512.png">
+  <link rel="apple-touch-icon" href="/assets/ui/web_512.png">
+  <meta name="theme-color" content="#0a0a0b">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${esc(pageTitle)}</title>
   <meta name="description" content="${esc(pageDesc)}">
   <meta name="robots" content="${robotsContent}">
   <link rel="canonical" href="${esc(canonicalUrl)}">
+  ${buildHreflangTags('/')}
   <link rel="alternate" type="application/rss+xml" title="${SITE_NAME} RSS Feed" href="${FEED_URL}">
   <meta property="og:site_name" content="${SITE_NAME}">
   <meta property="og:title" content="${esc(pageTitle)}">

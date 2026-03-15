@@ -12,7 +12,7 @@ export const metadata = {
     description: 'OpenTuwa is an independent platform for long-form articles, research, and media exploring foundational ideas.',
     type: 'website',
     url: 'https://opentuwa.com/about',
-    images: [{ url: 'https://opentuwa.com/assets/ui/web_512.png', alt: 'About OpenTuwa' }],
+    images: [{ url: 'https://opentuwa.com/assets/ui/web_512.png', width: 512, height: 512, alt: 'About OpenTuwa' }],
     siteName: 'OpenTuwa',
     locale: 'en_US',
   },
@@ -23,7 +23,13 @@ export const metadata = {
     images: ['https://opentuwa.com/assets/ui/web_512.png'],
     site: '@opentuwa',
   },
-  alternates: { canonical: 'https://opentuwa.com/about' }, // SEO: Req 13.3, 13.6 — canonical URL, no trailing slash
+  alternates: {
+    canonical: 'https://opentuwa.com/about',
+    languages: Object.fromEntries(
+      ['en','zh-Hans','hi','es','fr','ar','bn','ru','pt','ur','ja','tr','de','x-default']
+        .map(l => [l, 'https://opentuwa.com/about'])
+    ),
+  },
   robots: { index: true, follow: true },
 };
 

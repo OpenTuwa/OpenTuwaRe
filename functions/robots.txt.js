@@ -2,6 +2,7 @@ export async function onRequestGet(context) {
   const robotsTxt = `User-agent: *
 Allow: /
 Allow: /feed.xml
+Allow: /authors/
 Disallow: /api/
 Disallow: /_next/static/
 Crawl-delay: 10

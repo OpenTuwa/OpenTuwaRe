@@ -1,5 +1,6 @@
 import { GoogleAnalytics } from '@next/third-parties/google';
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
+import Script from 'next/script';
 import './globals.css';
 import GraphSchema from '../components/GraphSchema';
 
@@ -42,11 +43,12 @@ export const metadata = {
   },
   icons: {
     icon: [
-      { url: '/assets/ui/web_512.png', sizes: '512x512', type: 'image/png' },
+      { url: '/assets/ui/web_512.png', sizes: '32x32', type: 'image/png' },
+      { url: '/assets/ui/web_512.png', sizes: '192x192', type: 'image/png' },
       { url: '/assets/ui/web.png', sizes: '128x128', type: 'image/png' },
       { url: '/assets/ui/web.ico', sizes: 'any' }
     ],
-    apple: '/assets/ui/web.png'
+    apple: '/assets/ui/web_512.png'
   },
   alternates: {
     // SEO: Req 12.1, 12.2 — RSS feed auto-discovery link
@@ -104,6 +106,13 @@ export default function RootLayout({ children }) {
         {children}
       </body>
       <GoogleAnalytics gaId="G-QLR0GR5SE8" />
+      {/* Cookiebot consent banner — loads after page is interactive, does not block rendering */}
+      <Script
+        id="Cookiebot"
+        src="https://consent.cookiebot.com/uc.js"
+        data-cbid="87b34ddf-45f5-47fc-8a13-87fcb9d1aa85"
+        strategy="afterInteractive"
+      />
     </html>
   );
 }

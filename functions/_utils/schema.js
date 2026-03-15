@@ -18,7 +18,20 @@ const ORG_NODE = {
     width: 512,
     height: 512,
   },
-  sameAs: ['https://twitter.com/opentuwa'],
+  foundingDate: '2024',
+  areaServed: 'Worldwide',
+  contactPoint: {
+    '@type': 'ContactPoint',
+    contactType: 'editorial',
+    email: 'founder@opentuwa.com',
+  },
+  sameAs: [
+    'https://twitter.com/opentuwa',
+    'https://x.com/opentuwa',
+    'https://www.linkedin.com/company/opentuwa',
+    'https://www.youtube.com/@opentuwa',
+    'https://www.facebook.com/opentuwa',
+  ],
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -116,20 +129,18 @@ export function buildArticleGraph(article, origin = SITE_URL) {
   const tagsArray = parseTags(article.tags);
   const keywords = tagsArray.length > 0 ? tagsArray.join(', ') : null;
 
+  // Only emit image node when using the article's own image (not the fallback logo)
+  const articleImage = imageAbsolute && imageAbsolute !== LOGO_URL
+    ? { '@type': 'ImageObject', url: imageAbsolute, width: 1200, height: 630 }
+    : null;
+
   // NewsArticle node
   const articleNode = {
     '@type': 'NewsArticle',
     '@id': `${articleUrl}#article`,
     headline: title,
     description: desc,
-    ...(imageAbsolute ? {
-      image: {
-        '@type': 'ImageObject',
-        url: imageAbsolute,
-        width: 1200,
-        height: 630,
-      },
-    } : {}),
+    ...(articleImage ? { image: articleImage } : {}),
     ...(datePublished ? { datePublished } : {}),
     ...(dateModified ? { dateModified } : {}),
     author: { '@id': `${base}/authors/${aSlug}#person` },
@@ -141,13 +152,31 @@ export function buildArticleGraph(article, origin = SITE_URL) {
     isAccessibleForFree: true,
   };
 
-  // Person (author) node
+  // Person (author) node — enriched with DB fields when available
+  const authorData = article._author || {};
   const personNode = {
     '@type': 'Person',
     '@id': `${base}/authors/${aSlug}#person`,
     name: authorName,
     jobTitle: 'Journalist',
-    url: `${base}/?author=${encodeURIComponent(authorName)}`,
+    url: `${base}/authors/${aSlug}`,
+    ...(authorData.author_bio ? { description: authorData.author_bio } : {}),
+    ...(authorData.author_image
+      ? { image: { '@type': 'ImageObject', url: authorData.author_image } }
+      : {}),
+    ...((authorData.author_twitter || authorData.author_linkedin ||
+         authorData.author_facebook || authorData.author_youtube)
+      ? {
+          sameAs: [
+            authorData.author_twitter
+              ? `https://twitter.com/${authorData.author_twitter.replace('@', '')}`
+              : null,
+            authorData.author_linkedin || null,
+            authorData.author_facebook || null,
+            authorData.author_youtube || null,
+          ].filter(Boolean),
+        }
+      : {}),
   };
 
   // BreadcrumbList node
@@ -231,4 +260,84 @@ export function buildArchiveGraph(origin = SITE_URL) {
   };
 
   return [collectionNode, ORG_NODE, breadcrumbNode];
+}
+
+/**
+ * Builds the JSON-LD @graph array for the About page.
+ *
+ * @param {string} [origin] - Site origin (defaults to SITE_URL)
+ * @returns {object[]}      - @graph array
+ */
+export function buildAboutGraph(origin = SITE_URL) {
+  const base = origin || SITE_URL;
+  const aboutUrl = `${base}/about`;
+
+  const aboutNode = {
+    '@type': 'AboutPage',
+    '@id': `${aboutUrl}#page`,
+    name: 'About OpenTuwa',
+    description: 'Independent news and journalism platform.',
+    url: aboutUrl,
+    publisher: { '@id': `${base}/#organization` },
+    inLanguage: 'en-US',
+  };
+
+  const breadcrumbNode = {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: base },
+      { '@type': 'ListItem', position: 2, name: 'About', item: aboutUrl },
+    ],
+  };
+
+  return [aboutNode, ORG_NODE, breadcrumbNode];
+}
+
+/**
+ * Builds the JSON-LD @graph array for an author page.
+ *
+ * @param {object} author         - Author DB row (name, author_bio, author_image, author_twitter, etc.)
+ * @param {string} authorSlugStr  - URL-safe slug for the author
+ * @param {string} [origin]       - Site origin (defaults to SITE_URL)
+ * @returns {object[]}            - @graph array
+ */
+export function buildAuthorGraph(author, authorSlugStr, origin = SITE_URL) {
+  const base = origin || SITE_URL;
+  const authorUrl = `${base}/authors/${authorSlugStr}`;
+
+  const personNode = {
+    '@type': 'Person',
+    '@id': `${authorUrl}#person`,
+    name: author.name,
+    jobTitle: 'Journalist',
+    url: authorUrl,
+    ...(author.author_bio ? { description: author.author_bio } : {}),
+    ...(author.author_image
+      ? { image: { '@type': 'ImageObject', url: author.author_image } }
+      : {}),
+    ...((author.author_twitter || author.author_linkedin ||
+         author.author_facebook || author.author_youtube)
+      ? {
+          sameAs: [
+            author.author_twitter
+              ? `https://twitter.com/${author.author_twitter.replace('@', '')}`
+              : null,
+            author.author_linkedin || null,
+            author.author_facebook || null,
+            author.author_youtube || null,
+          ].filter(Boolean),
+        }
+      : {}),
+  };
+
+  const breadcrumbNode = {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: base },
+      { '@type': 'ListItem', position: 2, name: 'Authors', item: `${base}/authors` },
+      { '@type': 'ListItem', position: 3, name: author.name, item: authorUrl },
+    ],
+  };
+
+  return [personNode, ORG_NODE, breadcrumbNode];
 }

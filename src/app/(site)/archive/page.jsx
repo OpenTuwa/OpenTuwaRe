@@ -23,7 +23,13 @@ export const metadata = {
     images: ['https://opentuwa.com/assets/ui/web_512.png'],
     site: '@opentuwa',
   },
-  alternates: { canonical: 'https://opentuwa.com/archive' }, // SEO: Req 13.2, 13.6 — canonical URL, no trailing slash
+  alternates: {
+    canonical: 'https://opentuwa.com/archive',
+    languages: Object.fromEntries(
+      ['en','zh-Hans','hi','es','fr','ar','bn','ru','pt','ur','ja','tr','de','x-default']
+        .map(l => [l, 'https://opentuwa.com/archive'])
+    ),
+  }, // SEO: Req 13.2, 13.6 — canonical URL, no trailing slash
   robots: { index: true, follow: true },
 };
 

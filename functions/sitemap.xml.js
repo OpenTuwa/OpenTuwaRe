@@ -11,6 +11,14 @@ export async function onRequestGet(context) {
     articles = results || [];
   } catch (e) { articles = []; }
 
+  let authors = [];
+  try {
+    const { results } = await env.DB.prepare(
+      "SELECT slug FROM authors WHERE slug IS NOT NULL AND slug != ''"
+    ).bind().all();
+    authors = results || [];
+  } catch (e) { authors = []; }
+
   const staticPages = [
     { path: '/', changefreq: 'daily', priority: '1.0' },
     { path: '/about', changefreq: 'monthly', priority: '0.6' },
@@ -50,6 +58,15 @@ export async function onRequestGet(context) {
       <image:loc>${esc(imageUrl)}</image:loc>
       <image:title>${esc(a.title || '')}</image:title>
     </image:image>` : ''}
+  </url>`;
+  }
+
+  for (const author of authors) {
+    xml += `
+  <url>
+    <loc>${esc(SITE_URL + '/authors/' + author.slug)}</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
   </url>`;
   }
 

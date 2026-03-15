@@ -41,8 +41,8 @@ export async function onRequestGet(context) {
       </news:publication>
       <news:publication_date>${esc(isoDate)}</news:publication_date>
       <news:title>${esc(a.title || '')}</news:title>${keywords ? `
-      <news:keywords>${esc(keywords)}</news:keywords>` : ''}${a.section ? `
-      <news:genre>News</news:genre>` : ''}
+      <news:keywords>${esc(keywords)}</news:keywords>` : ''}
+      <news:genre>${a.section ? esc(a.section) : 'News'}</news:genre>
     </news:news>${imageUrl ? `
     <image:image>
       <image:loc>${esc(imageUrl)}</image:loc>

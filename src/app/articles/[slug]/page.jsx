@@ -74,6 +74,11 @@ export async function generateMetadata({ params }) {
   const imageHeight = article.image_url ? 630 : 512;
   const canonicalUrl = `https://opentuwa.com/articles/${slug}`;
 
+  const locales = ['en', 'zh-Hans', 'hi', 'es', 'fr', 'ar', 'bn', 'ru', 'pt', 'ur', 'ja', 'tr', 'de'];
+  const languages = {};
+  locales.forEach(locale => { languages[locale] = canonicalUrl; });
+  languages['x-default'] = canonicalUrl;
+
   let tagsArray = [];
   if (Array.isArray(article.tags)) tagsArray = article.tags;
   else if (typeof article.tags === 'string') tagsArray = article.tags.split(',').map(t => t.trim()).filter(Boolean);
@@ -83,7 +88,10 @@ export async function generateMetadata({ params }) {
     description: seoDesc,
     keywords: [...tagsArray, 'news', 'journalism', 'documentary', 'OpenTuwa'].join(', '),
     authors: [{ name: article.author || 'OpenTuwa' }],
-    alternates: { canonical: canonicalUrl },
+    alternates: {
+      canonical: canonicalUrl,
+      languages,
+    },
     robots: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1, googleBot: { index: true, follow: true } },
     openGraph: {
       title: article.title,

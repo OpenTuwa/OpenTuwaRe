@@ -1,5 +1,6 @@
 import { isBot } from '../_utils/bot-detector.js';
 import { buildArticleGraph } from '../_utils/schema.js';
+import { buildHreflangTags } from '../_utils/hreflang.js';
 
 const SITE_NAME = 'OpenTuwa';
 const SITE_URL = 'https://opentuwa.com';
@@ -50,11 +51,11 @@ export async function onRequest(context) {
   }
   const keywords = tagsArray.join(', ');
 
-  // OG image with dimensions
+  // OG image: use article's own image at 1200×630, fall back to logo at 512×512
   const hasImage = !!image;
+  const ogImage = hasImage ? image : `${SITE_URL}/assets/ui/web_512.png`;
   const imgWidth = hasImage ? '1200' : '512';
   const imgHeight = hasImage ? '630' : '512';
-  const ogImage = image || `${origin}/assets/ui/web_512.png`;
 
   // JSON-LD @graph — built from shared schema utility for bot/React parity
   const jsonLd = {
@@ -80,12 +81,18 @@ export async function onRequest(context) {
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <script id="Cookiebot" src="https://consent.cookiebot.com/uc.js" data-cbid="87b34ddf-45f5-47fc-8a13-87fcb9d1aa85" type="text/javascript" async></script>
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/ui/web_512.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/ui/web_512.png">
+  <link rel="apple-touch-icon" href="/assets/ui/web_512.png">
+  <meta name="theme-color" content="#0a0a0b">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${esc(title)} | ${SITE_NAME}</title>
   <meta name="description" content="${esc(desc)}">
   <meta name="author" content="${esc(authorDisplay)}">
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
   <link rel="canonical" href="${canonicalUrl}">
+  ${buildHreflangTags(`/articles/${slug}`)}
   <link rel="alternate" type="application/rss+xml" title="${SITE_NAME} RSS Feed" href="${FEED_URL}">
   <meta property="og:site_name" content="${SITE_NAME}">
   <meta property="og:title" content="${esc(title)}">

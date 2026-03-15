@@ -8,6 +8,7 @@ export const runtime = 'edge';
 const BASE_TITLE = 'OpenTuwa | Independent Journalism & Documentaries';
 const BASE_DESC = 'Independent news and journalism covering stories that matter. Deep dives, documentaries, and analysis.';
 const CANONICAL_HOME = 'https://opentuwa.com';
+const LOCALES = ['en', 'zh-Hans', 'hi', 'es', 'fr', 'ar', 'bn', 'ru', 'pt', 'ur', 'ja', 'tr', 'de'];
 
 export async function generateMetadata({ searchParams }) {
   const { author, tag, q } = await searchParams;
@@ -24,11 +25,18 @@ export async function generateMetadata({ searchParams }) {
 
   const canonicalUrl = variantUrl ?? CANONICAL_HOME;
 
+  const languages = {};
+  LOCALES.forEach(locale => { languages[locale] = CANONICAL_HOME; });
+  languages['x-default'] = CANONICAL_HOME;
+
   return {
     title: BASE_TITLE,
     description: BASE_DESC,
     keywords: 'news, journalism, documentaries, independent media, deep dive, analysis, OpenTuwa',
-    alternates: { canonical: canonicalUrl },
+    alternates: {
+      canonical: canonicalUrl,
+      languages,
+    },
     // SEO: Req 1.5, 1.6 — noindex variant pages (?author, ?tag, ?q); canonical always set
     robots: isVariant
       ? { index: false, follow: true }
