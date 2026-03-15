@@ -20,7 +20,7 @@ export async function onRequest(context) {
       `SELECT title, seo_description, subtitle, excerpt, image_url,
               author, author_name, author_twitter, published_at, updated_at, content_html, tags, section,
               category, category_slug, is_breaking, created_at,
-              available_translations
+              available_translations, related_articles
        FROM articles WHERE slug = ? LIMIT 1`
     ).bind(slug).all();
     article = results?.[0] || null;
@@ -88,12 +88,32 @@ export async function onRequest(context) {
     .filter(r => r?.slug)
     .map(r => `${SITE_URL}/articles/${r.slug}`);
 
+  // Parse editor-curated related_articles (JSON array of slugs)
+  let curatedRelated = [];
+  try {
+    const raw = article.related_articles;
+    const slugs = raw ? JSON.parse(raw) : [];
+    if (Array.isArray(slugs) && slugs.length > 0) {
+      const placeholders = slugs.map(() => '?').join(',');
+      const { results: rows } = await env.DB.prepare(
+        `SELECT slug, title FROM articles WHERE slug IN (${placeholders}) LIMIT 20`
+      ).bind(...slugs).all();
+      // preserve editor order
+      const bySlug = Object.fromEntries((rows || []).map(r => [r.slug, r]));
+      curatedRelated = slugs.map(s => bySlug[s]).filter(Boolean);
+    }
+  } catch (_) {}
+
+  // Merge curated slugs into relatedLinks for JSON-LD (deduplicated, curated first)
+  const curatedLinks = curatedRelated.map(r => `${SITE_URL}/articles/${r.slug}`);
+  const allRelatedLinks = [...new Set([...curatedLinks, ...relatedLinks])];
+
   const jsonLd = {
     '@context': 'https://schema.org',
-    '@graph': buildArticleGraph(article, SITE_URL, relatedLinks),
+    '@graph': buildArticleGraph(article, SITE_URL, allRelatedLinks),
   };
 
-  // Further Reading section
+  // Further Reading section (silo)
   let relatedHtml = '';
   if (siloArticles.length > 0) {
     const links = siloArticles
@@ -101,6 +121,15 @@ export async function onRequest(context) {
       .map(r => `    <li><a href="/articles/${esc(r.slug)}">${esc(r.title || 'Article')}</a></li>`)
       .join('\n');
     relatedHtml = `\n  <section aria-label="Further reading">\n    <h2>Further Reading</h2>\n    <ul>\n${links}\n    </ul>\n  </section>`;
+  }
+
+  // Editor-curated Related Articles block (appended to body)
+  let curatedRelatedHtml = '';
+  if (curatedRelated.length > 0) {
+    const links = curatedRelated
+      .map(r => `    <li><a href="/articles/${esc(r.slug)}">${esc(r.title || r.slug)}</a></li>`)
+      .join('\n');
+    curatedRelatedHtml = `\n  <section aria-label="Related articles">\n    <h2>Related Articles</h2>\n    <ul>\n${links}\n    </ul>\n  </section>`;
   }
 
   const authorSlugStr = authorDisplay.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
@@ -131,6 +160,7 @@ export async function onRequest(context) {
     twitterCreator: esc(twitterCreator),
     jsonLd: JSON.stringify(jsonLd),
     extraMeta,
+    relatedLinks: allRelatedLinks,
     cssVariant: 'article',
   })}
 </head>
@@ -147,7 +177,7 @@ export async function onRequest(context) {
     </div>
     ${rawImage ? `<img src="${esc(image)}" alt="${esc(title)}" width="1200" height="630" class="hero-img" loading="eager">` : ''}
     <div>${content}</div>
-  </div>${relatedHtml}
+  </div>${curatedRelatedHtml}${relatedHtml}
   <footer>
     <p>&copy; ${new Date().getFullYear()} OpenTuwa Media.
       <a href="/legal">Legal</a> |

@@ -17,6 +17,22 @@ async function getArticle(slug, env) {
   }
 }
 
+async function getCuratedRelated(article, env) {
+  try {
+    const raw = article?.related_articles;
+    const slugs = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(slugs) || slugs.length === 0) return [];
+    const placeholders = slugs.map(() => '?').join(',');
+    const { results } = await env.DB.prepare(
+      `SELECT slug, title FROM articles WHERE slug IN (${placeholders}) LIMIT 20`
+    ).bind(...slugs).all();
+    const bySlug = Object.fromEntries((results || []).map(r => [r.slug, r]));
+    return slugs.map(s => bySlug[s]).filter(Boolean);
+  } catch (_) {
+    return [];
+  }
+}
+
 async function getAuthor(name, env) {
   if (!name) return null;
   try {
@@ -155,24 +171,40 @@ export default async function ArticlePage({ params }) {
     notFound();
   }
 
-  const [authorInfo, recommended, siloArticles] = await Promise.all([
+  const [authorInfo, recommended, siloArticles, curatedRelated] = await Promise.all([
     getAuthor(article.author, env),
     getRecommendations(article, env),
     getSiloArticles(article, env),
+    getCuratedRelated(article, env),
   ]);
 
-  const relatedLinks = siloArticles
+  const siloLinks = siloArticles
     .filter(r => r?.slug)
     .map(r => `https://opentuwa.com/articles/${r.slug}`);
+
+  const curatedLinks = curatedRelated.map(r => `https://opentuwa.com/articles/${r.slug}`);
+  const allRelatedLinks = [...new Set([...curatedLinks, ...siloLinks])];
+
+  // Append editor-curated "Related Articles" block to content_html
+  let contentHtml = article.content_html || '';
+  if (curatedRelated.length > 0) {
+    const listItems = curatedRelated
+      .map(r => `<li><em><a href="/articles/${r.slug}">${r.title || r.slug}</a></em></li>`)
+      .join('');
+    contentHtml += `<hr style="margin:2rem 0;border-color:rgba(255,255,255,0.08)"><p><strong>Related Articles</strong></p><ul>${listItems}</ul>`;
+  }
 
   return (
     <>
       {article.image_url && (
         <link rel="preload" as="image" href={article.image_url} fetchPriority="high" />
       )}
-      <GraphSchema type="article" data={{ ...article, relatedLinks }} />
+      {allRelatedLinks.map(url => (
+        <link key={url} rel="related" href={url} />
+      ))}
+      <GraphSchema type="article" data={{ ...article, relatedLinks: allRelatedLinks }} />
       <ArticleView
-        article={article}
+        article={{ ...article, content_html: contentHtml }}
         recommended={recommended}
         authorInfo={authorInfo}
         furtherReading={siloArticles}

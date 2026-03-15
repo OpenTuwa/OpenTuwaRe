@@ -115,6 +115,7 @@ export function buildHead({
   twitterCreator = '@opentuwa',
   jsonLd = '',
   extraMeta = '',
+  relatedLinks = [],
   cssVariant = 'base',
 }) {
   const criticalCss = [
@@ -124,6 +125,10 @@ export function buildHead({
       : cssVariant === 'author' ? CRITICAL_CSS_AUTHOR
       : '',
   ].filter(Boolean).join('\n');
+
+  const relatedLinkTags = relatedLinks.length
+    ? relatedLinks.map(url => `  <link rel="related" href="${url}">`).join('\n')
+    : '';
 
   return `
   <meta charset="utf-8">
@@ -152,6 +157,7 @@ export function buildHead({
   <meta name="twitter:image" content="${ogImage}">
   ${ogImageAlt ? `<meta name="twitter:image:alt" content="${ogImageAlt}">` : ''}
   <link rel="alternate" type="application/rss+xml" title="${SITE_NAME} RSS Feed" href="${FEED_URL}">
+  ${relatedLinkTags}
   ${extraMeta}
   ${jsonLd ? `<script type="application/ld+json">${jsonLd}</script>` : ''}
   <style>${criticalCss}</style>
