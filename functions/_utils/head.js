@@ -11,9 +11,9 @@
 //   9. Critical inline CSS (above-the-fold styles — nav + first ~1000px)
 //  10. Cookiebot (async, non-blocking)
 
+import { FEED_URL, SITE_NAME } from './constants.js';
+
 const COOKIEBOT_ID = '87b34ddf-45f5-47fc-8a13-87fcb9d1aa85';
-const FEED_URL     = 'https://opentuwa.com/feed.xml';
-const SITE_NAME    = 'OpenTuwa';
 
 // ─── Critical CSS ─────────────────────────────────────────────────────────────
 // Covers: CSS custom properties, reset, body, nav (always above fold),
@@ -76,7 +76,8 @@ li a{color:var(--accent)}
 const ICON_TAGS = `
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/ui/web_512.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/assets/ui/web_512.png">
-  <link rel="apple-touch-icon" href="/assets/ui/web_512.png">`.trimStart();
+  <link rel="apple-touch-icon" href="/assets/ui/web_512.png">
+  <link rel="manifest" href="/manifest.json">`.trimStart();
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 

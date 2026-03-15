@@ -8,8 +8,9 @@
 // Article pages emit hreflang only for locales present in the article's
 // available_translations DB column, plus always 'en' + 'x-default'.
 
+import { SITE_URL } from './constants.js';
+
 const LOCALES = ['en', 'zh-Hans', 'hi', 'es', 'fr', 'ar', 'bn', 'ru', 'pt', 'ur', 'ja', 'tr', 'de'];
-const SITE_URL = 'https://opentuwa.com';
 
 /**
  * Returns a block of <link rel="alternate" hreflang="..."> tags.

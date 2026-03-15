@@ -10,7 +10,7 @@ export async function onRequest(context) {
   try {
     // specific fetch from your new authors table
     const { results } = await env.DB.prepare(
-      "SELECT * FROM authors WHERE name = ?"
+      "SELECT name, author_bio, author_image, author_twitter, author_linkedin, author_facebook, author_youtube, role FROM authors WHERE name = ?"
     ).bind(name).all();
 
     if (!results || results.length === 0) {

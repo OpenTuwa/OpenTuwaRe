@@ -2,6 +2,9 @@ export async function onRequestGet(context) {
   const { env, request, params } = context;
   const slug = params.slug;
 
+  // Player pages are noindex — they're companion views to article pages
+  const noindexHeader = { 'X-Robots-Tag': 'noindex, follow' };
+
   let article = null;
   try {
     const { results } = await env.DB.prepare(
@@ -35,14 +38,17 @@ export async function onRequestGet(context) {
   const response = await context.next();
 
   if (!response.headers.get('content-type')?.includes('text/html')) {
-    return new Response(innerHtml, { headers: { 'content-type': 'text/html' } });
+    return new Response(innerHtml, { headers: { 'content-type': 'text/html', ...noindexHeader } });
   }
 
   return new HTMLRewriter()
     .on('title', { element(e) { e.setInnerContent(title + " | OpenTuwa"); } })
     .on('meta[name="description"]', { element(e) { e.setAttribute('content', desc); } })
     .on('div#root', { element(e) { e.setInnerContent(innerHtml, { html: true }); } })
-    .transform(response);
+    .transform(new Response(response.body, {
+      status: response.status,
+      headers: { ...Object.fromEntries(response.headers), ...noindexHeader },
+    }));
 }
 
 function esc(s) {

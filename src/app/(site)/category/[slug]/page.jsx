@@ -39,7 +39,7 @@ export async function generateMetadata({ params }) {
       canonical: canonicalUrl,
       languages: buildHreflangLanguages(canonicalUrl),
     },
-    robots: { index: true, follow: true },
+    robots: { index: false, follow: true },
     openGraph: {
       title: `${label} | OpenTuwa`,
       description: `Browse all ${label} articles on OpenTuwa.`,

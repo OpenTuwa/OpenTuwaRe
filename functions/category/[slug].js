@@ -71,6 +71,7 @@ export async function onRequest(context) {
     title: esc(pageTitle),
     desc: esc(pageDesc),
     canonical: canonicalUrl,
+    robots: 'noindex, follow',
     hreflang: buildHreflangTags(`/category/${slug}`),
     ogType: 'website',
     ogImage: `${SITE_URL}/assets/ui/web_1200.png`,

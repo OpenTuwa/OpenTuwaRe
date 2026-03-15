@@ -7,7 +7,7 @@ export async function onRequestGet(context) {
     if (nameFilter) {
       // 1. Fetch the specific author your React app is asking for
       const author = await env.DB.prepare(
-        "SELECT * FROM authors WHERE name = ?"
+        "SELECT name, author_bio, author_image, author_twitter, author_linkedin, author_facebook, author_youtube, role, avatar_url FROM authors WHERE name = ?"
       ).bind(nameFilter).first();
 
       if (!author) {
@@ -25,7 +25,9 @@ export async function onRequestGet(context) {
     }
 
     // If no name is provided, return all authors as usual
-    const { results } = await env.DB.prepare("SELECT * FROM authors ORDER BY id ASC").all();
+    const { results } = await env.DB.prepare(
+      "SELECT name, author_bio, author_image, author_twitter, author_linkedin, author_facebook, author_youtube, role, avatar_url FROM authors ORDER BY id ASC"
+    ).all();
     const authors = (results || []).map(a => {
       a.avatar = a.avatar_url;
       if (a.avatar && a.avatar.includes('jsdelivr')) {

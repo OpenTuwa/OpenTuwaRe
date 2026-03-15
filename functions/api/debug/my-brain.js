@@ -6,6 +6,15 @@ export default {
     // THE X-RAY: GET /api/debug/my-brain?userId=YOUR_ID
     // ===================================================================
     if (url.pathname === '/api/debug/my-brain' && request.method === 'GET') {
+      // Auth check
+      const authHeader = request.headers.get('Authorization') || '';
+      if (!env.ADMIN_SECRET || authHeader !== `Bearer ${env.ADMIN_SECRET}`) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
       // Grab the user ID from the URL, fallback to 'test_user'
       const userId = url.searchParams.get('userId') || 'test_user';
       const kvKey = `user_vector:${userId}`;
@@ -38,8 +47,7 @@ export default {
           vector_preview_end: userVector.slice(-5)
         }, null, 2), { 
           headers: { 
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*' // Allows your local dev frontend to fetch this
+            'Content-Type': 'application/json'
           } 
         });
 

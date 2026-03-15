@@ -97,7 +97,7 @@ export async function onRequestPost(context) {
       JSON.stringify(userVisualVector)
     ).run();
 
-    return new Response(JSON.stringify({ success: true, rpe_multiplier: rpeMultiplier }), { status: 200 });
+    return new Response(JSON.stringify({ success: true }), { status: 200 });
 
   } catch (error) {
     return new Response(JSON.stringify({ error: "Failed" }), { status: 500 });

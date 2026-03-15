@@ -137,7 +137,9 @@ export class RecommendationEngine {
           score = TemporalGravity.dynamicGravity(article.engagement_score, hoursOld, 1.85, article.trending_velocity || 0);
         }
         const chronScore = new Date(article.published_at || Date.now()).getTime() / 10000000000;
-        return { ...article, _trending_score: score + chronScore };
+        // eslint-disable-next-line no-unused-vars
+        const { neural_vector, visual_vector, ...safe } = article;
+        return { ...safe, _trending_score: score + chronScore };
       })
       .sort((a, b) => b._trending_score - a._trending_score)
       .slice(0, limit);

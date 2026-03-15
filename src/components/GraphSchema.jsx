@@ -2,9 +2,11 @@
 // Single GraphSchema component — emits one <script type="application/ld+json"> @graph block per page.
 // Replaces: NewsArticleSchema, OrganizationSchema, WebSiteSchema, BreadcrumbSchema, CollectionPageSchema
 
-const SITE_URL = 'https://opentuwa.com';
+// Note: constants.js is a Cloudflare Functions file; we redeclare here for the React/Next.js layer.
+// These values must stay in sync with functions/_utils/constants.js.
+const SITE_URL  = 'https://opentuwa.com';
 const SITE_NAME = 'OpenTuwa';
-const LOGO_URL = 'https://opentuwa.com/assets/ui/web_512.png';
+const LOGO_URL  = 'https://opentuwa.com/assets/ui/web_512.png';
 
 // ─── Shared org node ─────────────────────────────────────────────────────────
 
@@ -132,17 +134,17 @@ export function buildArticleGraph(article, origin = SITE_URL, relatedLinks = [])
         height: 630,
         caption: article?.image_alt || title || '',
         description: article?.image_alt || title || '',
-        representativeOfPage: 'true',
+        representativeOfPage: true,
       }
     : null;
 
-  // Citation extraction — parse external hrefs from article.content
+  // Citation extraction — parse external hrefs from article.content_html
   const citations = [];
-  if (article?.content) {
+  if (article?.content_html) {
     const hrefRegex = /href="([^"]+)"/g;
     let match;
     const seen = new Set();
-    while ((match = hrefRegex.exec(article.content)) !== null) {
+    while ((match = hrefRegex.exec(article.content_html)) !== null) {
       const url = match[1];
       if (!url.includes('opentuwa.com') && !seen.has(url)) {
         seen.add(url);

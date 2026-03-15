@@ -34,7 +34,9 @@ export const metadata = {
 async function getArchive() {
   try {
     const { env } = getRequestContext();
-    const { results } = await env.DB.prepare("SELECT * FROM articles ORDER BY published_at DESC").all();
+    const { results } = await env.DB.prepare(
+      "SELECT slug, title, subtitle, published_at, author, section, category FROM articles ORDER BY published_at DESC LIMIT 500"
+    ).all();
     
     if (!results || results.length === 0) return [];
 

@@ -97,7 +97,6 @@ export async function onRequestPost(context) {
   const { env, request } = context;
 
   // CORS preflight passthrough
-  const origin = request.headers.get('Origin') || '';
 
   let body;
   try {
@@ -110,6 +109,9 @@ export async function onRequestPost(context) {
 
   if (!url || typeof url !== 'string') {
     return json({ error: 'Missing or invalid "url" field' }, 400);
+  }
+  if (!url.startsWith('https://opentuwa.com/')) {
+    return json({ error: 'URL not allowed — must be an opentuwa.com URL' }, 403);
   }
   if (type !== 'URL_UPDATED' && type !== 'URL_DELETED') {
     return json({ error: '"type" must be URL_UPDATED or URL_DELETED' }, 400);

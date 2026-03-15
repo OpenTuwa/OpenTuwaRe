@@ -1,9 +1,7 @@
 // Shared JSON-LD @graph schema builder utility for OpenTuwa
 // Used by both Cloudflare Worker bot-SSR and React StructuredData components
 
-const SITE_URL = 'https://opentuwa.com';
-const SITE_NAME = 'OpenTuwa';
-const LOGO_URL = 'https://opentuwa.com/assets/ui/web_512.png';
+import { SITE_URL, SITE_NAME, LOGO_URL } from './constants.js';
 
 // ─── Shared nodes ────────────────────────────────────────────────────────────
 
@@ -182,17 +180,17 @@ export function buildArticleGraph(article, origin = SITE_URL, relatedLinks = [])
         height: 630,
         caption: article?.image_alt || title || '',
         description: article?.image_alt || title || '',
-        representativeOfPage: 'true',
+        representativeOfPage: true,
       }
     : null;
 
-  // Citation extraction — parse external hrefs from article.content
+  // Citation extraction — parse external hrefs from article.content_html
   const citations = [];
-  if (article?.content) {
+  if (article?.content_html) {
     const hrefRegex = /href="([^"]+)"/g;
     let match;
     const seen = new Set();
-    while ((match = hrefRegex.exec(article.content)) !== null) {
+    while ((match = hrefRegex.exec(article.content_html)) !== null) {
       const url = match[1];
       if (!url.includes('opentuwa.com') && !seen.has(url)) {
         seen.add(url);

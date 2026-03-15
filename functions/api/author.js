@@ -8,7 +8,7 @@ export async function onRequestGet(context) {
     if (!name) return Response.json({ error: 'Missing author name' }, { status: 400 });
 
     const { results } = await env.DB.prepare(
-      "SELECT * FROM authors WHERE LOWER(name) = LOWER(?)"
+      "SELECT name, author_bio, author_image, author_twitter, author_linkedin, author_facebook, author_youtube, role FROM authors WHERE LOWER(name) = LOWER(?)"
     ).bind(name).all();
 
     if (!results || results.length === 0) {
