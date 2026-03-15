@@ -84,9 +84,9 @@ export async function generateMetadata({ params }) {
 
   const seoTitle = `${article.title} | OpenTuwa`;
   const seoDesc = article.seo_description || article.subtitle || article.excerpt || article.title;
-  const imageUrl = article.image_url || 'https://opentuwa.com/assets/ui/web_512.png';
-  const imageWidth = article.image_url ? 1200 : 512;
-  const imageHeight = article.image_url ? 630 : 512;
+  const imageUrl = article.image_url || 'https://opentuwa.com/assets/ui/web_1200.png';
+  const imageWidth = article.image_url ? 1200 : 1200;
+  const imageHeight = article.image_url ? 630 : 630;
   const canonicalUrl = `https://opentuwa.com/articles/${slug}`;
 
   // Parse available_translations defensively

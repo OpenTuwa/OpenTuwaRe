@@ -45,7 +45,6 @@ export async function generateMetadata({ searchParams }) {
       type: 'website',
       url: canonicalUrl,
       images: [
-        { url: 'https://opentuwa.com/assets/ui/web_512.png', width: 512, height: 512, alt: 'OpenTuwa' },
         { url: 'https://opentuwa.com/assets/ui/web_1200.png', width: 1200, height: 630, alt: 'OpenTuwa - Independent Journalism' }
       ],
       siteName: 'OpenTuwa',

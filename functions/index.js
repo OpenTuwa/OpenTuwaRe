@@ -6,7 +6,7 @@ import { buildHead } from './_utils/head.js';
 const SITE_NAME = 'OpenTuwa';
 const SITE_URL = 'https://opentuwa.com';
 const SITE_DESC = 'Discover stories, documentaries, and articles on OpenTuwa. Substantive journalism and rigorous intellectual inquiry.';
-const OG_IMAGE = 'https://opentuwa.com/assets/ui/web_512.png';
+const OG_IMAGE = 'https://opentuwa.com/assets/ui/web_1200.png';
 const FEED_URL = 'https://opentuwa.com/feed.xml';
 
 export async function onRequestGet(context) {
@@ -86,9 +86,9 @@ export async function onRequestGet(context) {
     hreflang: buildHreflangTags('/'),
     ogType: 'website',
     ogImage: OG_IMAGE,
-    ogImageWidth: '512',
-    ogImageHeight: '512',
-    twitterCard: 'summary',
+    ogImageWidth: '1200',
+    ogImageHeight: '630',
+    twitterCard: 'summary_large_image',
     jsonLd: JSON.stringify({ '@context': 'https://schema.org', '@graph': buildHomepageGraph(SITE_URL) }),
     cssVariant: 'list',
   })}

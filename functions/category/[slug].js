@@ -76,9 +76,10 @@ export async function onRequest(context) {
     canonical: canonicalUrl,
     hreflang: buildHreflangTags(`/category/${slug}`),
     ogType: 'website',
-    ogImage: `${SITE_URL}/assets/ui/web_512.png`,
-    ogImageWidth: '512',
-    ogImageHeight: '512',
+    ogImage: `${SITE_URL}/assets/ui/web_1200.png`,
+    ogImageWidth: '1200',
+    ogImageHeight: '630',
+    twitterCard: 'summary_large_image',
     cssVariant: 'list',
   })}
 </head>

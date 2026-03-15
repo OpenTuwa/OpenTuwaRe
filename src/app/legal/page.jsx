@@ -9,7 +9,7 @@ export const metadata = {
     description: 'Terms of Service, Privacy Policy, and Cookie Policy for OpenTuwa.',
     type: 'website',
     url: 'https://opentuwa.com/legal',
-    images: [{ url: 'https://opentuwa.com/assets/ui/web_512.png', alt: 'OpenTuwa Legal' }],
+    images: [{ url: 'https://opentuwa.com/assets/ui/web_1200.png', width: 1200, height: 630, alt: 'OpenTuwa Legal' }],
     siteName: 'OpenTuwa',
     locale: 'en_US',
   },
@@ -17,7 +17,7 @@ export const metadata = {
     card: 'summary_large_image',
     title: 'Legal | OpenTuwa',
     description: 'Terms of Service, Privacy Policy, and Cookie Policy for OpenTuwa.',
-    images: ['https://opentuwa.com/assets/ui/web_512.png'],
+    images: ['https://opentuwa.com/assets/ui/web_1200.png'],
     site: '@opentuwa',
   },
   alternates: {

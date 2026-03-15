@@ -68,11 +68,11 @@ export async function onRequest(context) {
     }
   }
 
-  // OG image: use article's own image at 1200×630, fall back to logo at 512×512
+  // OG image: use article's own image at 1200×630, fall back to brand image
   const hasImage = !!image;
-  const ogImage = hasImage ? image : `${SITE_URL}/assets/ui/web_512.png`;
-  const imgWidth = hasImage ? '1200' : '512';
-  const imgHeight = hasImage ? '630' : '512';
+  const ogImage = hasImage ? image : `${SITE_URL}/assets/ui/web_1200.png`;
+  const imgWidth = hasImage ? '1200' : '1200';
+  const imgHeight = hasImage ? '630' : '630';
 
   // JSON-LD @graph — built from shared schema utility for bot/React parity
   // Silo: fetch 3 most recent articles in the same category

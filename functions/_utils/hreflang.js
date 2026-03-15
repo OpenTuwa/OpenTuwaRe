@@ -1,62 +1,51 @@
 // Shared hreflang tag builder for Cloudflare Worker bot-SSR functions
+//
+// Static pages (about, archive, homepage, legal, authors) emit NO hreflang tags
+// because OpenTuwa has no translated versions of these pages. Emitting 13 locales
+// all pointing to the same English URL is malformed hreflang and will be ignored
+// or penalised by Google. Re-enable when actual translated URLs exist.
+//
+// Article pages emit hreflang only for locales present in the article's
+// available_translations DB column, plus always 'en' + 'x-default'.
 
 const LOCALES = ['en', 'zh-Hans', 'hi', 'es', 'fr', 'ar', 'bn', 'ru', 'pt', 'ur', 'ja', 'tr', 'de'];
 const SITE_URL = 'https://opentuwa.com';
 
 /**
- * Returns a block of <link rel="alternate" hreflang="..."> tags for the given path.
+ * Returns a block of <link rel="alternate" hreflang="..."> tags.
  *
- * For static pages (about, archive, homepage, authors, legal) pass no
- * availableTranslations — all 13 locales are emitted.
- *
- * For article pages, pass the availableTranslations array from the DB row.
- * Only locales present in that array will be emitted (plus x-default → 'en' URL).
- * 'en' is always included for articles since the canonical content is English.
- *
- * @param {string}   path                   - e.g. '/articles/my-slug'
- * @param {string[]|null} [availableTranslations] - locale codes available for this article,
- *                                                  or null/undefined for static pages
- * @returns {string} - HTML string of <link> tags
+ * @param {string}        path
+ * @param {string[]|null} [availableTranslations] - null/omitted → static page → no tags emitted
+ * @returns {string}
  */
 export function buildHreflangTags(path = '', availableTranslations = null) {
+  // Static pages: no translated URLs exist — emit nothing
+  if (!availableTranslations) return '';
+
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
   const url = `${SITE_URL}${cleanPath}`;
 
-  // Static pages: emit all locales
-  if (!availableTranslations) {
-    return LOCALES.map(locale =>
-      `<link rel="alternate" hreflang="${locale}" href="${url}">`
-    ).join('\n  ')
-      + `\n  <link rel="alternate" hreflang="x-default" href="${url}">`;
-  }
-
-  // Article pages: only emit locales that exist in the DB, always include 'en'
   const available = new Set(availableTranslations);
-  available.add('en'); // English is always available (canonical content language)
+  available.add('en');
 
   return LOCALES
     .filter(locale => available.has(locale))
     .map(locale => `<link rel="alternate" hreflang="${locale}" href="${url}">`)
     .join('\n  ')
-      + `\n  <link rel="alternate" hreflang="x-default" href="${url}">`;
+    + `\n  <link rel="alternate" hreflang="x-default" href="${url}">`;
 }
 
 /**
  * Builds the Next.js `alternates.languages` object for generateMetadata.
  *
  * @param {string}        canonicalUrl
- * @param {string[]|null} [availableTranslations] - null for static pages (all locales)
+ * @param {string[]|null} [availableTranslations] - null → static page → empty object
  * @returns {Record<string, string>}
  */
 export function buildHreflangLanguages(canonicalUrl, availableTranslations = null) {
-  if (!availableTranslations) {
-    // Static page — all locales
-    const languages = Object.fromEntries(LOCALES.map(l => [l, canonicalUrl]));
-    languages['x-default'] = canonicalUrl;
-    return languages;
-  }
+  // Static pages: no translated URLs — return empty so Next.js emits no hreflang
+  if (!availableTranslations) return {};
 
-  // Article page — only available locales + en
   const available = new Set(availableTranslations);
   available.add('en');
 

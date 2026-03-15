@@ -45,9 +45,9 @@ export async function generateMetadata({ params }) {
   const authorUrl = `${SITE_URL}/authors/${slug}`;
   const pageTitle = `${author.name} — OpenTuwa`;
   const pageDesc = author.author_bio || `Articles by ${author.name} on OpenTuwa.`;
-  const ogImage = author.author_image || `${SITE_URL}/assets/ui/web_512.png`;
-  const imgWidth = author.author_image ? 400 : 512;
-  const imgHeight = author.author_image ? 400 : 512;
+  const ogImage = author.author_image || `${SITE_URL}/assets/ui/web_1200.png`;
+  const imgWidth = author.author_image ? undefined : 1200;
+  const imgHeight = author.author_image ? undefined : 630;
 
   const languages = buildHreflangLanguages(authorUrl);
 
@@ -69,8 +69,7 @@ export async function generateMetadata({ params }) {
       locale: 'en_US',
     },
     twitter: {
-      card: 'summary',
-      title: pageTitle,
+      card: 'summary',      title: pageTitle,
       description: pageDesc,
       images: [ogImage],
       site: '@opentuwa',

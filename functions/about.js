@@ -5,7 +5,7 @@ import { buildHead } from './_utils/head.js';
 
 const PAGE_TITLE = 'About OpenTuwa | Independent Journalism';
 const PAGE_DESC = 'OpenTuwa is an independent platform for long-form articles, research, and media exploring foundational ideas. Built for deep thought, not fast cycles.';
-const OG_IMAGE = 'https://opentuwa.com/assets/ui/web_512.png';
+const OG_IMAGE = 'https://opentuwa.com/assets/ui/web_1200.png';
 const CANONICAL = 'https://opentuwa.com/about';
 const SITE_URL = 'https://opentuwa.com';
 const FEED_URL = 'https://opentuwa.com/feed.xml';
@@ -32,9 +32,9 @@ export async function onRequestGet(context) {
     hreflang: buildHreflangTags('/about'),
     ogType: 'website',
     ogImage: OG_IMAGE,
-    ogImageWidth: '512',
-    ogImageHeight: '512',
-    twitterCard: 'summary',
+    ogImageWidth: '1200',
+    ogImageHeight: '630',
+    twitterCard: 'summary_large_image',
     jsonLd,
     cssVariant: 'list',
   })}

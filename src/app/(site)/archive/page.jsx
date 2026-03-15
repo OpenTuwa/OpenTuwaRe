@@ -13,7 +13,7 @@ export const metadata = {
     description: 'A complete timeline of all articles, documentaries, and stories published on OpenTuwa.',
     type: 'website',
     url: 'https://opentuwa.com/archive',
-    images: [{ url: 'https://opentuwa.com/assets/ui/web_512.png', alt: 'OpenTuwa Archive' }],
+    images: [{ url: 'https://opentuwa.com/assets/ui/web_1200.png', width: 1200, height: 630, alt: 'OpenTuwa Archive' }],
     siteName: 'OpenTuwa',
     locale: 'en_US',
   },
@@ -21,7 +21,7 @@ export const metadata = {
     card: 'summary_large_image',
     title: 'Archive | OpenTuwa',
     description: 'A complete timeline of all articles, documentaries, and stories published on OpenTuwa.',
-    images: ['https://opentuwa.com/assets/ui/web_512.png'],
+    images: ['https://opentuwa.com/assets/ui/web_1200.png'],
     site: '@opentuwa',
   },
   alternates: {

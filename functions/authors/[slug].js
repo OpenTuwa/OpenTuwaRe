@@ -42,9 +42,11 @@ export async function onRequest(context) {
   const canonicalUrl = `${SITE_URL}/authors/${slug}`;
   const pageTitle = `${authorName} — ${SITE_NAME}`;
   const pageDesc = `Articles by ${authorName} on ${SITE_NAME}.`;
-  const ogImage = author.author_image || `${SITE_URL}/assets/ui/web_512.png`;
-  const ogImgWidth = author.author_image ? '400' : '512';
-  const ogImgHeight = author.author_image ? '400' : '512';
+  const ogImage = author.author_image || `${SITE_URL}/assets/ui/web_1200.png`;
+  // Don't declare dimensions for user-supplied author images — aspect ratio is unknown.
+  const ogImgWidth = author.author_image ? '' : '1200';
+  const ogImgHeight = author.author_image ? '' : '630';
+  const twitterCardType = author.author_image ? 'summary' : 'summary_large_image';
 
   const jsonLd = JSON.stringify({
     '@context': 'https://schema.org',
@@ -71,7 +73,7 @@ export async function onRequest(context) {
     ogImage: esc(ogImage),
     ogImageWidth: ogImgWidth,
     ogImageHeight: ogImgHeight,
-    twitterCard: 'summary',
+    twitterCard: twitterCardType,
     jsonLd,
     cssVariant: 'author',
   })}

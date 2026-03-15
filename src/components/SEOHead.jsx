@@ -4,7 +4,7 @@ import React from 'react';
 export function ArticleSEOHead({ article, author, canonicalUrl }) {
   const seoTitle = `${article.title} | OpenTuwa`;
   const seoDesc = article.seo_description || article.subtitle || article.excerpt || article.title;
-  const imageUrl = article.image_url || 'https://opentuwa.com/assets/ui/web_512.png';
+  const imageUrl = article.image_url || 'https://opentuwa.com/assets/ui/web_1200.png';
   const publishedTime = article.published_at;
   const modifiedTime = article.updated_at || article.published_at;
   
@@ -58,12 +58,6 @@ export function ArticleSEOHead({ article, author, canonicalUrl }) {
       <meta name="robots" content="index, follow" />
       <meta name="googlebot" content="index, follow" />
       <meta name="bingbot" content="index, follow" />
-      
-      {/* Geo Tags (optional, for local news) */}
-      <meta name="geo.region" content="US" />
-      <meta name="geo.placename" content="United States" />
-      <meta name="geo.position" content="38.3620;-77.5650" />
-      <meta name="ICBM" content="38.3620, -77.5650" />
     </>
   );
 }
@@ -82,7 +76,7 @@ export function HomeSEOHead() {
       <meta property="og:description" content="Independent news and journalism covering stories that matter. Deep dives, documentaries, and analysis." />
       <meta property="og:type" content="website" />
       <meta property="og:url" content="https://opentuwa.com" />
-      <meta property="og:image" content="https://opentuwa.com/assets/ui/web_512.png" />
+      <meta property="og:image" content="https://opentuwa.com/assets/ui/web_1200.png" />
       <meta property="og:image:alt" content="OpenTuwa - Independent Journalism" />
       <meta property="og:locale" content="en_US" />
       <meta property="og:site_name" content="OpenTuwa" />
@@ -91,7 +85,7 @@ export function HomeSEOHead() {
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content="OpenTuwa | Independent Journalism & Documentaries" />
       <meta name="twitter:description" content="Independent news and journalism covering stories that matter." />
-      <meta name="twitter:image" content="https://opentuwa.com/assets/ui/web_512.png" />
+      <meta name="twitter:image" content="https://opentuwa.com/assets/ui/web_1200.png" />
       <meta name="twitter:image:alt" content="OpenTuwa - Independent Journalism" />
       <meta name="twitter:site" content="@opentuwa" />
       
@@ -117,7 +111,7 @@ export function ArchiveSEOHead() {
       <meta property="og:description" content="A complete timeline of all articles, documentaries, and stories published on OpenTuwa." />
       <meta property="og:type" content="website" />
       <meta property="og:url" content="https://opentuwa.com/archive" />
-      <meta property="og:image" content="https://opentuwa.com/assets/ui/web_512.png" />
+      <meta property="og:image" content="https://opentuwa.com/assets/ui/web_1200.png" />
       <meta property="og:image:alt" content="OpenTuwa Archive" />
       <meta property="og:locale" content="en_US" />
       <meta property="og:site_name" content="OpenTuwa" />
@@ -126,7 +120,7 @@ export function ArchiveSEOHead() {
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content="Archive | OpenTuwa" />
       <meta name="twitter:description" content="A complete timeline of all articles, documentaries, and stories published on OpenTuwa." />
-      <meta name="twitter:image" content="https://opentuwa.com/assets/ui/web_512.png" />
+      <meta name="twitter:image" content="https://opentuwa.com/assets/ui/web_1200.png" />
       <meta name="twitter:image:alt" content="OpenTuwa Archive" />
       <meta name="twitter:site" content="@opentuwa" />
       
@@ -152,7 +146,7 @@ export function AboutSEOHead() {
       <meta property="og:description" content="OpenTuwa is an independent platform for long-form articles, research, and media exploring foundational ideas." />
       <meta property="og:type" content="website" />
       <meta property="og:url" content="https://opentuwa.com/about" />
-      <meta property="og:image" content="https://opentuwa.com/assets/ui/web_512.png" />
+      <meta property="og:image" content="https://opentuwa.com/assets/ui/web_1200.png" />
       <meta property="og:image:alt" content="About OpenTuwa" />
       <meta property="og:locale" content="en_US" />
       <meta property="og:site_name" content="OpenTuwa" />
@@ -161,7 +155,7 @@ export function AboutSEOHead() {
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content="About OpenTuwa" />
       <meta name="twitter:description" content="OpenTuwa is an independent platform for long-form articles, research, and media exploring foundational ideas." />
-      <meta name="twitter:image" content="https://opentuwa.com/assets/ui/web_512.png" />
+      <meta name="twitter:image" content="https://opentuwa.com/assets/ui/web_1200.png" />
       <meta name="twitter:image:alt" content="About OpenTuwa" />
       <meta name="twitter:site" content="@opentuwa" />
       
@@ -187,7 +181,7 @@ export function LegalSEOHead() {
       <meta property="og:description" content="Terms of Service, Privacy Policy, and Cookie Policy for OpenTuwa." />
       <meta property="og:type" content="website" />
       <meta property="og:url" content="https://opentuwa.com/legal" />
-      <meta property="og:image" content="https://opentuwa.com/assets/ui/web_512.png" />
+      <meta property="og:image" content="https://opentuwa.com/assets/ui/web_1200.png" />
       <meta property="og:image:alt" content="OpenTuwa Legal" />
       <meta property="og:locale" content="en_US" />
       <meta property="og:site_name" content="OpenTuwa" />
@@ -196,7 +190,7 @@ export function LegalSEOHead() {
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content="Legal | OpenTuwa" />
       <meta name="twitter:description" content="Terms of Service, Privacy Policy, and Cookie Policy for OpenTuwa." />
-      <meta name="twitter:image" content="https://opentuwa.com/assets/ui/web_512.png" />
+      <meta name="twitter:image" content="https://opentuwa.com/assets/ui/web_1200.png" />
       <meta name="twitter:image:alt" content="OpenTuwa Legal" />
       <meta name="twitter:site" content="@opentuwa" />
       
@@ -207,3 +201,4 @@ export function LegalSEOHead() {
     </>
   );
 }
+

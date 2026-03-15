@@ -30,7 +30,6 @@ export const metadata = {
     title: 'OpenTuwa | Independent Journalism & Documentaries',
     description: 'Independent news and journalism covering stories that matter.',
     images: [
-      { url: '/assets/ui/web_512.png', width: 512, height: 512, alt: 'OpenTuwa' },
       { url: '/assets/ui/web_1200.png', width: 1200, height: 630, alt: 'OpenTuwa - Independent Journalism' }
     ],
   },

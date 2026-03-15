@@ -15,8 +15,7 @@ export async function onRequestGet(context) {
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:news="http://www.google.com/schemas/sitemap-news/0.9"
-        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
-        xmlns:geo="http://www.google.com/schemas/sitemap-geo/1.0">`;
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">`;
 
   for (const a of articles) {
     const isoDate = toISO(a.published_at);
@@ -42,11 +41,11 @@ export async function onRequestGet(context) {
       <news:publication_date>${esc(isoDate)}</news:publication_date>
       <news:title>${esc(a.title || '')}</news:title>${keywords ? `
       <news:keywords>${esc(keywords)}</news:keywords>` : ''}
-      <news:genre>${a.section ? esc(a.section) : 'News'}</news:genre>
     </news:news>${imageUrl ? `
     <image:image>
       <image:loc>${esc(imageUrl)}</image:loc>
       <image:title>${esc(a.title || '')}</image:title>
+      <image:caption>${esc(a.title || '')}</image:caption>
     </image:image>` : ''}
   </url>`;
   }

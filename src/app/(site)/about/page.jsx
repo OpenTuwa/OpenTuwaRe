@@ -13,7 +13,7 @@ export const metadata = {
     description: 'OpenTuwa is an independent platform for long-form articles, research, and media exploring foundational ideas.',
     type: 'website',
     url: 'https://opentuwa.com/about',
-    images: [{ url: 'https://opentuwa.com/assets/ui/web_512.png', width: 512, height: 512, alt: 'About OpenTuwa' }],
+    images: [{ url: 'https://opentuwa.com/assets/ui/web_1200.png', width: 1200, height: 630, alt: 'About OpenTuwa' }],
     siteName: 'OpenTuwa',
     locale: 'en_US',
   },
@@ -21,7 +21,7 @@ export const metadata = {
     card: 'summary_large_image',
     title: 'About OpenTuwa | Independent Journalism',
     description: 'OpenTuwa is an independent platform for long-form articles, research, and media exploring foundational ideas.',
-    images: ['https://opentuwa.com/assets/ui/web_512.png'],
+    images: ['https://opentuwa.com/assets/ui/web_1200.png'],
     site: '@opentuwa',
   },
   alternates: {
