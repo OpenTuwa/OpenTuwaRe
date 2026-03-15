@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 
-export default function Navbar({ showSearch = false, onSearch, sections = [], hasBreaking = false }) {
+export default function Navbar({ showSearch = false, onSearch, sections = [] }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const pathname = usePathname();
@@ -54,12 +54,6 @@ export default function Navbar({ showSearch = false, onSearch, sections = [], ha
           </div>
 
           <div className="flex items-center gap-4">
-            {hasBreaking && (
-              <span className="flex items-center gap-1.5 text-xs font-bold text-red-500 uppercase tracking-wider">
-                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                Live
-              </span>
-            )}
 
             {/* Search icon button — always visible on desktop */}
             <button aria-label="Search" className="hidden md:flex items-center justify-center w-8 h-8 text-tuwa-muted hover:text-white transition-colors">

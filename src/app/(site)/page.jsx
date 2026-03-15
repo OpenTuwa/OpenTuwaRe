@@ -86,24 +86,21 @@ export default async function HomePage({ searchParams }) {
     .sort((a, b) => new Date(b.published_at || 0) - new Date(a.published_at || 0))
     .slice(0, 5);
 
-  // Hero: top trending article
-  const heroArticle = articles[0] ?? null;
+  // Hero: top 5 algorithm-ranked articles for auto-rotating banner
+  const heroArticles = articles.slice(0, 5);
 
-  // Section grids: remaining articles grouped by section/category
-  const sections = groupBySection(articles.slice(1));
+  // Section grids: all articles grouped by section/category (hero articles also appear here)
+  const sections = groupBySection(articles);
 
   // Trending rail: top 5 by trending score (already sorted)
   const trendingArticles = articles.slice(0, 5);
-
-  // Section labels for Navbar
-  const sectionLabels = [...new Set(sections.map(s => s.label))].slice(0, 5);
 
   return (
     <>
       <GraphSchema type="homepage" />
       <BreakingNewsTicker articles={tickerArticles} />
       <div className="max-w-7xl mx-auto px-4 md:px-6 pt-4 pb-24 min-h-screen">
-        <HeroStory article={heroArticle} />
+        <HeroStory articles={heroArticles} />
 
         {articles.length === 0 && (
           <div className="text-center text-tuwa-muted py-20">No stories found.</div>

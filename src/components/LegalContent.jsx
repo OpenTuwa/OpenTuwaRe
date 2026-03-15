@@ -168,7 +168,7 @@ export default function LegalContent() {
                   <h1 className="text-4xl md:text-5xl font-extrabold mb-4" data-i18n="eua_title">Tuwa End User Agreement</h1>
                   <div className="text-xs uppercase tracking-widest text-tuwa-muted border-l-2 border-tuwa-accent pl-3 mb-12" data-i18n="eua_eff">Effective as of: August 26, 2025</div>
 
-                  <div className="glass-panel space-y-10 text-tuwa-text leading-relaxed font-serif">
+                  <div className="glass-panel space-y-10 text-tuwa-text leading-relaxed">
                       <p data-i18n="eua_desc">Hello! Welcome to the Tuwa&trade; End User Agreement ("<strong>Terms</strong>") which apply when you use the Tuwa application, a brand of OpenTuwa&reg;. These Terms govern your use of our distraction-free Quran audio streaming and reading services (the "<strong>Service</strong>").</p>
 
                       <section id="eua-1" className="scroll-mt-32">
@@ -218,7 +218,7 @@ export default function LegalContent() {
                   <h1 className="text-4xl md:text-5xl font-extrabold mb-4" data-i18n="priv_title">Tuwa Privacy Policy</h1>
                   <div className="text-xs uppercase tracking-widest text-tuwa-muted border-l-2 border-tuwa-accent pl-3 mb-12" data-i18n="priv_eff">Effective as of: August 26, 2025</div>
 
-                  <div className="glass-panel space-y-10 text-tuwa-text leading-relaxed font-serif">
+                  <div className="glass-panel space-y-10 text-tuwa-text leading-relaxed">
                       <p data-i18n="priv_desc">At Tuwa&trade;, we believe in data minimization. This Privacy Policy outlines our strict practices regarding the limited information we process to keep our Service running securely.</p>
 
                       <section id="priv-1" className="scroll-mt-32">
@@ -263,7 +263,7 @@ export default function LegalContent() {
                   <h1 className="text-4xl md:text-5xl font-extrabold mb-4" data-i18n="cookie_title">Tuwa Cookie Policy</h1>
                   <div className="text-xs uppercase tracking-widest text-tuwa-muted border-l-2 border-tuwa-accent pl-3 mb-12" data-i18n="cookie_eff">Effective as of: August 26, 2025</div>
 
-                  <div className="glass-panel space-y-10 text-tuwa-text leading-relaxed font-serif">
+                  <div className="glass-panel space-y-10 text-tuwa-text leading-relaxed">
                       <p data-i18n="cookie_desc">This Cookie Policy explains how Tuwa&trade; uses cookies and local storage technologies to provide a seamless, secure experience.</p>
 
                       <section id="cook-1" className="scroll-mt-32">

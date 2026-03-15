@@ -39,15 +39,14 @@ export default function AboutPageContent({ authors = [] }) {
   return (
     <>
       {/* Masthead banner */}
-      <div className="bg-tuwa-black border-b border-white/10 px-6 py-12">
+      <div className="bg-tuwa-black border-b border-white/10 px-6 pt-28 pb-10">
         <div className="max-w-7xl mx-auto">
           <p className="text-xs uppercase tracking-widest text-tuwa-muted mb-2">OpenTuwa</p>
-          <h1 className="text-4xl md:text-5xl font-heading font-extrabold text-white tracking-tight mb-3">About</h1>
-          <hr className="border-white/10 mt-6" />
+          <h1 className="text-3xl md:text-4xl font-heading font-extrabold text-white tracking-tight">About</h1>
         </div>
       </div>
 
-      <main className="flex-grow pt-16 pb-24 max-w-7xl mx-auto w-full px-6">
+      <main className="flex-grow pt-8 pb-24 max-w-7xl mx-auto w-full px-6">
         <div className="py-10 border-b border-white/10">
           <div className="prose prose-invert prose-lg max-w-none text-tuwa-muted">
             <p className="lead text-xl text-white font-medium mb-6">
