@@ -12,10 +12,6 @@ export default function SpecialIssueStrip({ label, articles }) {
     <div className="border-l-4 border-tuwa-accent bg-white/[0.03] rounded-r px-6 py-7">
       {/* Header */}
       <div className="flex items-center gap-3 mb-5">
-        <span className="text-tuwa-accent text-[10px] font-bold uppercase tracking-[0.2em]">
-          Special Coverage
-        </span>
-        <span className="text-white/20 text-xs">·</span>
         <span className="text-white text-sm font-bold uppercase tracking-wide">
           {label}
         </span>
