@@ -79,8 +79,8 @@ export default async function HomePage({ searchParams }) {
     console.error('[HomePage] Error fetching articles:', err.message, err.stack);
   }
 
-  // Hero: top 5 algorithm-ranked articles for auto-rotating banner
-  const heroArticles = articles.slice(0, 5);
+  // Hero: top 9 algorithm-ranked articles for auto-rotating banner
+  const heroArticles = articles.slice(0, 9);
 
   // Section grids: all articles grouped by section/category
   const sections = groupBySection(articles);
