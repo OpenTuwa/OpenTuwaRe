@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function Navbar({ showSearch = false, onSearch, sections = [] }) {
@@ -9,6 +9,7 @@ export default function Navbar({ showSearch = false, onSearch, sections = [] }) 
   const [searchQuery, setSearchQuery] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
   const isHome = pathname === '/';
 
   useEffect(() => {
@@ -17,6 +18,13 @@ export default function Navbar({ showSearch = false, onSearch, sections = [] }) 
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, [isHome]);
+
+  const handleSearch = (e) => {
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      router.push(`/?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery('');
+    }
+  };
 
   const links = [
     { href: '/', label: 'Stories' },
@@ -63,6 +71,15 @@ export default function Navbar({ showSearch = false, onSearch, sections = [] }) 
           </div>
 
           <div className="flex items-center gap-4">
+            <div className="hidden md:block" role="search" aria-label="Search articles">
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleSearch}
+                placeholder="Search stories..."
+                className="bg-white/5 text-sm text-white placeholder:text-tuwa-muted/60 rounded-full px-5 py-2 w-52 focus:outline-none focus:ring-1 focus:ring-tuwa-accent transition-all"
+              />
+            </div>
 
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -84,6 +101,15 @@ export default function Navbar({ showSearch = false, onSearch, sections = [] }) 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
           <div role="navigation" aria-label="Mobile navigation" className="fixed inset-x-4 top-[83px] z-40 rounded-lg bg-[rgba(10,10,11,0.95)] border border-white/5 p-4 shadow-lg md:hidden">
+            <div className="mb-3" role="search">
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => { handleSearch(e); if (e.key === 'Enter') setIsMobileMenuOpen(false); }}
+                placeholder="Search stories..."
+                className="w-full bg-white/5 text-sm text-white placeholder:text-tuwa-muted/60 rounded-full px-5 py-2 focus:outline-none focus:ring-1 focus:ring-tuwa-accent transition-all"
+              />
+            </div>
             {links.map((link) => (
               <Link
                 key={link.href}

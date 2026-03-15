@@ -15,13 +15,19 @@ function nameToSlug(name) {
 
 async function getAuthorData(slug, env) {
   try {
-    // Fetch all authors and find the one whose name-derived slug matches
+    // authors table has no slug column — scan all and match by name-derived slug
     const { results } = await env.DB.prepare(
-      `SELECT name, role, author_bio, author_image, author_twitter,
-              author_linkedin, author_facebook, author_youtube
+      `SELECT name, role, bio, author_bio, avatar_url, author_image,
+              author_twitter, author_linkedin, author_facebook, author_youtube
        FROM authors LIMIT 200`
     ).all();
-    return results?.find(a => nameToSlug(a.name) === slug) || null;
+    const match = results?.find(a => nameToSlug(a.name) === slug) || null;
+    if (!match) return null;
+    // Normalise: prefer author_image, fall back to avatar_url
+    match._image = match.author_image || match.avatar_url || null;
+    // Normalise bio: prefer author_bio, fall back to bio
+    match._bio = match.author_bio || match.bio || null;
+    return match;
   } catch (e) {
     return null;
   }
@@ -52,8 +58,8 @@ export async function generateMetadata({ params }) {
 
   const authorUrl = `${SITE_URL}/authors/${slug}`;
   const pageTitle = `${author.name} — OpenTuwa`;
-  const pageDesc = author.author_bio || `Articles by ${author.name} on OpenTuwa.`;
-  const ogImage = author.author_image || `${SITE_URL}/assets/ui/web_1200.png`;
+  const pageDesc = author._bio || `Articles by ${author.name} on OpenTuwa.`;
+  const ogImage = author._image || `${SITE_URL}/assets/ui/web_1200.png`;
 
   const languages = buildHreflangLanguages(authorUrl);
 
@@ -99,9 +105,9 @@ export default async function AuthorPage({ params }) {
         {/* Author header */}
         <div className="max-w-4xl mx-auto px-6 mb-12">
           <div className="flex items-start gap-6">
-            {author.author_image ? (
+            {author._image ? (
               <img
-                src={author.author_image}
+                src={author._image}
                 alt={author.name}
                 width={96}
                 height={96}
@@ -117,8 +123,8 @@ export default async function AuthorPage({ params }) {
               {author.role && (
                 <p className="text-tuwa-accent text-sm font-medium mb-3">{author.role}</p>
               )}
-              {author.author_bio && (
-                <p className="text-tuwa-muted text-sm leading-relaxed max-w-2xl">{author.author_bio}</p>
+              {author._bio && (
+                <p className="text-tuwa-muted text-sm leading-relaxed max-w-2xl">{author._bio}</p>
               )}
 
               {/* Social links */}

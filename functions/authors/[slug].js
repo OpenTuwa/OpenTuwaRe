@@ -12,14 +12,25 @@ export async function onRequest(context) {
     return context.next();
   }
 
+  // authors table has no slug column — scan all and match by name-derived slug
+  function nameToSlug(name) {
+    return String(name || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  }
+
   let author = null;
   try {
     const { results } = await env.DB.prepare(
-      `SELECT name, author_bio, author_image, author_twitter, author_linkedin,
-              author_facebook, author_youtube
-       FROM authors WHERE slug = ? LIMIT 1`
-    ).bind(slug).all();
-    author = results?.[0] || null;
+      `SELECT name, role, bio, author_bio, avatar_url, author_image,
+              author_twitter, author_linkedin, author_facebook, author_youtube
+       FROM authors LIMIT 200`
+    ).all();
+    const match = results?.find(a => nameToSlug(a.name) === slug) || null;
+    if (!match) return context.next();
+    // Normalise: prefer author_image, fall back to avatar_url
+    match._image = match.author_image || match.avatar_url || null;
+    // Normalise bio: prefer author_bio, fall back to bio
+    match._bio = match.author_bio || match.bio || null;
+    author = match;
   } catch (e) {
     return context.next();
   }
@@ -30,20 +41,20 @@ export async function onRequest(context) {
   try {
     const { results } = await env.DB.prepare(
       `SELECT slug, title, published_at FROM articles
-       WHERE author = ? ORDER BY published_at DESC LIMIT 10`
-    ).bind(author.name).all();
+       WHERE author = ? OR author_name = ? ORDER BY published_at DESC LIMIT 10`
+    ).bind(author.name, author.name).all();
     articles = results || [];
   } catch (_) {}
 
   const authorName = author.name || slug;
   const canonicalUrl = `${SITE_URL}/authors/${slug}`;
   const pageTitle = `${authorName} — ${SITE_NAME}`;
-  const pageDesc = `Articles by ${authorName} on ${SITE_NAME}.`;
-  const ogImage = author.author_image || `${SITE_URL}/assets/ui/web_1200.png`;
+  const pageDesc = author._bio || `Articles by ${authorName} on ${SITE_NAME}.`;
+  const ogImage = author._image || `${SITE_URL}/assets/ui/web_1200.png`;
   // Don't declare dimensions for user-supplied author images — aspect ratio is unknown.
-  const ogImgWidth = author.author_image ? '' : '1200';
-  const ogImgHeight = author.author_image ? '' : '630';
-  const twitterCardType = author.author_image ? 'summary' : 'summary_large_image';
+  const ogImgWidth = author._image ? '' : '1200';
+  const ogImgHeight = author._image ? '' : '630';
+  const twitterCardType = author._image ? 'summary' : 'summary_large_image';
 
   const jsonLd = JSON.stringify({
     '@context': 'https://schema.org',
@@ -80,9 +91,9 @@ export async function onRequest(context) {
     <a href="/" class="brand" aria-label="${SITE_NAME} home">${SITE_NAME}</a>
   </nav>
   <div class="author-wrap">
-    ${author.author_image ? `<img src="${esc(author.author_image)}" alt="${esc(authorName)}" class="avatar">` : ''}
+    ${author._image ? `<img src="${esc(author._image)}" alt="${esc(authorName)}" class="avatar">` : ''}
     <h1>${esc(authorName)}</h1>
-    ${author.author_bio ? `<p class="bio">${esc(author.author_bio)}</p>` : ''}
+    ${author._bio ? `<p class="bio">${esc(author._bio)}</p>` : ''}
     <h2>Articles</h2>
     ${articleListHtml}
   </div>
