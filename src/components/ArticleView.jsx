@@ -7,6 +7,8 @@ import Footer from './Footer';
 import useScrollReveal from '../hooks/useScrollReveal';
 import SkeletonImage from './SkeletonImage';
 import VttEngine from './VttEngine';
+import { isVerifiedRole } from '../utils/verifiedRoles';
+import VerifiedBadge from './VerifiedBadge';
 
 const scheduleIdleTask = (fn) => {
   if (typeof requestIdleCallback !== 'undefined') {
@@ -287,8 +289,8 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
                   <div className="text-left">
                     <p className="text-sm font-semibold text-white group-hover:text-tuwa-accent transition-colors flex items-center gap-1.5">
                       {authorName}
-                      {(authorRole === 'Founder and Editor-in-Chief' || authorRole === 'Developer') && (
-                        <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="12" fill="#1D9BF0"/><path d="M9.5 12.5L11 14L15 10" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      {isVerifiedRole(authorRole) && (
+                        <VerifiedBadge name={authorName} role={authorRole} size="sm" />
                       )}
                     </p>
                     <p className="text-xs text-tuwa-muted">{authorRole || 'Author'}</p>

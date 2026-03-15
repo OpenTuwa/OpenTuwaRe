@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import GraphSchema from '../../../../components/GraphSchema';
 import { buildHreflangLanguages } from '../../../../../functions/_utils/hreflang.js';
+import { isVerifiedRole } from '../../../../utils/verifiedRoles';
+import VerifiedBadge from '../../../../components/VerifiedBadge';
 
 export const runtime = 'edge';
 
@@ -119,7 +121,12 @@ export default async function AuthorPage({ params }) {
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <h1 className="text-3xl font-bold text-white mb-1">{author.name}</h1>
+              <h1 className="text-3xl font-bold text-white mb-1 flex items-center gap-2">
+                {author.name}
+                {isVerifiedRole(author.role) && (
+                  <VerifiedBadge name={author.name} role={author.role} size="lg" />
+                )}
+              </h1>
               {author.role && (
                 <p className="text-tuwa-accent text-sm font-medium mb-3">{author.role}</p>
               )}

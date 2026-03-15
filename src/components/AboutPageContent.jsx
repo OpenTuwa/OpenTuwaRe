@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import useScrollReveal from '../hooks/useScrollReveal';
 import SkeletonImage from './SkeletonImage';
+import { isVerifiedRole } from '../utils/verifiedRoles';
+import VerifiedBadge from './VerifiedBadge';
 
 function RevealSection({ children, className = '' }) {
   const ref = useScrollReveal();
@@ -129,8 +131,8 @@ export default function AboutPageContent({ authors = [] }) {
                     <div className="flex-1">
                       <h4 className="text-white font-medium text-sm flex items-center gap-1">
                         {author.name}
-                        {(author.role === 'Founder and Editor-in-Chief' || author.role === 'Developer' || author.role === 'Founder & Editor-in-Chief' || author.role === 'Journalist') && (
-                          <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="12" fill="#1D9BF0"/><path d="M9.5 12.5L11 14L15 10" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        {isVerifiedRole(author.role) && (
+                          <VerifiedBadge name={author.name} role={author.role} size="sm" />
                         )}
                       </h4>
                       <span className="inline-block mt-1 mb-2 px-2 py-0.5 border border-white/20 rounded-full text-[10px] text-tuwa-muted uppercase tracking-wider">{author.role || 'Contributor'}</span>
