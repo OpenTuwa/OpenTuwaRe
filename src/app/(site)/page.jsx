@@ -69,6 +69,7 @@ export async function generateMetadata({ searchParams }) {
 
 export default async function HomePage({ searchParams }) {
   const { q, author, tag } = await searchParams;
+  const isVariant = !!(q || author || tag);
   let articles = [];
 
   try {
@@ -80,10 +81,32 @@ export default async function HomePage({ searchParams }) {
     console.error('[HomePage] Error fetching articles:', err.message, err.stack);
   }
 
-  // Hero: top 9 algorithm-ranked articles for auto-rotating banner
-  const heroArticles = articles.slice(0, 9);
+  // ── Search / filter variant: simple results list, no hero ──
+  if (isVariant) {
+    const filterLabel = q
+      ? `Search: "${q}"`
+      : author
+        ? `By ${author}`
+        : `Tag: ${tag}`;
 
-  // Section grids: all articles grouped by section/category
+    return (
+      <>
+        <GraphSchema type="homepage" />
+        <div className="max-w-7xl mx-auto px-4 md:px-6 pt-32 pb-24 min-h-screen">
+          <p className="text-tuwa-muted text-xs uppercase tracking-widest mb-2">Results</p>
+          <h1 className="text-2xl font-bold text-white mb-8">{filterLabel}</h1>
+          {articles.length === 0 ? (
+            <p className="text-tuwa-muted py-20 text-center">No stories found.</p>
+          ) : (
+            <SectionGrid sections={[{ type: 'section', label: '', articles }]} />
+          )}
+        </div>
+      </>
+    );
+  }
+
+  // ── Normal homepage ──
+  const heroArticles = articles.slice(0, 9);
   const sections = groupBySection(articles);
 
   return (

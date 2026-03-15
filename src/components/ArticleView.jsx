@@ -203,6 +203,8 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
   const authorRole = authorInfo?.role || null;
   const authorAvatar = authorInfo?.avatar || authorInfo?.avatar_url || null;
   
+  const authorSlug = (authorInfo?.slug) || authorName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+
   let tagsArray = [];
   if (Array.isArray(article.tags)) tagsArray = article.tags;
   else if (typeof article.tags === 'string') tagsArray = article.tags.split(',').map(t => t.trim()).filter(Boolean);
@@ -274,7 +276,7 @@ export default function ArticleView({ article, recommended = [], authorInfo = {}
                 </p>
               )}
               <div className="mt-12 flex items-center justify-center space-x-6 border-y border-white/5 py-8 flex-wrap gap-y-4">
-                <Link href={`/?author=${encodeURIComponent(authorName)}`} className="flex items-center space-x-3 group">
+                <Link href={`/authors/${authorSlug}`} className="flex items-center space-x-3 group">
                   {authorAvatar ? (
                     <SkeletonImage src={authorAvatar} alt={authorName} width={48} height={48} className="w-12 h-12 rounded-full object-cover border border-white/10 group-hover:border-tuwa-accent transition-colors" />
                   ) : (
