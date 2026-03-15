@@ -135,7 +135,7 @@ export default function AboutPageContent({ authors = [] }) {
                       </h4>
                       <span className="inline-block mt-1 mb-2 px-2 py-0.5 border border-white/20 rounded-full text-[10px] text-tuwa-muted uppercase tracking-wider">{author.role || 'Contributor'}</span>
                       {author.bio && <p className="text-xs text-tuwa-muted leading-relaxed mb-2">{author.bio}</p>}
-                      <Link href={`/?author=${encodeURIComponent(author.name)}`} className="text-[11px] editorial-link text-tuwa-muted">View profile →</Link>
+                      <Link href={`/authors/${String(author.name || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}`} className="text-[11px] editorial-link text-tuwa-muted">View profile →</Link>
                     </div>
                   </div>
                 ))}
