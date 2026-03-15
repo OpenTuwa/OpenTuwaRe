@@ -182,6 +182,47 @@ export default function AboutPageContent({ authors = [] }) {
           </form>
         </div>
       </section>
+
+      {/* Signal secure tip section */}
+      <section className="border-t border-white/10 bg-tuwa-black">
+        <div className="max-w-3xl mx-auto px-6 py-16 text-center">
+          {/* Signal wordmark + lock icon */}
+          <div className="flex items-center justify-center gap-3 mb-5">
+            <svg viewBox="0 0 48 48" width="32" height="32" fill="none" aria-label="Signal" role="img">
+              <circle cx="24" cy="24" r="24" fill="#3A76F0"/>
+              <path d="M24 10.5a13.5 13.5 0 1 0 6.364 25.37l3.272.9-.9-3.272A13.5 13.5 0 0 0 24 10.5z" fill="white"/>
+              <path d="M19 24h10M19 20h10M19 28h6" stroke="#3A76F0" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+            <span className="text-white font-bold text-lg tracking-tight">Signal</span>
+            <span className="text-white/30 text-xs font-medium uppercase tracking-widest border border-white/10 rounded px-2 py-0.5">Encrypted</span>
+          </div>
+
+          <h2 className="text-2xl font-heading font-bold text-white mb-3">Send us a secure tip</h2>
+          <p className="text-tuwa-muted text-sm leading-relaxed mb-2 max-w-xl mx-auto">
+            Have a story, document, or information you want to share confidentially? Contact OpenTuwa on Signal for end-to-end encrypted, metadata-minimised communication.
+          </p>
+          <p className="text-white/30 text-xs mb-8">
+            Signal does not log your identity, IP address, or message content. Your source protection is our priority.
+          </p>
+
+          <a
+            href="https://signal.me/#eu/bquAC4a6nlu2QkJSDs2oD_TpUflpKObY5badX6z5IrGPk1U7uBxHGr916Aa6vXYb"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-3 bg-[#3A76F0] hover:bg-[#2d65d8] text-white font-bold py-3 px-8 rounded-full transition-all text-sm shadow-[0_0_24px_rgba(58,118,240,0.25)] hover:shadow-[0_0_32px_rgba(58,118,240,0.4)]"
+          >
+            <svg viewBox="0 0 48 48" width="18" height="18" fill="none" aria-hidden="true">
+              <circle cx="24" cy="24" r="24" fill="white" fillOpacity="0.2"/>
+              <path d="M24 10.5a13.5 13.5 0 1 0 6.364 25.37l3.272.9-.9-3.272A13.5 13.5 0 0 0 24 10.5z" fill="white"/>
+            </svg>
+            Contact on Signal
+          </a>
+
+          <p className="text-white/20 text-[11px] mt-6">
+            Signal is a registered trademark of Signal Messenger LLC. OpenTuwa is not affiliated with Signal Messenger LLC.
+          </p>
+        </div>
+      </section>
     </>
   );
 }
