@@ -1,13 +1,22 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 
 export default function Navbar({ showSearch = false, onSearch, sections = [] }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isScrolled, setIsScrolled] = useState(false);
   const pathname = usePathname();
+  const isHome = pathname === '/';
+
+  useEffect(() => {
+    if (!isHome) return;
+    const onScroll = () => setIsScrolled(window.scrollY > 10);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [isHome]);
 
   const links = [
     { href: '/', label: 'Stories' },
@@ -24,10 +33,10 @@ export default function Navbar({ showSearch = false, onSearch, sections = [] }) 
 
   return (
     <div className="fixed top-0 w-full z-50">
-      {/* 3px red top strip */}
-      <div className="bg-red-600 h-[3px] w-full" />
+      {/* 3px red top strip — hidden on homepage when at top */}
+      {!(isHome && !isScrolled) && <div className="bg-red-600 h-[3px] w-full" />}
 
-      <header className="backdrop-blur-md bg-[rgba(10,10,11,0.8)] border-b border-white/5">
+      <header className={`backdrop-blur-md border-b transition-colors duration-300 ${isHome && !isScrolled ? 'bg-transparent border-transparent' : 'bg-[rgba(10,10,11,0.9)] border-white/5'}`}>
         <nav aria-label="Site navigation" className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center space-x-8">
             <Link className="text-2xl font-extrabold tracking-tighter font-heading text-white" href="/">OpenTuwa</Link>
