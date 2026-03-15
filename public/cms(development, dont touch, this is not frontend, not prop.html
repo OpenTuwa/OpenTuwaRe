@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenTuwa Studio | Content Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Enterprise Dark Theme (Zinc/Slate) */
+            --bg-base: #09090b;
+            --bg-panel: #18181b;
+            --bg-input: #27272a;
+            --bg-hover: #3f3f46;
+            --border-subtle: #27272a;
+            --border-focus: #52525b;
+            --text-main: #f4f4f5;
+            --text-muted: #a1a1aa;
+            --accent: #ffffff;
+            --accent-bg: #fafafa;
+            --accent-text: #09090b;
+            --danger: #ef4444;
+            --success: #10b981;
+            --radius: 6px;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            margin: 0; padding: 0; min-height: 100vh; display: flex; flex-direction: column;
+            font-size: 14px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        * { box-sizing: border-box; }
+
+        /* Minimalist Topbar */
+        nav {
+            background-color: var(--bg-base);
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 0.75rem 2rem;
+            display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 0; z-index: 100;
+        }
+        .nav-brand { font-weight: 600; letter-spacing: -0.5px; display: flex; align-items: center; gap: 0.75rem; font-size: 15px;}
+        .badge-outline { border: 1px solid var(--border-focus); padding: 2px 6px; border-radius: 4px; font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;}
+        .nav-actions { display: flex; gap: 0.75rem; align-items: center; }
+
+        main { padding: 2rem; display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; flex-grow: 1; height: calc(100vh - 60px); }
+
+        /* Flat, Sharp Panels */
+        .panel {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius);
+            padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem;
+            overflow-y: auto;
+        }
+        
+        h2 { margin: 0; font-size: 1.25rem; font-weight: 500; letter-spacing: -0.5px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 1rem; }
+        
+        .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
+        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+        label { font-size: 0.75rem; color: var(--text-muted); font-weight: 500; }
+
+        /* Inputs - Industrial Style */
+        input, textarea, select {
+            width: 100%; background-color: var(--bg-input); border: 1px solid var(--border-subtle);
+            border-radius: 4px; padding: 0.6rem 0.75rem; color: var(--text-main);
+            font-family: inherit; font-size: 0.875rem; transition: border-color 0.15s;
+        }
+        input:focus, textarea:focus { outline: none; border-color: var(--border-focus); }
+        textarea { resize: vertical; min-height: 100px; }
+        #content_html { 
+            min-height: 500px; 
+            font-family: 'JetBrains Mono', monospace; 
+            font-size: 13px; line-height: 1.6; 
+            background-color: #000;
+            border-top-left-radius: 0; border-top-right-radius: 0;
+            border-top: none;
+        }
+
+        /* Professional Toolbar */
+        .editor-container { border: 1px solid var(--border-subtle); border-radius: 4px; overflow: hidden; }
+        .toolbar { background-color: var(--bg-input); padding: 0.5rem; display: flex; flex-wrap: wrap; gap: 0.25rem; border-bottom: 1px solid var(--border-subtle); }
+        .toolbar-divider { width: 1px; background-color: var(--border-subtle); margin: 0 0.25rem; }
+        
+        button {
+            background: transparent; border: 1px solid transparent; color: var(--text-main);
+            padding: 0.4rem 0.75rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;
+            font-family: inherit; font-weight: 500; display: flex; align-items: center; gap: 0.4rem;
+            transition: all 0.1s;
+        }
+        button:hover { background-color: var(--bg-hover); }
+        
+        .toolbar button { padding: 0.3rem 0.5rem; color: var(--text-muted); }
+        .toolbar button:hover { color: var(--text-main); background-color: var(--bg-hover); }
+        
+        /* Primary/Action Buttons */
+        button.btn-primary { background-color: var(--accent-bg); color: var(--accent-text); border: 1px solid var(--accent-bg); font-weight: 600; }
+        button.btn-primary:hover { background-color: #e4e4e7; }
+        button.btn-outline { border: 1px solid var(--border-subtle); }
+        button.btn-outline:hover { border-color: var(--border-focus); }
+        button.btn-danger { color: #f87171; }
+        button.btn-danger:hover { background-color: rgba(239, 68, 68, 0.1); }
+
+        /* Live Preview */
+        #live_preview_container {
+            background-color: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 4px;
+            padding: 2rem; flex-grow: 1; overflow-y: auto; line-height: 1.7; font-size: 1rem;
+        }
+        #live_preview_container p { margin-top: 0; margin-bottom: 1.5em; color: #d4d4d8;}
+        #live_preview_container .dateline { font-weight: 600; color: #fff; }
+        #live_preview_container blockquote { border-left: 3px solid var(--border-focus); padding-left: 1rem; color: var(--text-muted); margin: 1.5rem 0;}
+        #live_preview_container figure { margin: 2rem 0; }
+        #live_preview_container img, #live_preview_container video, #live_preview_container iframe { max-width: 100%; border-radius: 4px; display: block; border: 1px solid var(--border-subtle); }
+        #live_preview_container figcaption { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.75rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.75rem; }
+        #live_preview_container .tuwa-subtitle-box { background: var(--bg-input); border: 1px dashed var(--border-focus); padding: 0.5rem; margin-top: -1.5rem; margin-bottom: 1.5rem; border-radius: 0 0 4px 4px; font-size: 0.75rem; color: var(--text-muted); font-family: monospace; }
+        #live_preview_container .tuwa-subtitle-box::before { content: "Attached VTT: " attr(data-vtt); }
+        #live_preview_container .infobox { background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: 4px; padding: 1.5rem; margin: 2rem 0; border-left: 3px solid var(--text-main); }
+        #live_preview_container .infobox h4 { margin-top: 0; color: white; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px;}
+
+        /* Modals */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: var(--radius); padding: 2rem; width: 90%; max-width: 600px; max-height: 85vh; overflow-y: auto; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid var(--border-subtle); font-size: 0.85rem;}
+        th { color: var(--text-muted); font-weight: 500; }
+        tr:hover td { background-color: var(--bg-input); }
+
+        /* SVG Icons */
+        svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+        #draft-status { font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.5rem; }
+        .dot { width: 6px; height: 6px; background: var(--border-focus); border-radius: 50%; }
+        .dot.saved { background: var(--success); }
+
+        ::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: var(--bg-input); border-radius: 4px; } ::-webkit-scrollbar-thumb:hover { background: var(--border-focus); }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="nav-brand">
+            <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            OpenTuwa Studio
+            <span class="badge-outline">D1 Direct</span>
+        </div>
+        <div class="nav-actions">
+            <div id="draft-status" style="display: none;"><div class="dot saved"></div> Saved</div>
+            <button class="btn-outline" onclick="restoreDraft()">
+                <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                Restore
+            </button>
+            <button class="btn-outline" onclick="openModal('manager-modal'); fetchArticles();">
+                <svg viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+                Content
+            </button>
+            <button class="btn-outline" onclick="openModal('settings-modal')">
+                <svg viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                Settings
+            </button>
+        </div>
+    </nav>
+
+    <main>
+        <div class="panel" id="editor-panel">
+            <h2>
+                <span id="editor-title">Create Article</span>
+                <span id="edit-badge" class="badge-outline" style="display: none; border-color: var(--text-main); color: var(--text-main);">Editing</span>
+            </h2>
+            
+            <div class="row">
+                <div class="form-group"><label>Title</label><input type="text" id="title" oninput="handleInput(); autoSlug()"></div>
+                <div class="form-group"><label>Slug</label><input type="text" id="slug" oninput="handleInput()"></div>
+            </div>
+            <div class="form-group"><label>Lede / Subtitle</label><input type="text" id="subtitle" oninput="handleInput()"></div>
+            <div class="row">
+                <div class="form-group"><label>Author</label><input type="text" id="author" oninput="handleInput()"></div>
+                <div class="form-group"><label>Read Time (Mins)</label><input type="number" id="read_time" oninput="handleInput()"></div>
+            </div>
+            <div class="row">
+                <div class="form-group"><label>Cover Image URL</label><input type="text" id="image_url" oninput="handleInput()"></div>
+                <div class="form-group"><label>Image Credits</label><input type="text" id="image_copyright" oninput="handleInput()"></div>
+            </div>
+            <div class="row">
+                <div class="form-group"><label>SEO Meta</label><input type="text" id="seo_description" oninput="handleInput()"></div>
+                <div class="form-group"><label>Tags (Comma separated)</label><input type="text" id="tags" oninput="handleInput()"></div>
+            </div>
+
+            <div class="form-group">
+                <label>Body Content</label>
+                <div class="editor-container">
+                    <div class="toolbar">
+                        <button type="button" title="Bold" onclick="insertTemplate('bold')"><b>B</b></button>
+                        <button type="button" title="Heading" onclick="insertTemplate('h3')">H3</button>
+                        <button type="button" title="Link" onclick="insertTemplate('link')"><svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
+                        <div class="toolbar-divider"></div>
+                        <button type="button" title="Quote" onclick="insertTemplate('pullquote')"><svg viewBox="0 0 24 24"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1zM15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h1c0 1 0 1 0 2v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/></svg></button>
+                        <button type="button" title="Image" onclick="insertTemplate('figure')"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></button>
+                        <button type="button" title="Video/VTT" onclick="insertTemplate('video_vtt')"><svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg></button>
+                        <button type="button" title="YouTube" onclick="insertTemplate('youtube_vtt')"><svg viewBox="0 0 24 24"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/></svg></button>
+                        <div class="toolbar-divider"></div>
+                        <button type="button" title="Infobox" onclick="insertTemplate('infobox')">Box</button>
+                        <button type="button" title="Dropcap" onclick="insertTemplate('dropcap')">Dropcap</button>
+                    </div>
+                    <textarea id="content_html" placeholder="Write content (HTML accepted)..." oninput="handleInput()"></textarea>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: auto;">
+                <button class="btn-primary" onclick="saveToD1()" style="flex-grow: 1; justify-content: center; padding: 0.75rem;">
+                    <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                    Publish
+                </button>
+                <button class="btn-outline" onclick="clearForm()">Clear</button>
+            </div>
+        </div>
+
+        <div class="panel" id="preview-panel">
+            <h2 style="border-bottom: none; padding-bottom: 0;">Preview</h2>
+            <div id="live_preview_container"><span style="color: var(--text-muted);">Preview will render here...</span></div>
+        </div>
+    </main>
+
+    <div class="modal-overlay" id="settings-modal">
+        <div class="modal-content">
+            <h2 style="margin-bottom: 1.5rem;">Database Configuration</h2>
+            <div class="form-group" style="margin-bottom: 1rem;"><label>Cloudflare Account ID</label><input type="text" id="cf_account_id"></div>
+            <div class="form-group" style="margin-bottom: 1rem;"><label>D1 Database ID</label><input type="text" id="cf_db_id"></div>
+            <div class="form-group" style="margin-bottom: 1.5rem;"><label>API Token</label><input type="password" id="cf_api_token"></div>
+            <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                <button class="btn-outline" onclick="closeModal('settings-modal')">Cancel</button>
+                <button class="btn-primary" onclick="saveSettings()">Save Configuration</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="manager-modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 1rem;">
+                <h2 style="border:none; padding:0; margin:0;">Content Library</h2>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn-outline" onclick="fetchArticles()">Refresh</button>
+                    <button class="btn-outline" onclick="closeModal('manager-modal')">Close</button>
+                </div>
+            </div>
+            <div id="articles-loader" style="color: var(--text-muted); display: none;">Fetching records...</div>
+            <table id="articles-table">
+                <thead><tr><th>Document</th><th>Published</th><th>Action</th></tr></thead>
+                <tbody id="articles-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let editingSlug = null; 
+        let autoSaveTimer;
+
+        window.onload = () => {
+            document.getElementById('cf_account_id').value = localStorage.getItem('cf_account_id') || '';
+            document.getElementById('cf_db_id').value = localStorage.getItem('cf_db_id') || '';
+            document.getElementById('cf_api_token').value = localStorage.getItem('cf_api_token') || '';
+        };
+
+        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        
+        function saveSettings() {
+            localStorage.setItem('cf_account_id', document.getElementById('cf_account_id').value.trim());
+            localStorage.setItem('cf_db_id', document.getElementById('cf_db_id').value.trim());
+            localStorage.setItem('cf_api_token', document.getElementById('cf_api_token').value.trim());
+            closeModal('settings-modal');
+        }
+
+        function handleInput() {
+            const text = document.getElementById('content_html').value;
+            if(!document.getElementById('read_time').value) document.getElementById('read_time').value = text.trim() ? Math.ceil(text.trim().split(/\s+/).length / 200) : '';
+            updatePreview();
+            clearTimeout(autoSaveTimer); 
+            document.getElementById('draft-status').style.display = 'none';
+            autoSaveTimer = setTimeout(saveDraft, 1000);
+        }
+
+        function saveDraft() {
+            const draftData = { editingSlug, title: document.getElementById('title').value, slug: document.getElementById('slug').value, subtitle: document.getElementById('subtitle').value, author: document.getElementById('author').value, read_time: document.getElementById('read_time').value, image_url: document.getElementById('image_url').value, image_copyright: document.getElementById('image_copyright').value, seo_description: document.getElementById('seo_description').value, tags: document.getElementById('tags').value, content_html: document.getElementById('content_html').value };
+            localStorage.setItem('tuwa_cms_draft', JSON.stringify(draftData));
+            const status = document.getElementById('draft-status'); status.style.display = 'flex'; 
+        }
+
+        function restoreDraft() {
+            const draftRaw = localStorage.getItem('tuwa_cms_draft'); if (!draftRaw) return alert("No recent draft.");
+            if(!confirm("Overwrite current editor with draft?")) return;
+            const draft = JSON.parse(draftRaw);
+            editingSlug = draft.editingSlug; document.getElementById('title').value = draft.title || ''; document.getElementById('slug').value = draft.slug || ''; document.getElementById('subtitle').value = draft.subtitle || ''; document.getElementById('author').value = draft.author || ''; document.getElementById('read_time').value = draft.read_time || ''; document.getElementById('image_url').value = draft.image_url || ''; document.getElementById('image_copyright').value = draft.image_copyright || ''; document.getElementById('seo_description').value = draft.seo_description || ''; document.getElementById('tags').value = draft.tags || ''; document.getElementById('content_html').value = draft.content_html || '';
+            if(editingSlug) { document.getElementById('editor-title').innerText = "Edit Article"; document.getElementById('edit-badge').style.display = 'inline-block'; }
+            updatePreview();
+        }
+
+        // D1 API
+        async function queryD1(sql, params = []) {
+            const accId = localStorage.getItem('cf_account_id'); const dbId = localStorage.getItem('cf_db_id'); const token = localStorage.getItem('cf_api_token');
+            if (!accId || !dbId || !token) { openModal('settings-modal'); throw new Error("Missing Settings."); }
+            const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accId}/d1/database/${dbId}/query`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ sql: sql, params: params }) });
+            const data = await response.json(); if (!data.success) throw new Error(data.errors[0]?.message || "API Error");
+            return data.result[0].results; 
+        }
+
+        async function pingIndexingApi(slug) {
+            try {
+                await fetch('/api/index-ping', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: `https://opentuwa.com/articles/${slug}`, type: 'URL_UPDATED' })
+                });
+            } catch (_) { /* non-fatal — indexing ping is best-effort */ }
+        }
+
+        async function saveToD1() {
+            const slug = document.getElementById('slug').value.trim(); const title = document.getElementById('title').value.trim();
+            if (!slug || !title) return alert("Title and Slug required.");
+            const data = [ slug, title, document.getElementById('subtitle').value, document.getElementById('author').value, parseInt(document.getElementById('read_time').value) || 1, document.getElementById('image_url').value, document.getElementById('image_copyright').value, document.getElementById('seo_description').value, document.getElementById('tags').value, formatSmartHTML(document.getElementById('content_html').value) ];
+            try {
+                if (editingSlug) { await queryD1(`UPDATE articles SET slug=?, title=?, subtitle=?, author=?, read_time_minutes=?, image_url=?, image_copyright=?, seo_description=?, tags=?, content_html=? WHERE slug=?`, [...data, editingSlug]); alert("Published changes."); } 
+                else { await queryD1(`INSERT INTO articles (slug, title, subtitle, author, read_time_minutes, image_url, image_copyright, seo_description, tags, content_html, published_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`, data); alert("Document Published."); }
+                editingSlug = slug; document.getElementById('editor-title').innerText = "Edit Article"; document.getElementById('edit-badge').style.display = 'inline-block'; localStorage.removeItem('tuwa_cms_draft');
+                pingIndexingApi(slug);
+            } catch (err) { alert("Save Error: " + err.message); }
+        }
+
+        async function fetchArticles() {
+            const tbody = document.getElementById('articles-body'); document.getElementById('articles-loader').style.display = 'block'; tbody.innerHTML = '';
+            try {
+                const rows = await queryD1(`SELECT slug, title, published_at FROM articles ORDER BY published_at DESC LIMIT 50;`);
+                document.getElementById('articles-loader').style.display = 'none';
+                rows.forEach(row => { tbody.innerHTML += `<tr><td><div style="font-weight:500; color:var(--text-main);">${row.title}</div><div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px; font-family:monospace;">${row.slug}</div></td><td>${new Date(row.published_at).toLocaleDateString()}</td><td><div style="display:flex; gap:0.5rem;"><button class="btn-outline" onclick="loadArticle('${row.slug}')">Edit</button> <button class="btn-outline btn-danger" onclick="deleteArticle('${row.slug}')">Del</button></div></td></tr>`; });
+            } catch (err) { alert("Fetch error: " + err.message); }
+        }
+
+        async function loadArticle(target) {
+            try {
+                const rows = await queryD1(`SELECT * FROM articles WHERE slug = ?`, [target]); const art = rows[0];
+                document.getElementById('slug').value = art.slug; document.getElementById('title').value = art.title; document.getElementById('subtitle').value = art.subtitle || ''; document.getElementById('author').value = art.author || ''; document.getElementById('read_time').value = art.read_time_minutes || ''; document.getElementById('image_url').value = art.image_url || ''; document.getElementById('image_copyright').value = art.image_copyright || ''; document.getElementById('seo_description').value = art.seo_description || ''; document.getElementById('tags').value = art.tags || '';
+                let rawText = (art.content_html || '').replace(/^<p>/gm, '').replace(/<\/p>$/gm, '');
+                document.getElementById('content_html').value = rawText.trim(); editingSlug = art.slug; document.getElementById('editor-title').innerText = "Edit Article"; document.getElementById('edit-badge').style.display = 'inline-block'; updatePreview(); closeModal('manager-modal'); saveDraft(); 
+            } catch (err) { alert("Load Error: " + err.message); }
+        }
+
+        async function deleteArticle(target) {
+            if(!confirm(`Delete record: ${target}?`)) return;
+            try { await queryD1(`DELETE FROM articles WHERE slug = ?`, [target]); if (editingSlug === target) clearForm(); fetchArticles(); } catch (err) { alert("Delete Error: " + err.message); }
+        }
+
+        function autoSlug() { if (editingSlug) return; document.getElementById('slug').value = document.getElementById('title').value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''); }
+        function clearForm() { if(confirm("Clear editor?")) { editingSlug = null; document.getElementById('editor-title').innerText = "Create Article"; document.getElementById('edit-badge').style.display = 'none'; document.querySelectorAll('input').forEach(i => i.value = ''); document.getElementById('content_html').value = ''; updatePreview(); } }
+
+        function formatSmartHTML(raw) {
+            return raw.split('\n\n').map(b => b.trim()).filter(b => b).map(b => {
+                if(b.startsWith('<') && !b.startsWith('<strong') && !b.startsWith('<em') && !b.startsWith('<a') && !b.startsWith('<span')) return b;
+                return `<p>${b}</p>`;
+            }).join('\n\n');
+        }
+
+        function updatePreview() {
+            const raw = document.getElementById('content_html').value;
+            document.getElementById('live_preview_container').innerHTML = raw.trim() ? formatSmartHTML(raw) : '<span style="color: var(--text-muted);">Preview will render here...</span>';
+        }
+
+        function generateMediaId() { return Math.random().toString(36).substr(2, 4); }
+
+        function insertTemplate(type) {
+            const ta = document.getElementById('content_html');
+            const sel = ta.value.substring(ta.selectionStart, ta.selectionEnd);
+            let tpl = '';
+
+            if (type === 'bold') tpl = `<strong>${sel || 'bold text'}</strong>`;
+            else if (type === 'h3') tpl = `\n<h3>${sel || 'Section Heading'}</h3>\n`;
+            else if (type === 'link') tpl = `<a href="https://" target="_blank" rel="noopener">${sel || 'link text'}</a>`;
+            else if (type === 'pullquote') tpl = `\n<aside class="pull-quote">\n  "${sel || 'Pull-quote content.'}"\n</aside>\n`;
+            else if (type === 'figure') tpl = `\n<figure>\n  <img src="IMAGE_URL" alt="Description">\n  <figcaption>Caption here. <span class="credit">Credit: Name</span></figcaption>\n</figure>\n`;
+            else if (type === 'dropcap') tpl = `\n<p class="dropcap">${sel || 'Start paragraph here.'}</p>\n`;
+            else if (type === 'infobox') tpl = `\n<div class="infobox">\n  <h4>Key Takeaways</h4>\n  <ul>\n    <li>Point 1</li>\n    <li>Point 2</li>\n  </ul>\n</div>\n`;
+
+            else if (type === 'youtube_vtt') {
+                const vidId = prompt("YouTube Video ID:"); if (!vidId) return;
+                const vttUrl = prompt("VTT URL path (optional):", ""); const uniqueId = 'media-' + generateMediaId();
+                tpl = `\n<iframe id="${uniqueId}" src="https://www.youtube.com/embed/${vidId}?enablejsapi=1&autoplay=1" style="width: 100%; aspect-ratio: 16 / 9;" frameborder="0"   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+  referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>\n`;
+                if (vttUrl) tpl += `<div class="tuwa-subtitle-box" data-video="${uniqueId}" data-vtt="${vttUrl}"></div>\n`;
+            }
+            else if (type === 'video_vtt') {
+                const mp4Url = prompt("MP4 URL:"); if (!mp4Url) return;
+                const vttUrl = prompt("VTT URL path (optional):", ""); const uniqueId = 'media-' + generateMediaId();
+                tpl = `\n<video id="${uniqueId}" controls autoplay playsinline style="width:100%;">\n  <source src="${mp4Url}" type="video/mp4">\n</video>\n`;
+                if (vttUrl) tpl += `<div class="tuwa-subtitle-box" data-video="${uniqueId}" data-vtt="${vttUrl}"></div>\n`;
+            }
+
+            ta.value = ta.value.substring(0, ta.selectionStart) + tpl + ta.value.substring(ta.selectionEnd);
+            handleInput(); 
+        }
+    </script>
+</body>
+</html>
