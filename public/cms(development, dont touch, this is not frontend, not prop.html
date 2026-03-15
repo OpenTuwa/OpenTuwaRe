@@ -308,6 +308,16 @@
             return data.result[0].results; 
         }
 
+        async function pingIndexingApi(slug) {
+            try {
+                await fetch('/api/index-ping', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: `https://opentuwa.com/articles/${slug}`, type: 'URL_UPDATED' })
+                });
+            } catch (_) { /* non-fatal — indexing ping is best-effort */ }
+        }
+
         async function saveToD1() {
             const slug = document.getElementById('slug').value.trim(); const title = document.getElementById('title').value.trim();
             if (!slug || !title) return alert("Title and Slug required.");
@@ -316,6 +326,7 @@
                 if (editingSlug) { await queryD1(`UPDATE articles SET slug=?, title=?, subtitle=?, author=?, read_time_minutes=?, image_url=?, image_copyright=?, seo_description=?, tags=?, content_html=? WHERE slug=?`, [...data, editingSlug]); alert("Published changes."); } 
                 else { await queryD1(`INSERT INTO articles (slug, title, subtitle, author, read_time_minutes, image_url, image_copyright, seo_description, tags, content_html, published_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`, data); alert("Document Published."); }
                 editingSlug = slug; document.getElementById('editor-title').innerText = "Edit Article"; document.getElementById('edit-badge').style.display = 'inline-block'; localStorage.removeItem('tuwa_cms_draft');
+                pingIndexingApi(slug);
             } catch (err) { alert("Save Error: " + err.message); }
         }
 
